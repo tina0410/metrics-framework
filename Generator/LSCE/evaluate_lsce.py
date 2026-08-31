@@ -8,6 +8,7 @@ import contextlib
 import io
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -21,7 +22,19 @@ PROJECT_ROOT = ROOT.parent.parent
 CONFIG_DIR = ROOT / "configs"
 DEFAULT_CONFIG = CONFIG_DIR / "config_case1.json"
 DEFAULT_CONFIGS = tuple(CONFIG_DIR / f"config_case{i}.json" for i in range(1, 6))
-AREA_ROOT = PROJECT_ROOT / "Area_TP_Estimator" / "Est_LS_CE_M2V"
+
+
+def _configured_area_root() -> Path:
+    """Resolve the optional model directory override without searching other trees."""
+    override = os.environ.get("LSCE_AREA_ROOT")
+    if override is not None:
+        if not override.strip():
+            raise ValueError("LSCE_AREA_ROOT must name the directory containing EstLS.py")
+        return Path(override).expanduser().resolve()
+    return PROJECT_ROOT / "Area_TP_Estimator" / "Est_LS_CE_M2V"
+
+
+AREA_ROOT = _configured_area_root()
 AREA_RESULTS = AREA_ROOT / "LSCE结果.xlsx"
 GE_REFERENCE_CELL = "LVT_NAND2HDV0"
 GE_AREA_UM2 = 1.12
@@ -237,6 +250,21 @@ def select_actual_time(
 @lru_cache(maxsize=1)
 def _load_area_evaluator() -> tuple[Any, Any, Any, Any, Any]:
     """Load the existing LSCE estimator and its models once per process."""
+    required = (
+        "EstLS.py", "EstModule.py", "KeyParam.py", "PyTU.py",
+        "model/SU_in.xlsx", "model/ADD_area.pkl",
+        "model/pure_MUL_area.pkl", "model/SU_out_FxP_area.pkl",
+    )
+    missing = [name for name in required if not (AREA_ROOT / name).is_file()]
+    if missing:
+        raise FileNotFoundError(
+            f"LSCE area model directory is incomplete: {AREA_ROOT}\n"
+            f"Missing: {', '.join(missing)}\n"
+            "The area estimator is a separate repository, not a pip package. "
+            "Set LSCE_AREA_ROOT to the existing Est_LS_CE_M2V directory "
+            "before starting Python. Keep its model files and LSCE结果.xlsx "
+            "from the original area/synthesis data source."
+        )
     import joblib
     import pandas as pd
     area_root_text = str(AREA_ROOT)

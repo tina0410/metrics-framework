@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import unittest
 from tempfile import TemporaryDirectory
@@ -11,6 +12,9 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 from evaluate_lsce import (
+    _configured_area_root,
+    _load_area_evaluator,
+    PROJECT_ROOT,
     latency_cycles,
     load_config,
     resolve_config_selection,
@@ -21,6 +25,39 @@ from evaluate_lsce import (
 
 
 class LSCEEvaluationTests(unittest.TestCase):
+    def test_area_root_keeps_original_default(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(
+                _configured_area_root(),
+                PROJECT_ROOT / "Area_TP_Estimator" / "Est_LS_CE_M2V",
+            )
+
+    def test_area_root_accepts_external_model_directory(self) -> None:
+        with TemporaryDirectory(prefix="lsce model ") as directory:
+            with patch.dict(os.environ, {"LSCE_AREA_ROOT": directory}):
+                self.assertEqual(_configured_area_root(), Path(directory).resolve())
+
+    def test_empty_area_root_is_rejected(self) -> None:
+        with patch.dict(os.environ, {"LSCE_AREA_ROOT": " "}):
+            with self.assertRaisesRegex(ValueError, "LSCE_AREA_ROOT"):
+                _configured_area_root()
+
+    def test_incomplete_area_model_reports_path_and_missing_files(self) -> None:
+        with TemporaryDirectory() as directory:
+            model_root = Path(directory)
+            (model_root / "EstLS.py").write_text(
+                "raise AssertionError('Incomplete model must not be imported')\n",
+                encoding="utf-8",
+            )
+            with patch("evaluate_lsce.AREA_ROOT", model_root):
+                with self.assertRaises(FileNotFoundError) as caught:
+                    _load_area_evaluator.__wrapped__()
+            message = str(caught.exception)
+            self.assertIn(str(model_root), message)
+            self.assertIn("model/ADD_area.pkl", message)
+            self.assertIn("EstModule.py", message)
+            self.assertIn("LSCE_AREA_ROOT", message)
+
     def test_actual_area_falls_back_to_workbook(self) -> None:
         self.assertEqual(select_actual_area({}, 123.5), 123.5)
 

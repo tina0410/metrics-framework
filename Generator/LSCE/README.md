@@ -5,7 +5,7 @@
 
 ## nanobind 改造与接口（2026-08-31）
 
-已迁移到 nanobind 并接入评估链，但本机缺少 Clang 20 原生工具链，**原生构建、绑定调用、位级一致性和完整 RTL 尚未验收**。不能把下面的契约测试视为原生验证通过。
+已迁移到 nanobind 并接入评估链。用户提供的 Linux / Python 3.10.19 日志确认 **8 项原生构建、绑定调用及新旧 C++ 对比测试通过**；本机 Windows 缺少 Clang 20，未复现这组原生测试。完整 RTL 回归目前在面积模型导入阶段失败，尚未启动 RTL 仿真，不能视为 RTL 验收通过。
 
 调用链：
 
@@ -109,6 +109,18 @@ LSCE_RUN_RTL=1 uv run --no-sync pytest -m rtl -q
 
 `bindings` extra 在 Windows/Linux 均安装 nanobind（锁文件固定 2.15.0），不依赖平台专属绑定生成器。Windows 原生构建还需要 Clang 20、MSVC C++ 工具和 Windows SDK；不能复制 Linux `.venv` 使用，也不能改用 Clang 22/C++20 验收。建议 Python 3.11 以匹配 scikit-learn 1.3.2 面积模型。
 
+面积估计器及模型是独立仓库，不包含在本仓库或 `uv sync` 安装内容中。默认目录仍为相对本文件的 `../../Area_TP_Estimator/Est_LS_CE_M2V`。如果克隆位置多了一层目录，或模型保存在别处，在启动 Python 前指定实际目录：
+
+```bash
+export LSCE_AREA_ROOT="$HOME/Desktop/mjj/Area_TP_Estimator/Est_LS_CE_M2V"
+test -f "$LSCE_AREA_ROOT/EstLS.py"
+LSCE_RUN_RTL=1 "$UV_PROJECT_ENVIRONMENT/bin/python" -m pytest -m rtl -vv -x
+```
+
+上面路径仅是原工程布局示例，必须指向自己的真实目录。目录需要 `EstLS.py`、`EstModule.py`、`KeyParam.py`、`PyTU.py`、`model/SU_in.xlsx`、`model/ADD_area.pkl`、`model/pure_MUL_area.pkl` 和 `model/SU_out_FxP_area.pkl`。工作簿真实值仍从同目录 `LSCE结果.xlsx` 读取；只有配置同时显式覆盖真实面积与综合时间时才不需要该表。只加载可信来源的 pickle 模型。缺文件会明确列出目录和缺失项，不搜索其他模型或用预测值代替真实值。
+
+`E:_configured_area_root() -> Path` 是模块内路径辅助函数，不计入关键跨模块接口。它在导入时读取 `LSCE_AREA_ROOT`（支持 `~`，相对路径基于启动目录），统一设置 `AREA_ROOT` 与 `AREA_RESULTS`。改目录只需重启 Python，无需重新生成或编译 C++；应重跑现场面积模型与完整 RTL 回归。未设置变量时保留原有行为，空变量报错。
+
 ```python
 from evaluate_lsce import run_lsce_evaluation, run_lsce_evaluations
 one = run_lsce_evaluation("configs/config_case1.json")
@@ -130,13 +142,16 @@ assert len(frames["o_H"]) == 10
 
 验证记录（2026-08-31）：
 
+- 路径修复回归：本机 Python 3.14 下 41 passed / 14 skipped；新增默认目录兼容、外部目录、空变量、缺文件诊断测试。Python 3.11 下通过 `LSCE_AREA_ROOT` 现场运行五个标准 case 的面积模型及工作簿读取成功；没有模拟面积输出，未运行完整 RTL。
 - 通过：Python 3.14 / 3.11 各 37 项契约测试；包括配置非法输入、外部 BOM 配置、参数变化、清理隔离、模板实际生成、全参考序列匹配逻辑。形状/调度测试明确使用 mock，不算 RTL 验证。
 - 通过：scikit-learn 1.3.2 现场运行 case1–case5 面积模型和工作簿真实值读取；预测面积分别为 90258.32、122071.89、176565.29、174528.77、161875.33 μm²。外部配置在 `run_simulation=false` 下的单 case、批量、CLI 和时钟修改回归通过，RTL 字段保持 None。
 - 通过：五个标准 case 的真实 RTL/TB 生成与 Icarus 编译（含面积模型先加载后的同进程导入顺序）；未运行 vvp，不代表 RTL 功能或时序验证。
 - 通过：自有 21 个 Python/生成模板文件无中文注释或 docstring；不改第三方 `pytv/`、QuBLAS、许可证或中文业务字段。算法模板仅删除无用日志流并简化英文注释，算术未变。
 - 失败：主动启用 case1 原生回归，在 Clang 版本预检被阻止（本机为 22.1.8）。nanobind 2.15.0 已在 Windows 的隔离 Python 3.11/3.14 环境安装成功。没有伪造成功或回退旧产物。
 - 工具链补齐尝试：系统 Clang 为 22.1.8，Visual Studio 附带版本为 22.1.3；官方 Clang 20 压缩包下载约几十 KB/s，预计数小时，已停止。没有替换系统编译器。
-- 未执行：原生编译、扩展导入/真实调用、新旧 C++ 位级对比、完整 RTL。默认套件跳过 8 项原生、6 项 RTL 测试。
+- 用户 Linux 验证：Python 3.10.19，设置 `CXX=clang++-20` 与 `LSCE_RUN_NATIVE=1` 后，8 passed / 43 deselected；包括标准 case1–case5 和 parallelism、quantization、single_stage 配置变更。此结果来自用户提供的真实日志，未在本机复跑。
+- 用户 RTL 验证：首个 case 在 `_load_area_evaluator` 导入 `EstLS` 时失败；后续 5 项因 `-x` 未执行，尚无 RTL 匹配或探针计时验证结果。
+- 本机未执行：原生编译、扩展导入/真实调用、新旧 C++ 位级对比、完整 RTL。默认套件跳过 8 项原生、6 项 RTL 测试。
 - 已解决的测试环境问题：Python 3.11 的临时目录权限冲突通过工作区专属 `--basetemp` 解决；Windows GBK 打印单位字符失败通过 UTF-8 测试输出解决。两者均已重跑。
 
 清理仅重建当前 case 的七个标准 workspace 子目录，删除当前标准成功标记/指标文件；保留其他 case、case 根目录和用户额外文件，并拒绝经符号链接或 junction 重定向的工作区。面积预测计时仍包围原模型入口，真实综合时间绝不用本轮仿真时间替代。
