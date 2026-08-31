@@ -1,0 +1,44 @@
+{
+  "Number of Transmit Antennas": 16,
+  "Number of Receiving Antennas": 32,
+  "Parallelism T": 4,
+  "Parallelism R": 32,
+  "Quantization format of Y": {
+    "bitwidth": 10,
+    "fractional width": 4,
+    "signed": true
+  },
+  "Quantization format of P": {
+    "bitwidth": 10,
+    "fractional width": 4,
+    "signed": true
+  },
+  "Quantization format of H": {
+    "bitwidth": 10,
+    "fractional width": 2,
+    "signed": true
+  },
+  "Quantization format of M_V": {
+    "bitwidth": 10,
+    "fractional width": 2,
+    "signed": true
+  },
+  "Quantization Mode": "TRN.TCPL",
+  "Overflow Mode": "WRP.TCPL",
+  "Pipeline Stages ([Multiplication, Adder Tree])": [
+    1,
+    1
+  ],
+  "clock": {
+    "period_ns": 10.0
+  },
+  "flow": {
+    "run_simulation": true
+  },
+  "area": {
+            "use_config_actual_area":  false,
+            "actual_area_um2":  null,
+            "use_config_actual_time":  false,
+            "actual_time_ms":  null
+          }
+}

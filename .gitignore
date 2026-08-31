@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.lsce-tools/
+Generator/LSCE/.binding_builds/
+Generator/LSCE/evaluation_output/
+Generator/LSCE/BehaviorialVerification/sim/

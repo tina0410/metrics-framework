@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+import json
+import sys
+import unittest
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+
+from evaluate_lsce import (
+    latency_cycles,
+    load_config,
+    resolve_config_selection,
+    run_lsce_evaluation,
+    select_actual_area,
+    select_actual_time,
+)
+
+
+class LSCEEvaluationTests(unittest.TestCase):
+    def test_actual_area_falls_back_to_workbook(self) -> None:
+        self.assertEqual(select_actual_area({}, 123.5), 123.5)
+
+    def test_actual_area_uses_enabled_config_value(self) -> None:
+        config = {
+            "area": {
+                "use_config_actual_area": True,
+                "actual_area_um2": 456.75,
+            }
+        }
+        self.assertEqual(select_actual_area(config, 123.5), 456.75)
+
+    def test_enabled_config_area_requires_value(self) -> None:
+        config = {
+            "area": {
+                "use_config_actual_area": True,
+                "actual_area_um2": None,
+            }
+        }
+        with self.assertRaises(ValueError):
+            select_actual_area(config, 123.5)
+    def test_actual_time_falls_back_to_workbook(self) -> None:
+        self.assertEqual(select_actual_time({}, 103954.488), 103954.488)
+
+    def test_actual_time_uses_enabled_config_value(self) -> None:
+        config = {
+            "area": {
+                "use_config_actual_time": True,
+                "actual_time_ms": 456.75,
+            }
+        }
+        self.assertEqual(select_actual_time(config, 123.5), 456.75)
+
+    def test_enabled_config_time_requires_value(self) -> None:
+        config = {
+            "area": {
+                "use_config_actual_time": True,
+                "actual_time_ms": None,
+            }
+        }
+        with self.assertRaises(ValueError):
+            select_actual_time(config, 123.5)
+    def test_default_selection_includes_case1_through_case5(self) -> None:
+        self.assertEqual(
+            [path.stem for path in resolve_config_selection()],
+            [f"config_case{i}" for i in range(1, 6)],
+        )
+
+    def test_latency_formula_for_standard_cases(self) -> None:
+        expected = {1: 8, 2: 6, 3: 6, 4: 10, 5: 18}
+        for case_id, cycles in expected.items():
+            config = load_config(ROOT / "configs" / f"config_case{case_id}.json")
+            self.assertEqual(latency_cycles(config), cycles)
+
+    def test_invalid_parallelism_is_rejected(self) -> None:
+        config_path = ROOT / "configs" / "config_case1.json"
+        config = json.loads(config_path.read_text(encoding="utf-8-sig"))
+        config["Parallelism T"] = 3
+        with TemporaryDirectory() as directory:
+            temporary = Path(directory) / "config_case7.json"
+            temporary.write_text(json.dumps(config), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "must divide"):
+                load_config(temporary)
+    @patch("evaluate_lsce.simulate_lsce", return_value={"latency_cycles": 8, "output_interval_cycles": 4})
+    @patch("evaluate_lsce.evaluate_lsce_area")
+    def test_case1_uses_area_evaluator_and_bp_output_shape(self, area_mock, simulation_mock) -> None:
+        area_mock.return_value = {
+            "predicted_area_um2": 90258.32,
+            "actual_area_um2": 91814.8,
+            "error_percent": 1.695247,
+            "prediction_time_ms": 0.1234567,
+            "synthesis_time_ms": 103954.488,
+            "speedup": 842030.269124,
+        }
+        with TemporaryDirectory() as directory, patch(
+            "evaluate_lsce.configured_output_dir", return_value=Path(directory)
+        ):
+            result = run_lsce_evaluation(ROOT / "configs" / "config_case1.json")
+            self.assertEqual(set(result), {"延迟", "面积", "Throughput", "硬件复杂度"})
+            self.assertEqual(result["延迟"]["预测结果 (cycles)"], 8)
+            self.assertEqual(result["面积"]["预测结果 (μm²)"], 90258.32)
+            self.assertEqual(result["面积"]["真实结果 (μm²)"], 91814.8)
+            self.assertEqual(result["面积"]["预测时间 (ms)"], 0.123457)
+            self.assertEqual(result["面积"]["综合时间 (ms)"], 103954.488)
+            self.assertEqual(result["面积"]["速度提升倍数 (×)"], 842030.27)
+            area_mock.assert_called_once()
+            output = Path(directory) / "lsce_metrics.json"
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8")), result)
+
+if __name__ == "__main__":
+    unittest.main()
