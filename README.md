@@ -5,7 +5,7 @@
 
 ## nanobind 改造与接口（2026-08-31）
 
-已迁移到 nanobind 并接入评估链。用户提供的 Linux / Python 3.10.19 日志确认 **8 项原生构建、绑定调用及新旧 C++ 对比测试通过**；本机 Windows 缺少 Clang 20，未复现这组原生测试。完整 RTL 回归目前在面积模型导入阶段失败，尚未启动 RTL 仿真，不能视为 RTL 验收通过。
+已迁移到 nanobind 并接入评估链。用户完成 Linux 目录整理与 Python 3.10 环境重建后，提供的完整回归日志为 **55 passed、5 warnings，耗时 67.93 秒**：41 项契约测试、8 项原生构建/绑定调用/新旧 C++ 对比、6 项 RTL 回归全部通过。本机 Windows 缺少 Clang 20，未复现原生及完整 RTL 测试；不能将用户 Linux 结果算作本机验证。
 
 调用链：
 
@@ -150,7 +150,9 @@ assert len(frames["o_H"]) == 10
 - 失败：主动启用 case1 原生回归，在 Clang 版本预检被阻止（本机为 22.1.8）。nanobind 2.15.0 已在 Windows 的隔离 Python 3.11/3.14 环境安装成功。没有伪造成功或回退旧产物。
 - 工具链补齐尝试：系统 Clang 为 22.1.8，Visual Studio 附带版本为 22.1.3；官方 Clang 20 压缩包下载约几十 KB/s，预计数小时，已停止。没有替换系统编译器。
 - 用户 Linux 验证：Python 3.10.19，设置 `CXX=clang++-20` 与 `LSCE_RUN_NATIVE=1` 后，8 passed / 43 deselected；包括标准 case1–case5 和 parallelism、quantization、single_stage 配置变更。此结果来自用户提供的真实日志，未在本机复跑。
-- 用户 RTL 验证：首个 case 在 `_load_area_evaluator` 导入 `EstLS` 时失败；后续 5 项因 `-x` 未执行，尚无 RTL 匹配或探针计时验证结果。
+- 用户 RTL 初次验证失败：首个 case 在 `_load_area_evaluator` 导入 `EstLS` 时失败；后续 5 项因 `-x` 未执行。该问题随后通过恢复面积路径修复及统一运行目录解决。
+- 用户最终 Linux 验证：在 `~/Desktop/mjj/Generator/LSCE` 使用重建的 `.venv-lsce`（Python 3.10），显式指定两份测试文件并开启 `LSCE_RUN_NATIVE=1 LSCE_RUN_RTL=1`，结果为 55 passed / 5 warnings，67.93 秒。覆盖标准 case1–case5、三组原生配置变更和外部 RTL 配置变更；RTL 回归经真实完整 C++ 序列匹配及探针测量链路，没有用预测值替代 RTL 结果。结果来自用户日志，未在本机复跑。
+- 剩余警告：第三方 pyverilog 的无效转义、pytv 的三个配置模块端口/名称提示，以及自有 `designs/Delay.py` 自测入口中路径字符串的无效转义；均未造成此次测试失败。安装包行为未验收，本次按源码运行。测试通过不表示这些警告已经修复。
 - 本机未执行：原生编译、扩展导入/真实调用、新旧 C++ 位级对比、完整 RTL。默认套件跳过 8 项原生、6 项 RTL 测试。
 - 已解决的测试环境问题：Python 3.11 的临时目录权限冲突通过工作区专属 `--basetemp` 解决；Windows GBK 打印单位字符失败通过 UTF-8 测试输出解决。两者均已重跑。
 
