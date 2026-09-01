@@ -95,11 +95,11 @@ inline void LSCE_ACC(Qu<dim<P_R, N_T>, QU_Y>& i_Y,
 
 ### 最小运行与验证
 
-建议在 Linux、Python 3.11、Clang 20 环境运行（现有模型版本为 scikit-learn 1.3.2）：
+统一在 Linux、Python 3.10.x、Clang 20 环境运行（现有模型版本为 scikit-learn 1.3.2）：
 
 ```bash
 export CXX=/usr/bin/clang++-20
-uv sync --python 3.11 --extra bindings
+uv sync --python 3.10 --extra bindings
 uv pip install 'numpy<2' 'scikit-learn==1.3.2'
 uv run --no-sync python evaluate_lsce.py 1
 uv run --no-sync pytest -q
@@ -107,7 +107,7 @@ LSCE_RUN_NATIVE=1 uv run --no-sync pytest -m native -q
 LSCE_RUN_RTL=1 uv run --no-sync pytest -m rtl -q
 ```
 
-`bindings` extra 在 Windows/Linux 均安装 nanobind（锁文件固定 2.15.0），不依赖平台专属绑定生成器。Windows 原生构建还需要 Clang 20、MSVC C++ 工具和 Windows SDK；不能复制 Linux `.venv` 使用，也不能改用 Clang 22/C++20 验收。建议 Python 3.11 以匹配 scikit-learn 1.3.2 面积模型。
+`bindings` extra 在 Windows/Linux 均安装 nanobind（锁文件固定 2.15.0），不依赖平台专属绑定生成器。项目、锁文件和 CMake 统一要求 Python 3.10.x；Python 3.11 只保留为历史契约测试记录，不属于当前支持矩阵。面积模型固定使用 scikit-learn 1.3.2。Windows 原生构建还需要 Clang 20、MSVC C++ 工具和 Windows SDK；不能复制 Linux `.venv` 使用，也不能改用 Clang 22/C++20 验收。
 
 面积估计器及模型是独立仓库，不包含在本仓库或 `uv sync` 安装内容中。默认目录仍为相对本文件的 `../../Area_TP_Estimator/Est_LS_CE_M2V`。如果克隆位置多了一层目录，或模型保存在别处，在启动 Python 前指定实际目录：
 
@@ -224,7 +224,7 @@ clock_frequency_mhz = 100 MHz
 
 ### 2.1 Python 环境
 
-要求 Python 3.10 或更高版本：
+要求 Python 3.10.x；Python 3.11 及更高版本会在依赖解析或 CMake 配置阶段明确失败：
 
 ```bash
 cd Generator/LSCE

@@ -10,6 +10,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+if(NOT Python_VERSION_MAJOR EQUAL 3 OR NOT Python_VERSION_MINOR EQUAL 10)
+  message(FATAL_ERROR
+    "LSCE requires Python 3.10.x; configure with the Python 3.10 environment")
+endif()
 execute_process(
   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
   OUTPUT_VARIABLE nanobind_ROOT
