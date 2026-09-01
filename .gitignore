@@ -5,3 +5,15 @@ __pycache__/
 Generator/LSCE/.binding_builds/
 Generator/LSCE/evaluation_output/
 Generator/LSCE/BehaviorialVerification/sim/
+
+/.venv*/
+
+/.binding_builds/
+
+/evaluation_output/
+
+/BehaviorialVerification/sim/
+
+/*.egg-info/
+
+/rtl-test.log
