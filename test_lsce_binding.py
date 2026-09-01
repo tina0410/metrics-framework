@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from types import ModuleType
 from unittest.mock import patch
 
 import pytest
@@ -23,6 +24,16 @@ ROOT = Path(__file__).resolve().parent
 @pytest.fixture
 def config():
     return evaluation.load_config(ROOT / "configs/config_case1.json")
+
+
+def test_generator_context_isolates_area_model_pytu(config, monkeypatch):
+    area_pytu = ModuleType("PyTU")
+    monkeypatch.setitem(sys.modules, "PyTU", area_pytu)
+
+    rendered = binding.render_parameters(config)
+
+    assert "using QU_Y = Qu<" in rendered
+    assert sys.modules["PyTU"] is area_pytu
 
 
 @pytest.mark.parametrize("field,value", [

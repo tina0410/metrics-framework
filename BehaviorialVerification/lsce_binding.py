@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+import threading
 from types import ModuleType
 import uuid
 
@@ -22,19 +23,39 @@ BINDINGS = LSCE_ROOT / "bindings"
 QUANTIZATION_MODES = ("TRN.TCPL", "TRN.SMGN", "RND.POS_INF", "RND.NEG_INF",
                       "RND.ZERO", "RND.INF", "RND.CONV")
 OVERFLOW_MODES = ("WRP.TCPL", "SAT.TCPL", "SAT.SMGN", "SAT.ZERO")
+_GENERATOR_IMPORT_LOCK = threading.RLock()
+
+
+def _load_generator_pytu() -> ModuleType:
+    """Load the generator's PyTU under the legacy name for local imports."""
+    path = ROOT / "PyTU.py"
+    spec = importlib.util.spec_from_file_location("PyTU", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load LSCE generator types from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["PyTU"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 @contextlib.contextmanager
 def generator_context():
     """Scope legacy generator search paths and command-line parsing."""
-    previous_path, previous_argv = sys.path[:], sys.argv[:]
-    sys.path[:0] = [str(ROOT), str(LSCE_ROOT / "designs"), str(LSCE_ROOT)]
-    sys.argv = [sys.argv[0]]
-    try:
-        yield
-    finally:
-        sys.path[:] = previous_path
-        sys.argv[:] = previous_argv
+    with _GENERATOR_IMPORT_LOCK:
+        previous_path, previous_argv = sys.path[:], sys.argv[:]
+        previous_pytu = sys.modules.get("PyTU")
+        sys.path[:0] = [str(ROOT), str(LSCE_ROOT / "designs"), str(LSCE_ROOT)]
+        sys.argv = [sys.argv[0]]
+        try:
+            _load_generator_pytu()
+            yield
+        finally:
+            if previous_pytu is None:
+                sys.modules.pop("PyTU", None)
+            else:
+                sys.modules["PyTU"] = previous_pytu
+            sys.path[:] = previous_path
+            sys.argv[:] = previous_argv
 
 
 def generator_parameters(config: dict) -> dict:
