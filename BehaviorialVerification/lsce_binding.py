@@ -24,10 +24,15 @@ QUANTIZATION_MODES = ("TRN.TCPL", "TRN.SMGN", "RND.POS_INF", "RND.NEG_INF",
                       "RND.ZERO", "RND.INF", "RND.CONV")
 OVERFLOW_MODES = ("WRP.TCPL", "SAT.TCPL", "SAT.SMGN", "SAT.ZERO")
 _GENERATOR_IMPORT_LOCK = threading.RLock()
+_GENERATOR_PYTU: ModuleType | None = None
 
 
 def _load_generator_pytu() -> ModuleType:
     """Load the generator's PyTU under the legacy name for local imports."""
+    global _GENERATOR_PYTU
+    if _GENERATOR_PYTU is not None:
+        sys.modules["PyTU"] = _GENERATOR_PYTU
+        return _GENERATOR_PYTU
     path = ROOT / "PyTU.py"
     spec = importlib.util.spec_from_file_location("PyTU", path)
     if spec is None or spec.loader is None:
@@ -35,6 +40,7 @@ def _load_generator_pytu() -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     sys.modules["PyTU"] = module
     spec.loader.exec_module(module)
+    _GENERATOR_PYTU = module
     return module
 
 

@@ -31,6 +31,10 @@ def test_generator_context_isolates_area_model_pytu(config, monkeypatch):
     monkeypatch.setitem(sys.modules, "PyTU", area_pytu)
 
     rendered = binding.render_parameters(config)
+    with binding.generator_context():
+        first_generator_pytu = sys.modules["PyTU"]
+    with binding.generator_context():
+        assert sys.modules["PyTU"] is first_generator_pytu
 
     assert "using QU_Y = Qu<" in rendered
     assert sys.modules["PyTU"] is area_pytu
