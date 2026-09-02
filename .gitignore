@@ -3,7 +3,8 @@ __pycache__/
 .venv/
 .lsce-tools/
 Generator/LSCE/evaluation_output/
-Generator/LSCE/BehaviorialVerification/sim/
+Generator/LSCE/BehaviorialVerification/sim/*
+!Generator/LSCE/BehaviorialVerification/sim/README.md
 Generator/LSCE/BehaviorialVerification/Simulation Screenshots/
 Generator/LSCE/BehaviorialVerification/latency_reports/
 Generator/LSCE/RTL/
