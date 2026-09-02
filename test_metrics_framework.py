@@ -375,6 +375,102 @@ def test_mimo_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
 
 
+def test_ls_rtl_validation_reports_measured_latency(monkeypatch, tmp_path, capsys):
+    config_path = tmp_path / "config_case7.json"
+    config = {
+        "clock": {"period_ns": 10.0},
+        "Number of Receiving Antennas": 2,
+        "validation": {
+            "area": {
+                "actual_um2": 112.0,
+                "synthesis_time_ms": 20.0,
+                "reported_speedup": None,
+            }
+        },
+    }
+
+    class Module:
+        @staticmethod
+        def validate_config(value, path):
+            assert path == config_path
+            return value
+
+        @staticmethod
+        def read_workbook_area_reference(_value):
+            pytest.fail("area reference must not be read")
+
+        @staticmethod
+        def simulate_lsce(path, *, config):
+            assert path == config_path
+            return {"latency_cycles": 12, "output_interval_cycles": 4}
+
+    monkeypatch.setattr(ls_adapter, "_module", lambda: Module)
+    result = ls_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 12
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        "Success. The RTL latency of config_case7 is 12 cycles\n"
+    )
+
+
+def test_mimo_rtl_validation_reports_measured_latency(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "config_case8.json"
+    config = {
+        "validation": {
+            "area": {
+                "actual_um2": 112.0,
+                "synthesis_time_ms": 20.0,
+                "reported_speedup": None,
+            }
+        }
+    }
+
+    class Evaluator:
+        @staticmethod
+        def load_config(path):
+            assert path == config_path
+            return config
+
+        @staticmethod
+        def simulate_rtl(path):
+            assert path == config_path
+            return {
+                "sim_latency_cycles": 14,
+                "sim_output_interval_cycles": 2,
+                "functional_match": True,
+            }
+
+    monkeypatch.setattr(
+        mimo_adapter,
+        "_modules",
+        lambda: (
+            Evaluator,
+            "NAND2",
+            lambda area, ge: area / ge,
+            lambda: 1.12,
+            lambda _config: 8,
+            lambda _config, *, simulated_output_interval_cycles: {
+                "simulated_gbps": 0.5
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        mimo_adapter,
+        "_area",
+        lambda *_args: pytest.fail("area reference must not be read"),
+    )
+    result = mimo_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 14
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        "Success. The RTL latency of config_case8 is 14 cycles\n"
+    )
+
+
 def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     config = _validation_config()
     config["decoder"] = {
@@ -424,7 +520,9 @@ def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
 
 
-def test_bp_rtl_validation_uses_canonical_sim_directory(monkeypatch, tmp_path):
+def test_bp_rtl_validation_uses_canonical_sim_directory(
+    monkeypatch, tmp_path, capsys
+):
     config_path = tmp_path / "config6.json"
     simulation_dir = tmp_path / "sim" / "config6"
     config = {
@@ -498,3 +596,6 @@ def test_bp_rtl_validation_uses_canonical_sim_directory(monkeypatch, tmp_path):
     assert observed["rtl_config"] == simulation_dir / "rtl_config.json"
     assert observed["rtl_config"].is_file()
     assert result["latency"]["source"] == "rtl"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "Success. The RTL latency of config6 is 10 cycles\n"

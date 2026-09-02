@@ -93,7 +93,13 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         started = time.perf_counter()
         simulation = module.simulate_lsce(config_path, config=config)
         measured_time = (time.perf_counter() - started) * 1000.0
-        actual_cycles = actual_cycles or int(simulation["latency_cycles"])
+        rtl_cycles = int(simulation["latency_cycles"])
+        print(
+            f"Success. The RTL latency of {config_path.stem} is "
+            f"{rtl_cycles} cycles",
+            file=sys.stderr,
+        )
+        actual_cycles = actual_cycles or rtl_cycles
         interval = interval or int(simulation["output_interval_cycles"])
         simulation_time = simulation_time or measured_time
         latency_source = "config+rtl" if latency_had_config else "rtl"

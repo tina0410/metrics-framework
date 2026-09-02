@@ -140,7 +140,13 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         )
         if simulation.get("waveform_verified") is False or simulation.get("decoding_verified") is False:
             raise RuntimeError("BP RTL functional comparison failed")
-        actual_cycles = actual_cycles or int(simulation["sim_latency_cycles"])
+        rtl_cycles = int(simulation["sim_latency_cycles"])
+        print(
+            f"Success. The RTL latency of {config_path.stem} is "
+            f"{rtl_cycles} cycles",
+            file=sys.stderr,
+        )
+        actual_cycles = actual_cycles or rtl_cycles
         simulation_time = simulation_time or float(simulation["rtl_simulation_time_ms"])
         if simulation.get("cpp_iterations") is not None:
             actual_iterations = float(simulation["cpp_iterations"])
