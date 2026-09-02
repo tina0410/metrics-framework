@@ -1,24 +1,12 @@
 [project]
-name = "lsce-metric-evaluation"
+name = "metrics-framework"
 version = "0.1.0"
-description = "Parameter-driven metric and RTL timing evaluation for LSCE"
-requires-python = ">=3.10,<3.11"
-dependencies = [
-    "joblib>=1.3",
-    "numpy>=1.24",
-    "openpyxl>=3.1",
-    "pandas>=2.0",
-    "pytest>=8.0",
-    "pyverilog>=1.3",
-    "scikit-learn>=1.3",
-]
+description = "Extensible isolated metric evaluation framework"
+requires-python = ">=3.10"
+dependencies = []
 
 [project.optional-dependencies]
-bindings = [
-    "nanobind>=2.9,<3",
-    "cmake>=3.20",
-    "ninja>=1.11",
-]
+test = ["pytest>=8.0"]
 
 [project.scripts]
 metrics = "metrics_framework.cli:main"
@@ -30,10 +18,6 @@ packages = ["metrics_framework", "metrics_framework.adapters"]
 metrics_framework = ["registry.json", "README.md"]
 
 [tool.pytest.ini_options]
-testpaths = ["test_evaluate_lsce.py", "test_lsce_binding.py", "test_metrics_framework.py"]
-python_files = ["test_evaluate_lsce.py", "test_lsce_binding.py", "test_metrics_framework.py"]
-norecursedirs = ["Generator/LSCE", ".venv*", ".lsce-tools", "evaluation_output"]
-markers = [
-    "native: requires Clang 20 and a working nanobind installation",
-    "rtl: requires native bindings, Icarus Verilog and area models",
-]
+testpaths = ["test_metrics_framework.py"]
+python_files = ["test_metrics_framework.py"]
+norecursedirs = ["Generator", "BPPredIter", ".venv*", ".lsce-tools", "evaluation_output"]

@@ -7,10 +7,28 @@ from pathlib import Path
 import pytest
 
 from metrics_framework import cli
-from metrics_framework.core import EvaluationUnavailable, _interpreter, evaluate, predict
+from metrics_framework.core import (
+    EvaluationUnavailable,
+    Registry,
+    _interpreter,
+    evaluate,
+    predict,
+)
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
+
+
+ROOT = Path(__file__).resolve().parent
+
+
+def test_registered_ls_uses_canonical_module_root():
+    spec = Registry().get("ls")
+    expected = (ROOT / "Generator" / "LSCE").resolve()
+    assert spec.root == expected
+    assert spec.config_dir == expected / "configs"
+    assert spec.output_root == expected / "evaluation_output"
+    assert Path(ls_adapter._module().__file__).resolve() == expected / "evaluate_lsce.py"
 
 
 FAKE_ADAPTER = r'''

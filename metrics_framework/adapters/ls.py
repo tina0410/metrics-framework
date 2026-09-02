@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LSCE_ROOT = PROJECT_ROOT / "Generator" / "LSCE"
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(LSCE_ROOT))
 os.environ.setdefault(
     "LSCE_AREA_ROOT",
     str(PROJECT_ROOT / "Area_TP_Estimator" / "Est_LS_CE_M2V"),

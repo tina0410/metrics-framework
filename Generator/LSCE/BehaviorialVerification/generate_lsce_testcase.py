@@ -45,13 +45,19 @@ def clean_case(case_id: int) -> None:
         _remove_path(workspace / generated_name)
 
 def generate_testcase(config_path: Path, case_id: int, *, config: dict | None = None) -> dict[str, list[str]]:
-    """Generate one RTL workspace and return its freshly bound C++ reference."""
+    """Generate one RTL workspace and return its standalone C++ reference."""
     if __package__:
-        from .lsce_binding import (build_reference, generator_context,
-                                   generator_parameters, write_reference_files)
+        from .lsce_reference import (
+            generate_reference_files,
+            generator_context,
+            generator_parameters,
+        )
     else:
-        from lsce_binding import (build_reference, generator_context,
-                                  generator_parameters, write_reference_files)
+        from lsce_reference import (
+            generate_reference_files,
+            generator_context,
+            generator_parameters,
+        )
     with generator_context():
         from evaluate_lsce import load_config, validate_config, _case_id
         config_path = config_path.resolve()
@@ -67,9 +73,7 @@ def generate_testcase(config_path: Path, case_id: int, *, config: dict | None = 
     (case_root / "config_snapshot.json").write_text(
         json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     (case_root / "config_source.txt").write_text(str(config_path), encoding="utf-8")
-    module = build_reference(config, workspace / "CppModules")
-    rows = module.reference_frames(10)
-    write_reference_files(rows, workspace, case_id)
+    rows = generate_reference_files(config, workspace, case_id, n_frames=10)
     design_rtl = workspace / "Generated_RTL" / case_name
     rtl = workspace / "RTL" / case_name
     design_rtl.mkdir(parents=True, exist_ok=True)

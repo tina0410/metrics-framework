@@ -40,6 +40,11 @@ GE_REFERENCE_CELL = "LVT_NAND2HDV0"
 GE_AREA_UM2 = 1.12
 AREA_COLUMN_ALIASES = ("dc综合面积", "dc×ÛºÏÃæ»ý", "Area (μm²)", "Area (um^2)")
 SYNTHESIS_TIME_COLUMN_ALIASES = ("time", "综合时间", "Synthesis Time (s)")
+QUANTIZATION_MODES = (
+    "TRN.TCPL", "TRN.SMGN", "RND.POS_INF", "RND.NEG_INF",
+    "RND.ZERO", "RND.INF", "RND.CONV",
+)
+OVERFLOW_MODES = ("WRP.TCPL", "SAT.TCPL", "SAT.SMGN", "SAT.ZERO")
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -155,7 +160,6 @@ def validate_config(config: dict[str, Any], path: Path) -> dict[str, Any]:
         area["use_config_actual_time"], bool
     ):
         raise ValueError(f"{path}: area.use_config_actual_time must be boolean")
-    from BehaviorialVerification.lsce_binding import QUANTIZATION_MODES, OVERFLOW_MODES
     if config.get("Quantization Mode", "TRN.TCPL") not in QUANTIZATION_MODES:
         raise ValueError(f"{path}: unsupported Quantization Mode")
     if config.get("Overflow Mode", "WRP.TCPL") not in OVERFLOW_MODES:

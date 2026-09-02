@@ -1,0 +1,26 @@
+[project]
+name = "lsce-metric-evaluation"
+version = "0.1.0"
+description = "Parameter-driven LSCE metric and RTL timing evaluation"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "joblib>=1.3",
+    "numpy>=1.24,<2",
+    "openpyxl>=3.1",
+    "pandas>=2.0",
+    "pytest>=8.0",
+    "pyverilog>=1.3",
+    "scikit-learn==1.3.2",
+]
+
+[tool.setuptools]
+py-modules = ["evaluate_lsce", "Generation"]
+
+[tool.pytest.ini_options]
+testpaths = ["test_evaluate_lsce.py", "test_lsce_reference.py"]
+python_files = ["test_evaluate_lsce.py", "test_lsce_reference.py"]
+norecursedirs = [".venv*", "evaluation_output", "BehaviorialVerification/sim"]
+markers = [
+    "native: requires Clang 20 and the standalone C++ reference toolchain",
+    "rtl: requires Clang 20, Icarus Verilog, pytv and area models",
+]

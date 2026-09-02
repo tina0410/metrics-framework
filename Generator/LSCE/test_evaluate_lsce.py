@@ -35,8 +35,7 @@ class LSCEEvaluationTests(unittest.TestCase):
                 target.mkdir(parents=True, exist_ok=True)
                 for name in (
                     "test_evaluate_lsce.py",
-                    "test_lsce_binding.py",
-                    "test_metrics_framework.py",
+                    "test_lsce_reference.py",
                 ):
                     (target / name).write_text(
                         "def test_contract(): pass\n", encoding="utf-8"
@@ -57,8 +56,7 @@ class LSCEEvaluationTests(unittest.TestCase):
                 nodes,
                 [
                     "test_evaluate_lsce.py::test_contract",
-                    "test_lsce_binding.py::test_contract",
-                    "test_metrics_framework.py::test_contract",
+                    "test_lsce_reference.py::test_contract",
                 ],
             )
 

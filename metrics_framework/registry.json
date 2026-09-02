@@ -4,7 +4,7 @@
     "ls": {
       "adapter": "metrics_framework/adapters/ls.py",
       "command": ["{python}", "{adapter}"],
-      "root": ".",
+      "root": "Generator/LSCE",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],

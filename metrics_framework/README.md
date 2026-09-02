@@ -14,7 +14,7 @@ python -m metrics_framework <ls|mimo|bp> evaluate [配置编号或路径]
 旧入口也接受新模式，例如：
 
 ```bash
-python evaluate_lsce.py predict 1
+python Generator/LSCE/evaluate_lsce.py predict 1
 python Generator/MIMODetector/evaluate_mimo.py evaluate 2
 python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 ```
