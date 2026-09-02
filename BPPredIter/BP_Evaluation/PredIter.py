@@ -130,9 +130,13 @@ def train(data_path=DATA_FILE, model_path=MODEL_FILE):
 #  预测
 # ================================================================
 
-def predict_iter(ebn0_db, N, code_rate, model_path=MODEL_FILE):
+def load_iter_model(model_path=MODEL_FILE):
     with open(model_path, "rb") as f:
-        b = pickle.load(f)
+        return pickle.load(f)
+
+
+def predict_iter(ebn0_db, N, code_rate, model_path=MODEL_FILE, *, model_bundle=None):
+    b = load_iter_model(model_path) if model_bundle is None else model_bundle
     X = _raw_to_feat(ebn0_db, N, code_rate)
     return float(np.clip(b["model"].predict(b["scaler"].transform(b["poly"].transform(X)))[0], 1.0, 15.0))
 

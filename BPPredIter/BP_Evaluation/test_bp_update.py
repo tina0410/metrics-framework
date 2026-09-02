@@ -11,7 +11,8 @@ from unittest import mock
 area_stub = types.ModuleType("area_tp_integration")
 area_stub.evaluate_bp_area = lambda *args: None
 pred_stub = types.ModuleType("PredIter")
-pred_stub.predict_iter = lambda *args: None
+pred_stub.load_iter_model = lambda: object()
+pred_stub.predict_iter = lambda *args, **kwargs: None
 sys.modules.setdefault("area_tp_integration", area_stub)
 sys.modules.setdefault("PredIter", pred_stub)
 

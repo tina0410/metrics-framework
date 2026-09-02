@@ -176,7 +176,13 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
         "预测结果 (Gbps)": 1.5,
         "仿真结果 (Gbps)": 1.25,
     }
-    assert result["评估总时间 (s)"] > 0
+    recorded_metric_seconds = (
+        result["延迟"]["预测时间 (ms)"]
+        + result["延迟"]["仿真时间 (ms)"]
+        + result["面积"]["预测时间 (ms)"]
+        + result["面积"]["综合时间 (ms)"]
+    ) / 1000.0
+    assert abs(result["评估总时间 (s)"] - recorded_metric_seconds) <= 0.003
     saved = json.loads(
         (root / "evaluation_output" / "config1" / "evaluation.json").read_text(
             encoding="utf-8"
@@ -192,6 +198,69 @@ def test_batch_evaluation_reports_total_time_per_case(tmp_path, monkeypatch):
     assert list(result) == ["config1", "config2"]
     assert result["config1"]["评估总时间 (s)"] > 0
     assert result["config2"]["评估总时间 (s)"] > 0
+
+
+def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path):
+    events: list[str] = []
+    clocks = iter((1.0, 1.001, 2.0, 2.002))
+    expected_model_bundle = object()
+
+    class AreaModule:
+        @staticmethod
+        def Esttop(**_kwargs):
+            return 112.0
+
+    class AreaIntegration:
+        @staticmethod
+        def _load_area_module():
+            return AreaModule
+
+    def load_iter_model():
+        events.append("model_load")
+        return expected_model_bundle
+
+    def predict_iter(*_args, model_bundle):
+        events.append("model_predict")
+        assert model_bundle is expected_model_bundle
+        return 2.0
+
+    monkeypatch.setattr(
+        bp_adapter.time,
+        "perf_counter",
+        lambda: (events.append("clock"), next(clocks))[1],
+    )
+    monkeypatch.setattr(
+        bp_adapter,
+        "_modules",
+        lambda: (
+            AreaIntegration,
+            object(),
+            lambda iterations, _terms: int(iterations * 10),
+            lambda *_args: object(),
+            lambda *_args: 2.0,
+            "NAND2",
+            lambda area, ge: area / ge,
+            lambda: 1.12,
+            load_iter_model,
+            predict_iter,
+        ),
+    )
+    config = {
+        "decoder": {
+            "hardware_architecture": "TypeI",
+            "decoding_algorithm": "MS",
+            "code_length": 64,
+            "parallelism": 16,
+            "data_width": 5,
+            "code_rate": 0.5,
+            "ebn0_db": 10.0,
+        },
+        "clock": {"period_ns": 20.0},
+    }
+
+    result = bp_adapter.predict(tmp_path / "config1.json", config)
+    assert events[:3] == ["model_load", "clock", "model_predict"]
+    assert result["latency"]["prediction_time_ms"] == pytest.approx(1.0)
 
 
 def test_incomplete_validation_does_not_write_evaluation(tmp_path, monkeypatch):
@@ -526,6 +595,7 @@ def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
             "NAND2",
             lambda area, ge: area / ge,
             lambda: 1.12,
+            lambda: object(),
             lambda *_args: 2.0,
         ),
     )
@@ -602,6 +672,7 @@ def test_bp_rtl_validation_uses_canonical_sim_directory(
             "NAND2",
             lambda area, ge: area / ge,
             lambda: 1.12,
+            lambda: object(),
             lambda *_args: 2.0,
         ),
     )

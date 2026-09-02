@@ -290,6 +290,7 @@ def _positive(value: Any, name: str) -> float:
 def _evaluation_view(
     prediction: Mapping[str, Any], validation: Mapping[str, Any]
 ) -> dict[str, Any]:
+    comparison_started = time.perf_counter()
     if prediction["config_digest"] != validation["config_digest"]:
         raise EvaluationUnavailable("Prediction and validation config digests differ")
     module = str(prediction["module"])
@@ -389,6 +390,18 @@ def _evaluation_view(
             },
         }
     )
+    comparison_time_ms = (time.perf_counter() - comparison_started) * 1000.0
+    view["评估总时间 (s)"] = round(
+        (
+            latency_prediction_time
+            + latency_validation_time
+            + area_prediction_time
+            + synthesis_time
+            + comparison_time_ms
+        )
+        / 1000.0,
+        3,
+    )
     return view
 
 
@@ -440,7 +453,6 @@ def evaluate(
     for path in resolve_configs(spec, config):
         output_dir = _output_dir(spec, path)
         _prepare_paths(output_dir)
-        evaluation_started = time.perf_counter()
         prediction_raw: dict[str, Any] | None = None
         try:
             prediction_raw = _run_adapter(spec, "predict", path)
@@ -456,10 +468,6 @@ def evaluate(
         try:
             validation_raw = _run_adapter(spec, "validate", path)
             view = _evaluation_view(prediction_raw, validation_raw)
-            view["评估总时间 (s)"] = round(
-                time.perf_counter() - evaluation_started,
-                3,
-            )
             _write_json(output_dir / "evaluation.json", view)
             rendered.append((path, view))
         except AdapterFailure as error:

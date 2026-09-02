@@ -25,7 +25,7 @@ def _modules():
     import evaluate_bp
     from bp_latency import calculate_latency, cycle_terms, iterations_from_latency
     from hardware_complexity import GE_REFERENCE_CELL, area_to_ge, read_ge_area
-    from PredIter import predict_iter
+    from PredIter import load_iter_model, predict_iter
 
     return (
         area_tp_integration,
@@ -36,6 +36,7 @@ def _modules():
         GE_REFERENCE_CELL,
         area_to_ge,
         read_ge_area,
+        load_iter_model,
         predict_iter,
     )
 
@@ -55,10 +56,11 @@ def _parameters(config: dict[str, Any]) -> tuple[str, str, int, int, int, float,
 
 
 def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
-    area_integration, _evaluator, calculate_latency, cycle_terms, _iterations_from_latency, ge_cell, area_to_ge, read_ge_area, predict_iter = _modules()
+    area_integration, _evaluator, calculate_latency, cycle_terms, _iterations_from_latency, ge_cell, area_to_ge, read_ge_area, load_iter_model, predict_iter = _modules()
     architecture, algorithm, n, m, width, rate, ebn0_db, period_ns = _parameters(config)
+    iteration_model = load_iter_model()
     started = time.perf_counter()
-    iterations = predict_iter(ebn0_db, n, rate)
+    iterations = predict_iter(ebn0_db, n, rate, model_bundle=iteration_model)
     latency = calculate_latency(iterations, cycle_terms(n, m))
     latency_time_ms = (time.perf_counter() - started) * 1000.0
     area_module = area_integration._load_area_module()
@@ -101,7 +103,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
-    area_integration, evaluator, _calculate_latency, cycle_terms, iterations_from_latency, _ge_cell, area_to_ge, read_ge_area, _predict_iter = _modules()
+    area_integration, evaluator, _calculate_latency, cycle_terms, iterations_from_latency, _ge_cell, area_to_ge, read_ge_area, _load_iter_model, _predict_iter = _modules()
     architecture, algorithm, n, m, width, rate, _ebn0_db, period_ns = _parameters(config)
     actual_area, synthesis_time, area_speedup = configured_area(config)
     area_had_config = any(

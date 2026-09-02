@@ -32,7 +32,7 @@ from bp_latency import (
     latency_error,
 )
 from hardware_complexity import GE_REFERENCE_CELL, area_to_ge, read_ge_area
-from PredIter import predict_iter
+from PredIter import load_iter_model, predict_iter
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = ROOT / "config"
@@ -152,8 +152,11 @@ def run_bp_evaluation(
     rate = float(decoder.get("code_rate", 0.5))
     ebn0_db = float(decoder.get("ebn0_db", 10.0))
     period_ns = float(config["clock"]["period_ns"])
+    iteration_model = load_iter_model()
     prediction_started = time.perf_counter()
-    average_iterations = predict_iter(ebn0_db, n, rate)
+    average_iterations = predict_iter(
+        ebn0_db, n, rate, model_bundle=iteration_model
+    )
     terms = cycle_terms(n, m)
     latency = calculate_latency(average_iterations, terms)
     prediction_time_ms = (time.perf_counter() - prediction_started) * 1000.0
