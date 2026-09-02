@@ -249,6 +249,22 @@ def test_cli_evaluation_failure_has_empty_stdout(monkeypatch, capsys):
     assert "RTL unavailable" in captured.err
 
 
+def test_cli_prints_adapter_validation_failure_once(tmp_path, monkeypatch, capsys):
+    _root, registry = _fixture(
+        tmp_path, monkeypatch, [{"fail_validation": True}]
+    )
+
+    def run_fixture(_module, config):
+        return evaluate("fake", config, registry=registry)
+
+    monkeypatch.setattr(cli, "evaluate", run_fixture)
+    exit_code = cli.main(["fake", "evaluate", "1"])
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert captured.out == ""
+    assert captured.err.count("validation unavailable") == 1
+
+
 def test_cli_success_prints_exactly_one_json(monkeypatch, capsys):
     expected = {"延迟": {"预测结果 (cycles)": 8}}
     monkeypatch.setattr(cli, "predict", lambda *_args, **_kwargs: expected)

@@ -207,14 +207,14 @@ def _run_adapter(spec: ModuleSpec, action: str, config_path: Path) -> dict[str, 
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    if process.stderr:
-        print(process.stderr, end="" if process.stderr.endswith("\n") else "\n", file=sys.stderr)
     if process.returncode != 0:
         details = process.stdout.strip() or process.stderr.strip()
         raise AdapterFailure(
             details or f"{spec.name} {action} adapter exited with {process.returncode}",
             returncode=process.returncode,
         )
+    if process.stderr:
+        print(process.stderr, end="" if process.stderr.endswith("\n") else "\n", file=sys.stderr)
     try:
         result = json.loads(process.stdout)
     except json.JSONDecodeError as error:
