@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import unittest
 from tempfile import TemporaryDirectory
@@ -25,6 +26,42 @@ from evaluate_lsce import (
 
 
 class LSCEEvaluationTests(unittest.TestCase):
+    def test_default_collection_ignores_nested_checkout(self) -> None:
+        with TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "pyproject.toml").write_bytes((ROOT / "pyproject.toml").read_bytes())
+            for relative in (".", "LSCE", "LSCE/Generator/LSCE"):
+                target = project / relative
+                target.mkdir(parents=True, exist_ok=True)
+                for name in (
+                    "test_evaluate_lsce.py",
+                    "test_lsce_binding.py",
+                    "test_metrics_framework.py",
+                ):
+                    (target / name).write_text(
+                        "def test_contract(): pass\n", encoding="utf-8"
+                    )
+            collected = subprocess.run(
+                [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+                cwd=project,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(collected.returncode, 0, collected.stdout + collected.stderr)
+            nodes = [
+                line
+                for line in collected.stdout.splitlines()
+                if "::test_contract" in line
+            ]
+            self.assertEqual(
+                nodes,
+                [
+                    "test_evaluate_lsce.py::test_contract",
+                    "test_lsce_binding.py::test_contract",
+                    "test_metrics_framework.py::test_contract",
+                ],
+            )
+
     def test_area_root_keeps_original_default(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(
