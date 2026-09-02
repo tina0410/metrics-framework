@@ -176,13 +176,13 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
         "预测结果 (Gbps)": 1.5,
         "仿真结果 (Gbps)": 1.25,
     }
-    recorded_metric_seconds = (
+    recorded_metric_ms = (
         result["延迟"]["预测时间 (ms)"]
         + result["延迟"]["仿真时间 (ms)"]
         + result["面积"]["预测时间 (ms)"]
         + result["面积"]["综合时间 (ms)"]
-    ) / 1000.0
-    assert abs(result["评估总时间 (s)"] - recorded_metric_seconds) <= 0.003
+    )
+    assert abs(result["评估总时间 (ms)"] - recorded_metric_ms) <= 3.0
     saved = json.loads(
         (root / "evaluation_output" / "config1" / "evaluation.json").read_text(
             encoding="utf-8"
@@ -196,8 +196,8 @@ def test_batch_evaluation_reports_total_time_per_case(tmp_path, monkeypatch):
     result = evaluate("fake", registry=registry)
 
     assert list(result) == ["config1", "config2"]
-    assert result["config1"]["评估总时间 (s)"] > 0
-    assert result["config2"]["评估总时间 (s)"] > 0
+    assert result["config1"]["评估总时间 (ms)"] > 0
+    assert result["config2"]["评估总时间 (ms)"] > 0
 
 
 def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path):

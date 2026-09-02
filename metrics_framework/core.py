@@ -391,15 +391,12 @@ def _evaluation_view(
         }
     )
     comparison_time_ms = (time.perf_counter() - comparison_started) * 1000.0
-    view["评估总时间 (s)"] = round(
-        (
-            latency_prediction_time
-            + latency_validation_time
-            + area_prediction_time
-            + synthesis_time
-            + comparison_time_ms
-        )
-        / 1000.0,
+    view["评估总时间 (ms)"] = round(
+        latency_prediction_time
+        + latency_validation_time
+        + area_prediction_time
+        + synthesis_time
+        + comparison_time_ms,
         3,
     )
     return view
