@@ -27,7 +27,7 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 - `evaluate` 验证完整时写入并打印 `evaluation.json`，展示结构与各模块原有 `*_metrics.json` 一致。
 - `prediction.json` 和 `evaluation.json` 的预测、仿真、综合及总评估时间统一使用毫秒（`ms`）。
 - 四项指标分别输出 `预测时间 (ms)`，计时从所需模型/工作簿加载完成后开始，到该指标的预测函数运行结束。
-- `prediction.json` 和 `evaluation.json` 末尾均包含 `自动评估总时间 (ms)`。预测模式累计四项预测时间；评估模式累计四项预测时间、延迟RTL仿真时间、面积DC综合时间以及指标校验/误差计算时间。两种模式均不包含模型或工作簿读取、adapter启动、文件保存和屏幕打印时间。
+- 只有 `prediction.json` 末尾包含 `自动评估总时间 (ms)`，只累计延迟、面积、Throughput、硬件复杂度四项 predict 时间，不包含模型或工作簿读取、RTL仿真、DC综合、误差计算、adapter启动、文件保存和屏幕打印时间；`evaluation.json` 不计算或输出总时间。
 - `evaluation.json` 的延迟分区保留 `仿真时间 (ms)`，面积分区保留 `综合时间 (ms)`，用于展示验证链耗时并计算速度提升倍数。
 - 验证数据不完整时不生成 `evaluation.json`，stdout 完全为空，stderr 说明原因，退出码为 2。
 - adapter 或框架自身出现未预期错误时 stdout 同样为空，退出码为 1。

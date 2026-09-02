@@ -7,7 +7,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -299,7 +298,6 @@ def _positive(value: Any, name: str) -> float:
 def _evaluation_view(
     prediction: Mapping[str, Any], validation: Mapping[str, Any]
 ) -> dict[str, Any]:
-    comparison_started = time.perf_counter()
     if prediction["config_digest"] != validation["config_digest"]:
         raise EvaluationUnavailable("Prediction and validation config digests differ")
     module = str(prediction["module"])
@@ -408,17 +406,6 @@ def _evaluation_view(
                 "1 GE面积 (μm²)": predicted["hardware_complexity"]["ge_area_um2"],
             },
         }
-    )
-    comparison_time_ms = (time.perf_counter() - comparison_started) * 1000.0
-    view["自动评估总时间 (ms)"] = round(
-        latency_prediction_time
-        + latency_validation_time
-        + area_prediction_time
-        + synthesis_time
-        + throughput_prediction_time
-        + complexity_prediction_time
-        + comparison_time_ms,
-        3,
     )
     return view
 

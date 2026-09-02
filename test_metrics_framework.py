@@ -185,15 +185,7 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
         "仿真结果 (Gbps)": 1.25,
         "预测时间 (ms)": 0.5,
     }
-    recorded_metric_ms = (
-        result["延迟"]["预测时间 (ms)"]
-        + result["延迟"]["仿真时间 (ms)"]
-        + result["面积"]["预测时间 (ms)"]
-        + result["面积"]["综合时间 (ms)"]
-        + result["Throughput"]["预测时间 (ms)"]
-        + result["硬件复杂度"]["预测时间 (ms)"]
-    )
-    assert abs(result["自动评估总时间 (ms)"] - recorded_metric_ms) <= 3.0
+    assert "自动评估总时间 (ms)" not in result
     saved = json.loads(
         (root / "evaluation_output" / "config1" / "evaluation.json").read_text(
             encoding="utf-8"
@@ -202,13 +194,13 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
     assert saved == result
 
 
-def test_batch_evaluation_reports_total_time_per_case(tmp_path, monkeypatch):
+def test_batch_evaluation_omits_total_time_per_case(tmp_path, monkeypatch):
     _root, registry = _fixture(tmp_path, monkeypatch, [{}, {}])
     result = evaluate("fake", registry=registry)
 
     assert list(result) == ["config1", "config2"]
-    assert result["config1"]["自动评估总时间 (ms)"] > 0
-    assert result["config2"]["自动评估总时间 (ms)"] > 0
+    assert "自动评估总时间 (ms)" not in result["config1"]
+    assert "自动评估总时间 (ms)" not in result["config2"]
 
 
 def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path):
