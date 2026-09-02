@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -439,6 +440,7 @@ def evaluate(
     for path in resolve_configs(spec, config):
         output_dir = _output_dir(spec, path)
         _prepare_paths(output_dir)
+        evaluation_started = time.perf_counter()
         prediction_raw: dict[str, Any] | None = None
         try:
             prediction_raw = _run_adapter(spec, "predict", path)
@@ -454,6 +456,10 @@ def evaluate(
         try:
             validation_raw = _run_adapter(spec, "validate", path)
             view = _evaluation_view(prediction_raw, validation_raw)
+            view["评估总时间 (s)"] = round(
+                time.perf_counter() - evaluation_started,
+                3,
+            )
             _write_json(output_dir / "evaluation.json", view)
             rendered.append((path, view))
         except AdapterFailure as error:

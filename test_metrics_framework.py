@@ -176,7 +176,22 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
         "预测结果 (Gbps)": 1.5,
         "仿真结果 (Gbps)": 1.25,
     }
-    assert (root / "evaluation_output" / "config1" / "evaluation.json").is_file()
+    assert result["评估总时间 (s)"] > 0
+    saved = json.loads(
+        (root / "evaluation_output" / "config1" / "evaluation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert saved == result
+
+
+def test_batch_evaluation_reports_total_time_per_case(tmp_path, monkeypatch):
+    _root, registry = _fixture(tmp_path, monkeypatch, [{}, {}])
+    result = evaluate("fake", registry=registry)
+
+    assert list(result) == ["config1", "config2"]
+    assert result["config1"]["评估总时间 (s)"] > 0
+    assert result["config2"]["评估总时间 (s)"] > 0
 
 
 def test_incomplete_validation_does_not_write_evaluation(tmp_path, monkeypatch):

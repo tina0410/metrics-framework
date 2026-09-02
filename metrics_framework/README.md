@@ -25,6 +25,7 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 
 - `predict` 只写入并打印 `prediction.json`，其中只有预测值、预测时间和 GE 信息，不包含 `null` 对比字段。
 - `evaluate` 验证完整时写入并打印 `evaluation.json`，展示结构与各模块原有 `*_metrics.json` 一致。
+- 每个成功 case 的 `evaluation.json` 末尾包含 `评估总时间 (s)`，记录从启动该 case 的预测到全部验证、指标和误差计算完成的墙钟时间。
 - 验证数据不完整时不生成 `evaluation.json`，stdout 完全为空，stderr 说明原因，退出码为 2。
 - adapter 或框架自身出现未预期错误时 stdout 同样为空，退出码为 1。
 - 批量 evaluate 是原子的：任一 case 失败，整个批次不打印部分 JSON；已经完成的 case 文件仍保留。
