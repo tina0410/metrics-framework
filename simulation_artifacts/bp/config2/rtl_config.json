@@ -1,0 +1,10 @@
+{
+  "Hardware Architecture": "TypeI",
+  "Decoding Algorithm": "MS",
+  "Code Length": 1024,
+  "Parallelism": 1024,
+  "Data Width": 5,
+  "Code Rate": 0.5,
+  "Eb/N0 (dB)": 10.0,
+  "Clock Period (ns)": 20.0
+}

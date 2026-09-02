@@ -15,6 +15,10 @@ python -m metrics_framework bp predict path/to/config.json
 `evaluate`；验证是 adapter 的内部动作。纯预测不会读取真实面积或启动 RTL。
 `evaluate` 验证失败时 stdout 为空、错误写入 stderr，并返回非零状态。
 
+LS、MIMO 和 BP 的标准配置历史仿真结果与 `wave.vcd` 已归档到
+[`simulation_artifacts/`](simulation_artifacts/README.md)。Ubuntu 拉取仓库后可直接
+用 GTKWave 查看；模块运行时生成的完整 workspace 仍保持忽略，不会污染 Git。
+
 三个模块可以通过环境变量选择自己的 Python 解释器：`LS_METRICS_PYTHON`、
 `MIMO_METRICS_PYTHON` 和 `BP_METRICS_PYTHON`。未设置时优先使用模块自己的
 `.venv`，最后使用启动框架的解释器。

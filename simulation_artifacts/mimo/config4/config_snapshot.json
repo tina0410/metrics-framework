@@ -1,0 +1,108 @@
+{
+    "Number of Transmit Antennas":  4,
+    "Number of Receiving Antennas":  32,
+    "Quantization format of H":  {
+                                     "bitwidth":  9,
+                                     "fractional width":  8,
+                                     "signed":  true
+                                 },
+    "Quantization format of y":  {
+                                     "bitwidth":  9,
+                                     "fractional width":  4,
+                                     "signed":  true
+                                 },
+    "Quantization format of a":  {
+                                     "bitwidth":  8,
+                                     "fractional width":  6,
+                                     "signed":  true
+                                 },
+    "Quantization format of D":  {
+                                     "bitwidth":  5,
+                                     "fractional width":  4,
+                                     "signed":  true
+                                 },
+    "Quantization format of ymf":  {
+                                       "bitwidth":  9,
+                                       "fractional width":  4,
+                                       "signed":  true
+                                   },
+    "Quantization format of x1":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of b2":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of d2":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of Dx1":  {
+                                       "bitwidth":  9,
+                                       "fractional width":  4,
+                                       "signed":  true
+                                   },
+    "Quantization format of x2":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of b3":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of d3":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of Dx2":  {
+                                       "bitwidth":  9,
+                                       "fractional width":  4,
+                                       "signed":  true
+                                   },
+    "Quantization format of x3":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of b4":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of d4":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Quantization format of Dx3":  {
+                                       "bitwidth":  9,
+                                       "fractional width":  4,
+                                       "signed":  true
+                                   },
+    "Quantization format of x4":  {
+                                      "bitwidth":  9,
+                                      "fractional width":  4,
+                                      "signed":  true
+                                  },
+    "Iterations":  2,
+    "Quantization Mode":  "TRN.TCPL",
+    "Overflow Mode":  "WRP.TCPL",
+    "Adder Tree Pipelines":  3,
+    "Interface Reset Active Low":  true,
+    "QAM Order":  16,
+    "clock":  {
+                  "period_ns":  10.0
+              },
+    "flow":  {
+                 "run_simulation":  true,
+                 "simulation_frames":  3,
+                 "output_dir":  "evaluation_output"
+             }
+}

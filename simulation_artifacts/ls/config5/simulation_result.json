@@ -1,0 +1,8 @@
+{
+  "case": "Testcase5",
+  "predicted_latency_cycles": 18,
+  "sim_latency_cycles": 18,
+  "sim_output_interval_cycles": 16,
+  "clock_period_ns": 10.0,
+  "measurement_method": "RTL cycle positions matching the complete C++ output sequence"
+}

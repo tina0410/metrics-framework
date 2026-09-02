@@ -1,0 +1,11 @@
+case=Testcase4
+predicted_latency_cycles=10
+rtl_measured_latency_cycles=10
+rtl_measured_output_interval_cycles=8
+clock_period_ns=10.0
+measurement_method=RTL cycle positions matching the complete C++ output sequence
+N_PIPELINES=[1, 1]
+STG_T=8
+rtl_output=rtl_o_H_latency_10cycles.txt
+behavioral_reference=behavioral_o_H_reference.txt
+waveform=wave.vcd

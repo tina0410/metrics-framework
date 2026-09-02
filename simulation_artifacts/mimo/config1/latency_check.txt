@@ -1,0 +1,5 @@
+sim_latency_cycles=40
+sim_output_interval_cycles=8
+sim_output_interval_cycle_list=[8, 8]
+clock_period_ns=10.0
+clock_frequency_mhz=100.0

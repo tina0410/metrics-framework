@@ -1,0 +1,3 @@
+simulation_artifacts/** binary
+simulation_artifacts/README.md text eol=lf diff
+simulation_artifacts/SHA256SUMS text eol=lf diff

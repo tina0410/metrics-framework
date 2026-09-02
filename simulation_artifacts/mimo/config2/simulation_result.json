@@ -1,0 +1,27 @@
+{
+  "sim_latency_cycles": 28,
+  "sim_output_interval_cycles": 4,
+  "sim_output_interval_cycle_list": [
+    4,
+    4
+  ],
+  "matched_output_frames": 3,
+  "input_accept_cycle": 0,
+  "first_output_cycle": 25,
+  "complete_output_cycle": 28,
+  "input_sample_time": 35000,
+  "first_output_sample_time": 285000,
+  "complete_output_sample_time": 315000,
+  "frame_first_output_sample_times": [
+    285000,
+    325000,
+    365000
+  ],
+  "measurement_method": "VCD clock-edge positions independently matching every complete C++ output vector; latency ends at the first vector's final component and throughput uses adjacent vector intervals",
+  "case": "Testcase2",
+  "clock_period_ns": 10.0,
+  "clock_frequency_mhz": 100.0,
+  "physical_latency_ns": 280.0,
+  "functional_match": true,
+  "rtl_compile_and_simulation_time_ms": 1450.566
+}

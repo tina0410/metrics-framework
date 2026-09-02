@@ -1,0 +1,33 @@
+{
+  "config_file": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/rtl_config.json",
+  "artifact_dir": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5",
+  "testbench": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/BP_tb.v",
+  "waveform": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/wave.vcd",
+  "comparison_reference": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/comparison_files/u_route_log.txt",
+  "decoding_output": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/output_files/decoding_output.txt",
+  "sim_latency_cycles": 526,
+  "cpp_iterations": 2.0,
+  "cpp_iteration_log": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/comparison_files/iter_frame_log.txt",
+  "cpp_simulation_time_ms": 104.94497699983185,
+  "rtl_simulation_time_ms": 2843.5929639999813,
+  "waveform_verified": true,
+  "decoding_verified": true,
+  "simulation_log": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/simulation.log",
+  "clock_period_ns": 20.0,
+  "stimulus_source": "baseline_input_files",
+  "stimulus_files": {
+    "channel": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/input_files/y1N256K128INTDWT3FRACDWT1MS.txt",
+    "left_messages": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/input_files/LN256K128INTDWT3FRACDWT1MS.txt",
+    "right_messages": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/input_files/RN256K128INTDWT3FRACDWT1MS.txt",
+    "matlab_decoded": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/input_files/u1_estiN256K128INTDWT3FRACDWT1MS.txt",
+    "matlab_route": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/input_files/u2N256K128INTDWT3FRACDWT1MS.txt",
+    "cpp_reference": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/comparison_files/u_route_log.txt"
+  },
+  "success_message": "Success. The latency of config5 is 526 cycles.",
+  "workspace_waveform": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/wave.vcd",
+  "workspace_latency_output": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/latency_output.txt",
+  "latency_output": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/latency_output.txt",
+  "workspace_simulation_log": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/simulation.log",
+  "workspace": "/home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace",
+  "console_log": "/home/roboute/Desktop/mjj/Generator/PolarDecoder/BehaviorialVerification/bp_latency_simulation.py:72: UserWarning: \u001b[31mCall of module function with unassigned ports is detected. Make sure this is the top module\u001b[0m\n  ModuleConfig(\n/home/roboute/Desktop/mjj/Generator/PolarDecoder/BehaviorialVerification/bp_latency_simulation.py:72: UserWarning: \u001b[31mModule name is not specified in the verilog instance block. Default module name applied.\u001b[0m\n  ModuleConfig(\n/home/roboute/Desktop/mjj/Generator/PolarDecoder/BehaviorialVerification/bp_latency_simulation.py:72: UserWarning: \u001b[31mInst name is not specified in the verilog instance block. Default Inst name applied.\u001b[0m\n  ModuleConfig(\n\u001b[1;34mINFO:Root directory set as /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/cpp_tmp\u001b[0m\n\u001b[1;34mINFO:RTL files will be saved at /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/cpp_tmp\u001b[0m\n\u001b[1;34mINFO:Writing into module file Config0000000001\u001b[0m\nMoving Config0000000001.h to /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace/cpp_include and renaming it as Config0000000001.h\n\u001b[1;34mINFO:Root directory set as /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace\u001b[0m\n\u001b[1;34mINFO:RTL files will be saved at /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_mux10000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Add0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_BCB0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_gen_bcb0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_mux20000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_perm0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_reverse_perm0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_counter0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_switch0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_gen_switch0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_counter0000000002\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_switch0000000002\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_gen_switch0000000002\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_counter0000000003\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_switch0000000003\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_gen_switch0000000003\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_counter0000000004\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_switch20000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_gen_switch20000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_mux30000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_delay_reg0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_memory0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_control0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_early_stop0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_early_stop_memory0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file Type1_hard_decision0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file top0000000001\u001b[0m\n\u001b[1;34mINFO:Writing into module file test0000000001\u001b[0m\n切换到目录: /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace\n正在编译...\n正在仿真...\nLXT2 info: dumpfile wave.vcd opened for output.\nSuccess. The latency of config5 is 526 cycles.\nBP_tb.v:6148: $stop called at 10560000 (1ps)\nSuccess. Fixed-point RTL output matches comparison reference.\nBP config5 simulation artifacts: /home/roboute/Desktop/mjj/BPPredIter/BP_Evaluation/sim/config5/workspace\n"
+}
