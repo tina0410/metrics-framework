@@ -23,6 +23,12 @@ bindings = [
 [project.scripts]
 metrics = "metrics_framework.cli:main"
 
+[tool.setuptools]
+packages = ["metrics_framework", "metrics_framework.adapters"]
+
+[tool.setuptools.package-data]
+metrics_framework = ["registry.json", "README.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["test_evaluate_lsce.py", "test_lsce_binding.py", "test_metrics_framework.py"]
 python_files = ["test_evaluate_lsce.py", "test_lsce_binding.py", "test_metrics_framework.py"]
