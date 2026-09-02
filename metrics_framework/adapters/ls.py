@@ -40,8 +40,12 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     latency_time_ms = (time.perf_counter() - started) * 1000.0
     area = module.evaluate_predicted_area(config_path)
     period_ns = float(config.get("clock", {}).get("period_ns", 10.0))
+    started = time.perf_counter()
     throughput = module.throughput_kchannels_s(config, period_ns)
+    throughput_time_ms = (time.perf_counter() - started) * 1000.0
+    started = time.perf_counter()
     complexity = float(area["predicted_area_um2"]) / GE_AREA_UM2 * predicted_latency
+    complexity_time_ms = (time.perf_counter() - started) * 1000.0
     return {
         "latency": {
             "predicted_cycles": predicted_latency,
@@ -57,10 +61,12 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "predicted": throughput,
             "unit": "kChannels/s",
             "precision": 5,
+            "prediction_time_ms": throughput_time_ms,
             "source": "formula",
         },
         "hardware_complexity": {
             "predicted_ge_cycles": complexity,
+            "prediction_time_ms": complexity_time_ms,
             "ge_reference_cell": GE_REFERENCE_CELL,
             "ge_area_um2": GE_AREA_UM2,
             "source": "derived",

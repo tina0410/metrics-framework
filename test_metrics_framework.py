@@ -50,9 +50,15 @@ if action == "predict":
     metrics = {
         "latency": {"predicted_cycles": 8, "prediction_time_ms": 0.25},
         "area": {"predicted_um2": 100.0, "prediction_time_ms": 2.0},
-        "throughput": {"predicted": 1.5, "unit": "Gbps", "precision": 2},
+        "throughput": {
+            "predicted": 1.5,
+            "unit": "Gbps",
+            "precision": 2,
+            "prediction_time_ms": 0.5
+        },
         "hardware_complexity": {
             "predicted_ge_cycles": 800.0,
+            "prediction_time_ms": 0.75,
             "ge_reference_cell": "NAND2",
             "ge_area_um2": 1.0
         }
@@ -136,12 +142,14 @@ def test_predict_uses_compact_chinese_shape(tmp_path, monkeypatch):
     assert result == {
         "延迟": {"预测结果 (cycles)": 8, "预测时间 (ms)": 0.25},
         "面积": {"预测结果 (μm²)": 100.0, "预测时间 (ms)": 2.0},
-        "Throughput": {"预测结果 (Gbps)": 1.5},
+        "Throughput": {"预测结果 (Gbps)": 1.5, "预测时间 (ms)": 0.5},
         "硬件复杂度": {
             "预测结果 (GE·cycles)": 800.0,
+            "预测时间 (ms)": 0.75,
             "GE基准单元": "NAND2",
             "1 GE面积 (μm²)": 1.0,
         },
+        "自动评估总时间 (ms)": 3.5,
     }
     serialized = json.dumps(result, ensure_ascii=False)
     assert "null" not in serialized
@@ -175,14 +183,17 @@ def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
     assert result["Throughput"] == {
         "预测结果 (Gbps)": 1.5,
         "仿真结果 (Gbps)": 1.25,
+        "预测时间 (ms)": 0.5,
     }
     recorded_metric_ms = (
         result["延迟"]["预测时间 (ms)"]
         + result["延迟"]["仿真时间 (ms)"]
         + result["面积"]["预测时间 (ms)"]
         + result["面积"]["综合时间 (ms)"]
+        + result["Throughput"]["预测时间 (ms)"]
+        + result["硬件复杂度"]["预测时间 (ms)"]
     )
-    assert abs(result["评估总时间 (ms)"] - recorded_metric_ms) <= 3.0
+    assert abs(result["自动评估总时间 (ms)"] - recorded_metric_ms) <= 3.0
     saved = json.loads(
         (root / "evaluation_output" / "config1" / "evaluation.json").read_text(
             encoding="utf-8"
@@ -196,13 +207,13 @@ def test_batch_evaluation_reports_total_time_per_case(tmp_path, monkeypatch):
     result = evaluate("fake", registry=registry)
 
     assert list(result) == ["config1", "config2"]
-    assert result["config1"]["评估总时间 (ms)"] > 0
-    assert result["config2"]["评估总时间 (ms)"] > 0
+    assert result["config1"]["自动评估总时间 (ms)"] > 0
+    assert result["config2"]["自动评估总时间 (ms)"] > 0
 
 
 def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path):
     events: list[str] = []
-    clocks = iter((1.0, 1.001, 2.0, 2.002))
+    clocks = iter((1.0, 1.001, 2.0, 2.002, 3.0, 3.0005, 4.0, 4.00075))
     expected_model_bundle = object()
 
     class AreaModule:
@@ -261,6 +272,8 @@ def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path
     result = bp_adapter.predict(tmp_path / "config1.json", config)
     assert events[:3] == ["model_load", "clock", "model_predict"]
     assert result["latency"]["prediction_time_ms"] == pytest.approx(1.0)
+    assert result["throughput"]["prediction_time_ms"] == pytest.approx(0.5)
+    assert result["hardware_complexity"]["prediction_time_ms"] == pytest.approx(0.75)
 
 
 def test_incomplete_validation_does_not_write_evaluation(tmp_path, monkeypatch):

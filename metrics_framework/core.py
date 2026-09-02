@@ -266,14 +266,23 @@ def _prediction_view(result: Mapping[str, Any]) -> dict[str, Any]:
             "Throughput": {
                 f"预测结果 ({throughput['unit']})": round(
                     float(throughput["predicted"]), int(throughput["precision"])
-                )
+                ),
+                "预测时间 (ms)": round(float(throughput["prediction_time_ms"]), 6),
             },
             "硬件复杂度": {
                 "预测结果 (GE·cycles)": round(float(complexity["predicted_ge_cycles"]), 2),
+                "预测时间 (ms)": round(float(complexity["prediction_time_ms"]), 6),
                 "GE基准单元": complexity["ge_reference_cell"],
                 "1 GE面积 (μm²)": complexity["ge_area_um2"],
             },
         }
+    )
+    view["自动评估总时间 (ms)"] = round(
+        sum(
+            float(metrics[name]["prediction_time_ms"])
+            for name in ("latency", "area", "throughput", "hardware_complexity")
+        ),
+        3,
     )
     return view
 
@@ -326,6 +335,10 @@ def _evaluation_view(
     predicted_throughput = _positive(
         predicted["throughput"]["predicted"], "predicted throughput"
     )
+    throughput_prediction_time = _positive(
+        predicted["throughput"]["prediction_time_ms"],
+        "throughput prediction time",
+    )
     actual_throughput = _positive(actual["throughput"].get("actual"), "actual throughput")
     predicted_complexity = _positive(
         predicted["hardware_complexity"]["predicted_ge_cycles"],
@@ -334,6 +347,10 @@ def _evaluation_view(
     actual_complexity = _positive(
         actual["hardware_complexity"].get("actual_ge_cycles"),
         "actual hardware complexity",
+    )
+    complexity_prediction_time = _positive(
+        predicted["hardware_complexity"]["prediction_time_ms"],
+        "hardware complexity prediction time",
     )
 
     latency_error = (actual_latency - predicted_latency) / predicted_latency * 100.0
@@ -378,6 +395,7 @@ def _evaluation_view(
                 f"仿真结果 ({throughput['unit']})": round(
                     actual_throughput, int(throughput["precision"])
                 ),
+                "预测时间 (ms)": round(throughput_prediction_time, 6),
             },
             "硬件复杂度": {
                 "预测结果 (GE·cycles)": round(predicted_complexity, 2),
@@ -385,17 +403,20 @@ def _evaluation_view(
                     actual_complexity, 2
                 ),
                 "误差 (%)": round(complexity_error, 2),
+                "预测时间 (ms)": round(complexity_prediction_time, 6),
                 "GE基准单元": predicted["hardware_complexity"]["ge_reference_cell"],
                 "1 GE面积 (μm²)": predicted["hardware_complexity"]["ge_area_um2"],
             },
         }
     )
     comparison_time_ms = (time.perf_counter() - comparison_started) * 1000.0
-    view["评估总时间 (ms)"] = round(
+    view["自动评估总时间 (ms)"] = round(
         latency_prediction_time
         + latency_validation_time
         + area_prediction_time
         + synthesis_time
+        + throughput_prediction_time
+        + complexity_prediction_time
         + comparison_time_ms,
         3,
     )

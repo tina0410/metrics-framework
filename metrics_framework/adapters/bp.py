@@ -72,9 +72,13 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             )
         )
     area_time_ms = (time.perf_counter() - started) * 1000.0
+    started = time.perf_counter()
     throughput = round(n * rate) / (period_ns * latency)
+    throughput_time_ms = (time.perf_counter() - started) * 1000.0
     ge_area = read_ge_area()
+    started = time.perf_counter()
     complexity = area_to_ge(predicted_area, ge_area) * latency
+    complexity_time_ms = (time.perf_counter() - started) * 1000.0
     return {
         "latency": {
             "predicted_cycles": latency,
@@ -91,10 +95,12 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "predicted": throughput,
             "unit": "Gbps",
             "precision": 2,
+            "prediction_time_ms": throughput_time_ms,
             "source": "formula",
         },
         "hardware_complexity": {
             "predicted_ge_cycles": complexity,
+            "prediction_time_ms": complexity_time_ms,
             "ge_reference_cell": ge_cell,
             "ge_area_um2": ge_area,
             "source": "derived",
