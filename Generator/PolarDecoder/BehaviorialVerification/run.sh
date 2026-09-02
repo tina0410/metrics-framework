@@ -1,0 +1,1 @@
+clang++-18 -std=c++23 -Iinclude -o3 -O3 bp_polar_decoder.cpp

@@ -17,3 +17,28 @@ Generator/LSCE/BehaviorialVerification/sim/
 /*.egg-info/
 
 /rtl-test.log
+
+evaluation_output/
+Generator/MIMODetector/evaluation_output/
+BPPredIter/BP_Evaluation/evaluation_output/
+BPPredIter/BP_Evaluation/sim/
+Generator/MIMODetector/BehaviorialVerification/sim/
+metrics_framework/__pycache__/
+metrics_framework/adapters/__pycache__/
+task_plan.md
+findings.md
+progress.md
+
+# Consolidated module worktrees: keep source/models, ignore local/generated artifacts.
+**/.venv/
+**/.claude/
+Generator/LSCE/
+Generator/MIMODetector/RTL/
+Generator/MIMODetector/designs/RTL/
+Generator/MIMODetector/BehaviorialVerification/Mimo Screenshots/
+Generator/PolarDecoder/designs/RTL/
+Generator/PolarDecoder/Synthesis/RTL/
+Generator/PolarDecoder/BehaviorialVerification/build/
+Generator/PolarDecoder/BehaviorialVerification/backup/
+Generator/PolarDecoder/BehaviorialVerification/3
+BPPredIter/BP_Evaluation/simulation screenshot/

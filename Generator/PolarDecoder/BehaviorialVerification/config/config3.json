@@ -1,0 +1,7 @@
+{
+    "Hardware Architecture": "TypeI",
+    "Decoding Algorithm": "SMS",
+    "Code Length": 1024,
+    "Parallelism": 1024,
+    "Data Width":5
+}

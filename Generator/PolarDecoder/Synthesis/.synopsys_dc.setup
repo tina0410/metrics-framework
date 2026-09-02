@@ -1,0 +1,90 @@
+# EXAMPLE DESIGN COMPILER STARTUP FILE - .synopsys_dc.setup
+# Library : SMIC 65nm
+#
+# Author: XWH
+# Date: Mar.2019
+
+# Setting library
+
+set search_path {./ /FAB/TSMC65/TSMC65nmGP/tcbn65gplus_200a/tcbn65gplus_200a_ccs/TSMCHOME/digital/Front_End/timing_power_noise/CCS/tcbn65gplus_200a /FAB/TSMC65/TSMC65nmGP/tpzn65gpgv2od3_200b/tpzn65gpgv2od3_200a_nldm/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tpzn65gpgv2od3_200a /FAB/TSMC65/TSMC65nmGP/tpzn65gpgv2od3_200b/tpzn65gpgv2od3_200a_nldm/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/script /home/synopsys/syn/O-2018.06-SP5/libraries/syn /home/synopsys/syn/O-2018.06-SP5/dw/syn_ver /home/synopsys/syn/O-2018.06-SP5/libraries/syn}
+
+set target_library "/FAB/TSMC65/TSMC65nmGP/tcbn65gplus_200a/tcbn65gplus_200a_ccs/TSMCHOME/digital/Front_End/timing_power_noise/CCS/tcbn65gplus_200a/tcbn65gplustc_ccs.db "
+
+set link_library {* /FAB/TSMC65/TSMC65nmGP/tcbn65gplus_200a/tcbn65gplus_200a_ccs/TSMCHOME/digital/Front_End/timing_power_noise/CCS/tcbn65gplus_200a/tcbn65gplustc_ccs.db /FAB/TSMC65/TSMC65nmGP/tpzn65gpgv2od3_200b/tpzn65gpgv2od3_200a_nldm/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tpzn65gpgv2od3_200a/tpzn65gpgv2od3tc.db dw_foundation.sldb /home/lch/workspace/omp_pad_V1.2/INNO_TPLL_TOP_setup_ss_cmax_125.db}
+
+set synthetic_library dw_foundation.sldb
+
+set_dont_use {tcbn65gplustc_ccs/EDFCND1 tcbn65gplustc_ccs/EDFCND2 tcbn65gplustc_ccs/EDFCND4}
+set_dont_use {tcbn65gplustc_ccs/EDFCNQD1 tcbn65gplustc_ccs/EDFCNQD2 tcbn65gplustc_ccs/EDFCNQD4}
+set_dont_use {tcbn65gplustc_ccs/EDFD1 tcbn65gplustc_ccs/EDFD2 tcbn65gplustc_ccs/EDFD4}
+set_dont_use {tcbn65gplustc_ccs/EDFKCND1 tcbn65gplustc_ccs/EDFKCND2 tcbn65gplustc_ccs/EDFKCND4}
+set_dont_use {tcbn65gplustc_ccs/EDFKCNQD1 tcbn65gplustc_ccs/EDFKCNQD2 tcbn65gplustc_ccs/EDFKCNQD4}
+set_dont_use {tcbn65gplustc_ccs/EDFQD1 tcbn65gplustc_ccs/EDFQD2 tcbn65gplustc_ccs/EDFQD4}
+
+#set target_library "/FAB/TSMC65/TSMC65nmGP/tcbn65gplus_200a/tcbn65gplus_200a_ccs/TSMCHOME/digital/Front_End/timing_power_noise/CCS/tcbn65gplus_200a/tcbn65gplustc_ccs.db "
+#set link_library "* $target_library /FAB/Design_kit/pdk+IO/tpdn65gpgv2od3_sd_200a/AN61001_20180208/tpdn65gpgv2od3_sd_200a_nldm/TSMCHOME/digital/Front_End/timing_power_noise/NLDM/tpdn65gpgv2od3_sd_200a/tpdn65gpgv2od3_sdtc.db" 
+#set symbol_library "/home/leads-server/Synopsys/library/smic.65/sc-x/SCC65NLL_VHS_RVT_V2p0/symbol/SCC65NLL_VHS_RVT_V2p0.sdb"
+
+
+
+#set link_library [concat $target_library $synthetic_library]
+
+#set search_path [concat $search_path [list [format “%s%s” $SYNOPSYS_DC_ROOT “/dw/sim_ver”]]]
+
+# Define Work Library Location
+define_design_lib work -path ./work
+
+#/* setup the Setup...Defaults menu */
+#designer = "NISung"
+#company = "TSMC"
+#search_path = { } 
+#hdlin_translate_off_skip_text = TRUE
+#link_library= { }
+#target_library= { }
+#symbol_library= { }
+#default_schematic_options = "-size infinite"
+
+#/* Site Specific Variables */
+#synthetic_library = {}
+#command_log_file = "./command.log"
+#view_command_log_file = "./view_command.log"
+#plot_command = "lpr -Plw"
+#text_print_command = "lpr -Plw"
+#
+#/* enable Text Viewer feature */
+#hdlin_source_to_gates_mode = "high"
+#
+#/* Synopsys to Compass EDIF interface */
+#edifin_ground_name = "VSS"
+#edifin_ground_net_name = "VSS"
+#edifin_ground_net_property_name = "global"
+#edifin_ground_net_property_value = "VSS"
+#edifin_ground_pin_name = "VSS"
+#edifin_ground_port_name = "VSS"
+#edifin_netlist_only = "true"
+#edifin_power_name = "VDD"
+#edifin_power_net_name = "VDD"
+#edifin_power_net_property_name = "global"
+#edifin_power_net_property_value = "VDD"
+#edifin_power_pin_name = "VDD"
+#edifin_power_port_name = "VDD"
+#edifin_power_and_ground_representation = "net"
+#edifout_ground_name = "VSS"
+#edifout_ground_net_name = "VSS"
+#edifout_ground_net_property_name = "global"
+#edifout_ground_net_property_value = "VSS"
+#edifout_ground_pin_name = "VSS"
+#edifout_ground_port_name = "VSS"
+#edifout_netlist_only = "true"
+#edifout_no_array = "true"
+#edifout_power_name = "VDD"
+#edifout_power_net_name = "VDD"
+#edifout_power_net_property_name = "global"
+#edifout_power_net_property_value = "VDD"
+#edifout_power_pin_name = "VDD"
+#edifout_power_port_name = "VDD"
+#edifout_power_and_ground_representation = "net"
+#write_name_nets_same_as_ports = "true"
+#compile_fix_multiple_port_nets = "true"
+#verilogout_no_tri = "true"
+#include TSMC_naming_rule.script

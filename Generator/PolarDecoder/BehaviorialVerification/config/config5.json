@@ -1,0 +1,7 @@
+{
+    "Hardware Architecture": "TypeI",
+    "Decoding Algorithm": "MS",
+    "Code Length": 256,
+    "Parallelism": 16,
+    "Data Width":5
+}

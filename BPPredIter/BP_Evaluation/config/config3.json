@@ -1,0 +1,24 @@
+{
+  "decoder": {
+    "hardware_architecture": "TypeI",
+    "decoding_algorithm": "SMS",
+    "code_length": 1024,
+    "parallelism": 1024,
+    "data_width": 5,
+    "code_rate": 0.5,
+    "ebn0_db": 10.0
+  },
+  "clock": {
+    "period_ns": 20.0
+  },
+  "area": {
+    "use_config_actual_area": false,
+    "actual_area_um2": null,
+    "synthesis_time_ms": null
+  },
+  "flow": {
+    "generate_rtl": false,
+    "run_simulation": true,
+    "output_dir": "../evaluation_output/config3"
+  }
+}

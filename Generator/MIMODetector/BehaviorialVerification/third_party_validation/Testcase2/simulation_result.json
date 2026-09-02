@@ -1,0 +1,9 @@
+{
+  "sim_latency_cycles": 28,
+  "sim_output_interval_cycles": null,
+  "input_sample_time": 35000,
+  "first_output_sample_time": 285000,
+  "complete_output_sample_time": 315000,
+  "measurement_method": "VCD clock-edge positions matching the complete C++ behavioral output vector; latency ends at the vector's final component",
+  "rtl_compile_and_simulation_time_ms": 1513.234
+}

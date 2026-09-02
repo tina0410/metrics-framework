@@ -1,0 +1,99 @@
+{
+  "Number of Transmit Antennas": 16,
+  "Number of Receiving Antennas": 256,
+  "Quantization format of H": {
+    "bitwidth": 6,
+    "fractional width": 3,
+    "signed": true
+  },
+  "Quantization format of y": {
+    "bitwidth": 5,
+    "fractional width": 1,
+    "signed": true
+  },
+  "Quantization format of a": {
+    "bitwidth": 3,
+    "fractional width": 1,
+    "signed": true
+  },
+  "Quantization format of D": {
+    "bitwidth": 12,
+    "fractional width": 10,
+    "signed": true
+  },
+  "Quantization format of ymf": {
+    "bitwidth": 14,
+    "fractional width": 5,
+    "signed": true
+  },
+  "Quantization format of x1": {
+    "bitwidth": 6,
+    "fractional width": 4,
+    "signed": true
+  },
+  "Quantization format of b2": {
+    "bitwidth": 7,
+    "fractional width": 3,
+    "signed": true
+  },
+  "Quantization format of d2": {
+    "bitwidth": 11,
+    "fractional width": 2,
+    "signed": true
+  },
+  "Quantization format of Dx1": {
+    "bitwidth": 6,
+    "fractional width": 4,
+    "signed": true
+  },
+  "Quantization format of x2": {
+    "bitwidth": 4,
+    "fractional width": 2,
+    "signed": true
+  },
+  "Quantization format of b3": {
+    "bitwidth": 9,
+    "fractional width": 5,
+    "signed": true
+  },
+  "Quantization format of d3": {
+    "bitwidth": 14,
+    "fractional width": 5,
+    "signed": true
+  },
+  "Quantization format of Dx2": {
+    "bitwidth": 6,
+    "fractional width": 4,
+    "signed": true
+  },
+  "Quantization format of x3": {
+    "bitwidth": 7,
+    "fractional width": 5,
+    "signed": true
+  },
+  "Quantization format of b4": {
+    "bitwidth": 4,
+    "fractional width": 1,
+    "signed": true
+  },
+  "Quantization format of d4": {
+    "bitwidth": 4,
+    "fractional width": 2,
+    "signed": true
+  },
+  "Quantization format of Dx3": {
+    "bitwidth": 3,
+    "fractional width": 1,
+    "signed": true
+  },
+  "Quantization format of x4": {
+    "bitwidth": 3,
+    "fractional width": 1,
+    "signed": true
+  },
+  "Iterations": 2,
+  "Quantization Mode": "TRN.TCPL",
+  "Overflow Mode": "WRP.TCPL",
+  "Adder Tree Pipelines": 3,
+  "Interface Reset Active Low": true
+}
