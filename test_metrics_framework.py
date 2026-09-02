@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from metrics_framework import cli
-from metrics_framework.core import EvaluationUnavailable, evaluate, predict
+from metrics_framework.core import EvaluationUnavailable, _interpreter, evaluate, predict
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
@@ -238,6 +238,26 @@ def test_cli_success_prints_exactly_one_json(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert json.loads(captured.out) == expected
     assert captured.err == ""
+
+
+def test_interpreter_preserves_virtualenv_symlink(monkeypatch):
+    expected = Path("/workspace/.venv/bin/python")
+
+    class VirtualenvPython:
+        def is_file(self):
+            return True
+
+        def absolute(self):
+            return expected
+
+        def resolve(self):
+            pytest.fail("virtualenv interpreter symlink must not be resolved")
+
+    monkeypatch.setattr(
+        "metrics_framework.core._candidate_interpreters",
+        lambda _spec: [VirtualenvPython()],
+    )
+    assert _interpreter(object()) == expected
 
 
 def _validation_config():

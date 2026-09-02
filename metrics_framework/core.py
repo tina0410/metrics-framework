@@ -146,7 +146,9 @@ def _candidate_interpreters(spec: ModuleSpec) -> Iterable[Path]:
 def _interpreter(spec: ModuleSpec) -> Path:
     for candidate in _candidate_interpreters(spec):
         if candidate.is_file():
-            return candidate.resolve()
+            # Keep a POSIX virtualenv's python symlink intact. Resolving it to
+            # /usr/bin/python discards the virtualenv prefix and site-packages.
+            return candidate.absolute()
     raise FileNotFoundError(
         f"No Python interpreter found for {spec.name}; set {spec.python_env}"
     )
