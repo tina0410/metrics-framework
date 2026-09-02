@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -44,13 +43,6 @@ DEFAULT_CONFIGS = tuple(CONFIG_DIR / f"config{i}.json" for i in range(1, 6))
 def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8-sig") as file:
         return json.load(file)
-
-
-def generate_rtl(config_path: Path, output_dir: Path) -> None:
-    from polar_decoder_integration import generate_bp_rtl
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    generate_bp_rtl(config_path, output_dir)
 
 
 def simulate_rtl(
@@ -230,9 +222,8 @@ def run_bp_evaluation(
 
     output_dir = configured_output_dir(config_path)
     simulation_dir = configured_simulation_dir(config_path)
-    generate_enabled = bool(flow.get("generate_rtl", False))
     simulation_enabled = bool(flow.get("run_simulation", False))
-    if generate_enabled or simulation_enabled:
+    if simulation_enabled:
         simulation_dir.mkdir(parents=True, exist_ok=True)
         (simulation_dir / "config_snapshot.json").write_text(
             json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -249,81 +240,75 @@ def run_bp_evaluation(
         }
         rtl_config_path = simulation_dir / "rtl_config.json"
         rtl_config_path.write_text(json.dumps(rtl_config, indent=2), encoding="utf-8")
-        if simulation_enabled:
-            simulation = simulate_rtl(
-                rtl_config_path,
-                simulation_dir,
-                config_path.stem,
+        simulation = simulate_rtl(
+            rtl_config_path,
+            simulation_dir,
+            config_path.stem,
+        )
+        cpp_iterations_value = simulation.get("cpp_iterations")
+        if cpp_iterations_value is None:
+            raise RuntimeError(
+                "C++ simulation did not provide cpp_iterations from "
+                "iter_frame_log.txt"
             )
-            cpp_iterations_value = simulation.get("cpp_iterations")
-            if cpp_iterations_value is None:
-                raise RuntimeError(
-                    "C++ simulation did not provide cpp_iterations from "
-                    "iter_frame_log.txt"
-                )
 
-            cpp_iterations = float(cpp_iterations_value)
-            actual_latency = int(simulation["sim_latency_cycles"])
-            simulation_time_ms = float(simulation["rtl_simulation_time_ms"])
-            speedup = (
-                simulation_time_ms / prediction_time_ms
-                if prediction_time_ms > 0
+        cpp_iterations = float(cpp_iterations_value)
+        actual_latency = int(simulation["sim_latency_cycles"])
+        simulation_time_ms = float(simulation["rtl_simulation_time_ms"])
+        speedup = (
+            simulation_time_ms / prediction_time_ms
+            if prediction_time_ms > 0
+            else None
+        )
+        latency_comparison = latency_error(latency, actual_latency)
+        iteration_comparison = latency_error(
+            average_iterations,
+            cpp_iterations,
+        )
+
+        print(
+            "Simulation Result: Success. The RTL latency of "
+            f"{config_path.stem} is {actual_latency} cycles; "
+            f"the C++ iteration count is {cpp_iterations:.6g} iter."
+        )
+        result["延迟"].update({
+            "仿真结果 (cycles)": actual_latency,
+            "误差 (%)": (
+                round(latency_comparison.percent, 2)
+                if latency_comparison.percent is not None
                 else None
-            )
-            latency_comparison = latency_error(latency, actual_latency)
-            iteration_comparison = latency_error(
-                average_iterations,
-                cpp_iterations,
-            )
-
-            print(
-                "Simulation Result: Success. The RTL latency of "
-                f"{config_path.stem} is {actual_latency} cycles; "
-                f"the C++ iteration count is {cpp_iterations:.6g} iter."
-            )
-            result["延迟"].update({
-                "仿真结果 (cycles)": actual_latency,
-                "误差 (%)": (
-                    round(latency_comparison.percent, 2)
-                    if latency_comparison.percent is not None
-                    else None
-                ),
-                "仿真时间 (ms)": round(simulation_time_ms, 3),
-                "速度提升倍数 (×)": (
-                    round(speedup, 2) if speedup is not None else None
-                ),
-            })
-            result["round前迭代次数 (iter)"].update({
-                "C++仿真值 (iter)": round(cpp_iterations, 6),
-                "误差 (%)": (
-                    round(iteration_comparison.percent, 2)
-                    if iteration_comparison.percent is not None
-                    else None
-                ),
-            })
-
-            actual_hardware_complexity = actual_ge * actual_latency
-            complexity_error = (
-                abs(predicted_hardware_complexity - actual_hardware_complexity)
-                / actual_hardware_complexity
-                * 100.0
-                if actual_hardware_complexity
+            ),
+            "仿真时间 (ms)": round(simulation_time_ms, 3),
+            "速度提升倍数 (×)": (
+                round(speedup, 2) if speedup is not None else None
+            ),
+        })
+        result["round前迭代次数 (iter)"].update({
+            "C++仿真值 (iter)": round(cpp_iterations, 6),
+            "误差 (%)": (
+                round(iteration_comparison.percent, 2)
+                if iteration_comparison.percent is not None
                 else None
-            )
-            result["硬件复杂度"].update({
-                "仿真结果 (GE·cycles)": round(actual_hardware_complexity, 2),
-                "误差 (%)": (
-                    round(complexity_error, 2) if complexity_error is not None else None
-                ),
-            })
-            result["Throughput"]["仿真结果 (Gbps)"] = round(
-                round(n * rate) / (period_ns * actual_latency), 2
-            )
-        elif generate_enabled:
-            workspace = simulation_dir / "workspace"
-            if workspace.exists():
-                shutil.rmtree(workspace)
-            generate_rtl(rtl_config_path, workspace / "RTL")
+            ),
+        })
+
+        actual_hardware_complexity = actual_ge * actual_latency
+        complexity_error = (
+            abs(predicted_hardware_complexity - actual_hardware_complexity)
+            / actual_hardware_complexity
+            * 100.0
+            if actual_hardware_complexity
+            else None
+        )
+        result["硬件复杂度"].update({
+            "仿真结果 (GE·cycles)": round(actual_hardware_complexity, 2),
+            "误差 (%)": (
+                round(complexity_error, 2) if complexity_error is not None else None
+            ),
+        })
+        result["Throughput"]["仿真结果 (Gbps)"] = round(
+            round(n * rate) / (period_ns * actual_latency), 2
+        )
 
     save_result(result, output_dir)
     return result

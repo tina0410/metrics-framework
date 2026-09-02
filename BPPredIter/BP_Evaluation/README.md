@@ -34,7 +34,6 @@ BP评估已经接入PolarDecoder真实RTL延迟。最终 `bp_metrics.json` 中�
     "synthesis_time_ms": null
   },
   "flow": {
-    "generate_rtl": false,
     "run_simulation": true,
     "output_dir": "../evaluation_output/config6"
   }
@@ -43,8 +42,7 @@ BP评估已经接入PolarDecoder真实RTL延迟。最终 `bp_metrics.json` 中�
 
 主要配置项：
 
-- `generate_rtl`：是否额外保留一份单独生成的RTL。
-- `run_simulation`：是否运行C++定点仿真和RTL正确性验证。
+- `run_simulation`：旧入口是否运行C++定点仿真和RTL正确性验证；统一入口由 `predict/evaluate` 模式决定。
 - `clock.period_ns`：时钟周期，标准配置统一为 `20.0 ns`。
 - `parallelism`：并行度 `M`，会改变真实RTL延迟；要求 `M <= N`、`N % M == 0`，建议使用2的幂。
 - `use_config_actual_area=false`：从面积工作簿精确匹配DC综合面积和综合时间。

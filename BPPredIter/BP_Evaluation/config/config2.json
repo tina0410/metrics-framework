@@ -17,7 +17,6 @@
     "synthesis_time_ms": null
   },
   "flow": {
-    "generate_rtl": false,
     "run_simulation": true,
     "output_dir": "../evaluation_output/config2"
   }

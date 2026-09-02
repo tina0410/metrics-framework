@@ -146,7 +146,7 @@ class EvaluationDataFlowTests(unittest.TestCase):
                     "ebn0_db": 10.0,
                 },
                 "clock": {"period_ns": 2.5},
-                "flow": {"run_simulation": True, "generate_rtl": False, "output_dir": "out"},
+                "flow": {"run_simulation": True, "output_dir": "out"},
             }), encoding="utf-8")
             simulation = {
                 "sim_latency_cycles": 77,
@@ -201,7 +201,6 @@ class EvaluationDataFlowTests(unittest.TestCase):
                 },
                 "flow": {
                     "run_simulation": False,
-                    "generate_rtl": False,
                     "output_dir": "out",
                 },
             }), encoding="utf-8")

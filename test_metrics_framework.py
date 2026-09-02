@@ -422,3 +422,79 @@ def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     assert result["latency"]["actual_cycles"] == 10
     assert result["throughput"]["actual"] == pytest.approx(0.16)
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
+
+
+def test_bp_rtl_validation_uses_canonical_sim_directory(monkeypatch, tmp_path):
+    config_path = tmp_path / "config6.json"
+    simulation_dir = tmp_path / "sim" / "config6"
+    config = {
+        "decoder": {
+            "hardware_architecture": "TypeI",
+            "decoding_algorithm": "MS",
+            "code_length": 64,
+            "parallelism": 16,
+            "data_width": 5,
+            "code_rate": 0.5,
+            "ebn0_db": 10.0,
+        },
+        "clock": {"period_ns": 20.0},
+        "validation": {
+            "area": {
+                "actual_um2": 112.0,
+                "synthesis_time_ms": 20.0,
+                "reported_speedup": None,
+            }
+        },
+    }
+    observed: dict[str, Path] = {}
+
+    class AreaIntegration:
+        @staticmethod
+        def _load_area_module():
+            pytest.fail("area reference must not be read")
+
+    class Evaluator:
+        @staticmethod
+        def configured_simulation_dir(path):
+            assert path == config_path
+            return simulation_dir
+
+        @staticmethod
+        def simulate_rtl(rtl_config, case_dir, *, label):
+            observed["rtl_config"] = rtl_config
+            observed["case_dir"] = case_dir
+            assert label == "config6"
+            return {
+                "sim_latency_cycles": 10,
+                "rtl_simulation_time_ms": 5.0,
+                "cpp_iterations": 2.0,
+                "waveform_verified": True,
+                "decoding_verified": True,
+            }
+
+    class Terms:
+        decision_cycles = 4
+        cycles_per_iteration = 44
+
+    monkeypatch.setattr(
+        bp_adapter,
+        "_modules",
+        lambda: (
+            AreaIntegration,
+            Evaluator,
+            lambda *_args: 8,
+            lambda *_args: Terms(),
+            lambda latency, terms: (latency - terms.decision_cycles)
+            / terms.cycles_per_iteration,
+            "NAND2",
+            lambda area, ge: area / ge,
+            lambda: 1.12,
+            lambda *_args: 2.0,
+        ),
+    )
+
+    result = bp_adapter.validate(config_path, config)
+    assert observed["case_dir"] == simulation_dir
+    assert observed["rtl_config"] == simulation_dir / "rtl_config.json"
+    assert observed["rtl_config"].is_file()
+    assert result["latency"]["source"] == "rtl"

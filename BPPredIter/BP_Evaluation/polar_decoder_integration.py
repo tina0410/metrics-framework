@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -14,23 +13,6 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_POLAR_PROJECT = (
     ROOT.parent.parent / "Generator" / "PolarDecoder" / "BehaviorialVerification"
 )
-
-
-def generate_bp_rtl(config_path: Path, output_dir: Path, project_dir: Path = DEFAULT_POLAR_PROJECT) -> float:
-    """Generate RTL through PolarDecoder without keeping a second generator copy."""
-    module_path = project_dir / "Gen_BPDecoder.py"
-    if not module_path.exists():
-        raise FileNotFoundError(f"PolarDecoder generator not found: {module_path}")
-    spec = importlib.util.spec_from_file_location("canonical_polar_gen_bpdecoder", module_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load PolarDecoder generator: {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(project_dir))
-    try:
-        spec.loader.exec_module(module)
-        return module.GenBPDecoder(str(config_path), str(output_dir))
-    finally:
-        sys.path.pop(0)
 
 
 def simulate_bp_rtl(

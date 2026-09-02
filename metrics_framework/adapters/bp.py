@@ -121,8 +121,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     latency_source = "config"
     actual_iterations: float | None = None
     if actual_cycles is None or (simulation_time is None and latency_speedup is None):
-        output_dir = evaluator.configured_output_dir(config_path)
-        simulation_dir = output_dir / "simulation"
+        simulation_dir = evaluator.configured_simulation_dir(config_path)
         simulation_dir.mkdir(parents=True, exist_ok=True)
         rtl_config = {
             "Hardware Architecture": architecture,
@@ -134,7 +133,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "Eb/N0 (dB)": float(config["decoder"].get("ebn0_db", 10.0)),
             "Clock Period (ns)": period_ns,
         }
-        rtl_config_path = output_dir / "rtl_config.json"
+        rtl_config_path = simulation_dir / "rtl_config.json"
         rtl_config_path.write_text(json.dumps(rtl_config, indent=2), encoding="utf-8")
         simulation = evaluator.simulate_rtl(
             rtl_config_path, simulation_dir, label=config_path.stem
