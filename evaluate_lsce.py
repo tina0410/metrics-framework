@@ -579,6 +579,10 @@ def run_lsce_evaluations(config: str | Path | None = None) -> dict[str, dict[str
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] in {"predict", "evaluate"}:
+        from metrics_framework.cli import main as framework_main
+
+        raise SystemExit(framework_main(["ls", *sys.argv[1:]]))
     parser = argparse.ArgumentParser(
         description="Run LSCE config_case1..5, or one selected config."
     )

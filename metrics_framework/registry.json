@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "modules": {
+    "ls": {
+      "adapter": "metrics_framework/adapters/ls.py",
+      "command": ["{python}", "{adapter}"],
+      "root": ".",
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "LS_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
+    },
+    "mimo": {
+      "adapter": "metrics_framework/adapters/mimo.py",
+      "command": ["{python}", "{adapter}"],
+      "root": "Generator/MIMODetector",
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "MIMO_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
+    },
+    "bp": {
+      "adapter": "metrics_framework/adapters/bp.py",
+      "command": ["{python}", "{adapter}"],
+      "root": "BPPredIter/BP_Evaluation",
+      "config_dir": "config",
+      "config_pattern": "config{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "BP_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity", "iterations"]
+    }
+  }
+}

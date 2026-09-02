@@ -1,5 +1,24 @@
 # LSCE 指标评估
 
+## LS / MIMO / BP 统一入口
+
+仓库现在提供可扩展的统一指标框架。详细协议、输出约定和新模块接入方法见
+[`metrics_framework/README.md`](metrics_framework/README.md)。推荐从仓库根目录运行：
+
+```bash
+python -m metrics_framework ls predict 1
+python -m metrics_framework mimo evaluate 3
+python -m metrics_framework bp predict path/to/config.json
+```
+
+安装项目后也可使用等价的 `metrics` 命令。公开模式只有 `predict` 和
+`evaluate`；验证是 adapter 的内部动作。纯预测不会读取真实面积或启动 RTL。
+`evaluate` 验证失败时 stdout 为空、错误写入 stderr，并返回非零状态。
+
+三个模块可以通过环境变量选择自己的 Python 解释器：`LS_METRICS_PYTHON`、
+`MIMO_METRICS_PYTHON` 和 `BP_METRICS_PYTHON`。未设置时优先使用模块自己的
+`.venv`，最后使用启动框架的解释器。
+
 本文档是 LS/LSCE 的快速入口，说明环境、顶层文件、配置改法、定点仿真与误差计算函数、输出文件、Bug 修复记录和当前进度。本次接口与维护说明如下。
 
 
