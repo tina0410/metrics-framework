@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO 和 BP 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
+该框架统一 LS、MIMO、BP 和 ADD 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|add> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|add> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -107,3 +107,5 @@ python adapter.py validate CONFIG
 5. 增加预测隔离、JSON 验证覆盖、验证失败零 stdout、完整 evaluation 快照测试。
 
 MIMO 的面积项目与 RTL 项目存在同名旧模块，因此其 adapter 使用额外的 area worker 子进程；新模块存在类似命名或 ABI 冲突时也应使用同样的隔离方式。
+
+ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数；统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`。ADD 的预测与真实延迟均为 `n_pipeline` cycles；设计文档与测试平台约定每拍处理一帧，Throughput 为 `1 / clock.period_ns` Gframes/s。面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数，真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。

@@ -15,11 +15,20 @@ from metrics_framework.core import (
     predict,
 )
 from metrics_framework.adapters import bp as bp_adapter
+from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 
 
 ROOT = Path(__file__).resolve().parent
+
+
+def test_registered_add_uses_canonical_module_root():
+    spec = Registry().get("add")
+    expected = (ROOT / "Generator" / "Add" / "V0.2.1").resolve()
+    assert spec.root == expected
+    assert spec.config_dir == expected / "configs"
+    assert spec.output_root == expected / "evaluation_output"
 
 
 def test_registered_ls_uses_canonical_module_root():
@@ -266,6 +275,124 @@ def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path
     assert result["latency"]["prediction_time_ms"] == pytest.approx(1.0)
     assert result["throughput"]["prediction_time_ms"] == pytest.approx(0.5)
     assert result["hardware_complexity"]["prediction_time_ms"] == pytest.approx(0.75)
+
+
+def _add_config(n_pipeline=4):
+    return {
+        "input_1": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+        "input_2": {"bitwidth": 6, "fractional_width": 2, "signed": False},
+        "output": {"bitwidth": 9, "fractional_width": 4, "signed": True},
+        "n_pipeline": n_pipeline,
+        "if_rst_n": False,
+        "clock": {"period_ns": 5.0},
+    }
+
+
+def test_add_prediction_uses_pipeline_latency_and_one_op_per_cycle(monkeypatch, tmp_path):
+    model = object()
+
+    class Module:
+        GE_REFERENCE_CELL = "NAND2"
+
+        @staticmethod
+        def parameters(config):
+            return (8, 4, 1, 6, 2, 0, 9, 4, config["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+        @staticmethod
+        def load_area_model():
+            return model
+
+        @staticmethod
+        def predict_area(value, _params):
+            assert value is model
+            return 112.0
+
+        @staticmethod
+        def throughput_gframes_s(params):
+            return 1.0 / params[10]
+
+        @staticmethod
+        def read_ge_area():
+            return 1.12
+
+    monkeypatch.setattr(add_adapter, "_module", lambda: Module)
+    result = add_adapter.predict(tmp_path / "config.json", _add_config())
+    assert result["latency"]["predicted_cycles"] == 4
+    assert result["throughput"]["predicted"] == pytest.approx(0.2)
+    assert result["throughput"]["unit"] == "Gframes/s"
+    assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(400.0)
+
+
+def test_add_validation_real_latency_is_n_pipeline(monkeypatch, tmp_path):
+    config = _add_config(n_pipeline=3)
+    config["validation"] = {
+        "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0},
+        "latency": {"actual_cycles": 3, "simulation_time_ms": 1.0},
+    }
+
+    class Module:
+        GE_REFERENCE_CELL = "NAND2"
+
+        @staticmethod
+        def parameters(value):
+            return (8, 4, 1, 6, 2, 0, 9, 4, value["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+        @staticmethod
+        def throughput_gframes_s(params):
+            return 1.0 / params[10]
+
+        @staticmethod
+        def read_ge_area():
+            return 1.12
+
+        @staticmethod
+        def read_area_reference(_params):
+            pytest.fail("configured area must bypass the DC workbook")
+
+    monkeypatch.setattr(add_adapter, "_module", lambda: Module)
+    result = add_adapter.validate(tmp_path / "config.json", config)
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["output_interval_cycles"] == 1
+    assert result["throughput"]["actual"] == pytest.approx(0.2)
+    assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(600.0)
+
+
+def test_add_rejects_actual_latency_different_from_n_pipeline(monkeypatch, tmp_path):
+    config = _add_config(n_pipeline=3)
+    config["validation"] = {
+        "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0},
+        "latency": {"actual_cycles": 4, "simulation_time_ms": 1.0},
+    }
+
+    class Module:
+        @staticmethod
+        def parameters(value):
+            return (8, 4, 1, 6, 2, 0, 9, 4, value["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+    monkeypatch.setattr(add_adapter, "_module", lambda: Module)
+    with pytest.raises(ValueError, match="must equal n_pipeline"):
+        add_adapter.validate(tmp_path / "config.json", config)
+
+
+def test_add_default_case_runs_full_unified_evaluation():
+    result = evaluate("add", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 1
+    assert result["延迟"]["仿真结果 (cycles)"] == 1
+    assert result["面积"]["真实结果 (μm²)"] == 11.48
+    assert result["Throughput"]["预测结果 (Gframes/s)"] == 0.2
+    assert result["Throughput"]["仿真结果 (Gframes/s)"] == 0.2
 
 
 def test_incomplete_validation_does_not_write_evaluation(tmp_path, monkeypatch):
