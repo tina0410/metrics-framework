@@ -114,6 +114,7 @@ ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位
 
 - 延迟预测值为 `n_pipeline` cycles。验证时复用仓库内 PyTV 的 `ModuleAdd`，生成完整 ADD、FxMatch 和 Delay RTL；同时生成同参数的无流水 ADD 作为功能参考。
 - Icarus Verilog 连续输入三帧并校验每帧输出，分别测量首帧的 `sim_latency_cycles` 和相邻有效输出的 `sim_output_interval_cycles`。真实延迟必须等于 `n_pipeline`。
+- ADD 的 `仿真时间 (ms)` 统计完整 RTL 验证链耗时，计时范围从 PyTV 开始生成 RTL，到 Icarus 编译、`vvp` 运行及结果解析完成；它不是 Verilog 波形覆盖的几十个仿真 cycle 所对应的物理时间。
 - 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值按实测输出间隔计算：`actual_Gframes/s = 1 / (clock.period_ns × sim_output_interval_cycles)`。默认 ADD 的输出间隔为 1 cycle，因此预测值和仿真值一致。流水级数影响首帧延迟，但只要流水线能每拍接收数据，就不降低稳态吞吐率。
 - `Gframes/s` 表示每秒十亿帧，`Gbps` 表示每秒十亿比特，两者物理意义不同。只有明确每帧包含的有效比特数后，才能按 `Gbps = Gframes/s × bits_per_frame` 换算。
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。

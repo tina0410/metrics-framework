@@ -162,6 +162,7 @@ def simulate_latency(
     params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
 ) -> dict[str, Any]:
     """Generate the real ADD RTL, then measure its latency and interval."""
+    started = time.perf_counter()
     n_pipeline = params[8]
     case_dir = SIMULATION_ROOT / config_path.stem
     case_dir.mkdir(parents=True, exist_ok=True)
@@ -265,7 +266,6 @@ endmodule
 """,
         encoding="utf-8",
     )
-    started = time.perf_counter()
     rtl_files = [Path(path) for path in manifest["rtl_files"]]
     compile_process = subprocess.run(
         [
