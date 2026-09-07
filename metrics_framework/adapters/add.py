@@ -82,11 +82,12 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         reference = module.read_area_reference(params)
         actual_area = actual_area or reference["actual_area_um2"]
         synthesis_time = synthesis_time or reference["synthesis_time_ms"]
-        area_source = "config+dc_reference" if area_had_config else "dc_reference"
+        reference_source = reference.get("source", "dc_reference")
+        area_source = f"config+{reference_source}" if area_had_config else reference_source
 
     configured_cycles, validation_time, interval, latency_speedup = configured_latency(config)
-    actual_cycles = module.latency_cycles(params)
-    if configured_cycles is not None and configured_cycles != actual_cycles:
+    predicted_cycles = module.latency_cycles(params)
+    if configured_cycles is not None and configured_cycles != predicted_cycles:
         raise ValueError(
             "validation.latency.actual_cycles must equal n_pipeline for ADD"
         )
@@ -94,21 +95,42 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "validation.latency.output_interval_cycles must equal 1 for pipelined ADD"
         )
-    if validation_time is None and latency_speedup is None:
-        started = time.perf_counter()
-        module.latency_cycles(params)
-        validation_time = max((time.perf_counter() - started) * 1000.0, 1e-9)
+    latency_had_config = configured_cycles is not None or interval is not None or validation_time is not None
+    latency_source = "config"
+    if (
+        configured_cycles is None
+        or interval is None
+        or (validation_time is None and latency_speedup is None)
+    ):
+        simulation = module.simulate_latency(config_path, params)
+        if simulation.get("functional_match") is not True:
+            raise RuntimeError("ADD RTL functional comparison failed")
+        measured_cycles = int(simulation["sim_latency_cycles"])
+        measured_interval = int(simulation["sim_output_interval_cycles"])
+        if measured_cycles != predicted_cycles:
+            raise RuntimeError(
+                f"ADD RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
+            )
+        configured_cycles = configured_cycles or measured_cycles
+        interval = interval or measured_interval
+        validation_time = validation_time or float(simulation["rtl_simulation_time_ms"])
+        latency_source = "config+rtl" if latency_had_config else "rtl"
+        print(
+            f"Success. The RTL latency of {config_path.stem} is {measured_cycles} cycles",
+            file=sys.stderr,
+        )
+    actual_cycles = configured_cycles
 
-    throughput = module.throughput_gframes_s(params)
+    throughput = 1.0 / (params[10] * int(interval))
     ge_area = module.read_ge_area()
     complexity = float(actual_area) / ge_area * actual_cycles
     return {
         "latency": {
             "actual_cycles": actual_cycles,
             "simulation_time_ms": validation_time,
-            "output_interval_cycles": 1,
+            "output_interval_cycles": interval,
             "reported_speedup": latency_speedup,
-            "source": "formula",
+            "source": latency_source,
         },
         "area": {
             "actual_um2": actual_area,
@@ -116,7 +138,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "reported_speedup": area_speedup,
             "source": area_source,
         },
-        "throughput": {"actual": throughput, "source": "formula"},
+        "throughput": {"actual": throughput, "source": "rtl_derived"},
         "hardware_complexity": {
             "actual_ge_cycles": complexity,
             "source": "derived",

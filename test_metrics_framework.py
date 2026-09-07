@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -331,7 +332,11 @@ def test_add_validation_real_latency_is_n_pipeline(monkeypatch, tmp_path):
     config = _add_config(n_pipeline=3)
     config["validation"] = {
         "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0},
-        "latency": {"actual_cycles": 3, "simulation_time_ms": 1.0},
+        "latency": {
+            "actual_cycles": 3,
+            "simulation_time_ms": 1.0,
+            "output_interval_cycles": 1,
+        },
     }
 
     class Module:
@@ -384,6 +389,69 @@ def test_add_rejects_actual_latency_different_from_n_pipeline(monkeypatch, tmp_p
     monkeypatch.setattr(add_adapter, "_module", lambda: Module)
     with pytest.raises(ValueError, match="must equal n_pipeline"):
         add_adapter.validate(tmp_path / "config.json", config)
+
+
+def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
+    config = _add_config(n_pipeline=3)
+    config["validation"] = {
+        "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0}
+    }
+
+    class Module:
+        GE_REFERENCE_CELL = "NAND2"
+
+        @staticmethod
+        def parameters(value):
+            return (8, 4, 1, 6, 2, 0, 9, 4, value["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+        @staticmethod
+        def simulate_latency(path, params):
+            assert path == tmp_path / "config.json"
+            assert params[8] == 3
+            return {
+                "sim_latency_cycles": 3,
+                "sim_output_interval_cycles": 1,
+                "rtl_simulation_time_ms": 25.0,
+                "functional_match": True,
+            }
+
+        @staticmethod
+        def read_ge_area():
+            return 1.12
+
+        @staticmethod
+        def read_area_reference(_params):
+            pytest.fail("configured area must bypass the DC workbook")
+
+    monkeypatch.setattr(add_adapter, "_module", lambda: Module)
+    result = add_adapter.validate(tmp_path / "config.json", config)
+    assert result["latency"] == {
+        "actual_cycles": 3,
+        "simulation_time_ms": 25.0,
+        "output_interval_cycles": 1,
+        "reported_speedup": None,
+        "source": "rtl",
+    }
+    assert result["throughput"] == {"actual": pytest.approx(0.2), "source": "rtl_derived"}
+
+
+@pytest.mark.skipif(
+    shutil.which("iverilog") is None or shutil.which("vvp") is None,
+    reason="Icarus Verilog is not installed",
+)
+def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
+    module = add_adapter._module()
+    monkeypatch.setattr(module, "SIMULATION_ROOT", tmp_path / "sim")
+    params = module.parameters(_add_config(n_pipeline=3))
+    result = module.simulate_latency(tmp_path / "config.json", params)
+
+    assert result["sim_latency_cycles"] == 3
+    assert result["sim_output_interval_cycles"] == 1
+    assert result["functional_match"] is True
 
 
 def test_add_default_case_runs_full_unified_evaluation():

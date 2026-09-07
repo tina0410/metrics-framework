@@ -23,6 +23,7 @@ evaluation_output/
 Generator/MIMODetector/evaluation_output/
 BPPredIter/BP_Evaluation/evaluation_output/
 Generator/Add/V0.2.1/evaluation_output/
+Generator/Add/V0.2.1/sim/
 BPPredIter/BP_Evaluation/sim/*
 !BPPredIter/BP_Evaluation/sim/README.md
 Generator/MIMODetector/BehaviorialVerification/sim/

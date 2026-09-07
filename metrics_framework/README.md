@@ -108,4 +108,4 @@ python adapter.py validate CONFIG
 
 MIMO 的面积项目与 RTL 项目存在同名旧模块，因此其 adapter 使用额外的 area worker 子进程；新模块存在类似命名或 ABI 冲突时也应使用同样的隔离方式。
 
-ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数；统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`。ADD 的预测与真实延迟均为 `n_pipeline` cycles；设计文档与测试平台约定每拍处理一帧，Throughput 为 `1 / clock.period_ns` Gframes/s。面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数，真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。
+ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数；统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`。五个默认 case 保持 `n_pipeline = 1`。预测延迟为 `n_pipeline` cycles；真实延迟和输出间隔由 Icarus Verilog 仿真连续三帧测得，仿真同时校验双输入加法输出，要求实测延迟等于 `n_pipeline`。设计文档与测试平台约定每拍处理一帧，预测 Throughput 为 `1 / clock.period_ns` Gframes/s，真实 Throughput 使用仿真的输出间隔计算。面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数，真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配；自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。运行 `evaluate` 前需确保 `iverilog` 和 `vvp` 位于 `PATH`，仿真证据写入 `Generator/Add/V0.2.1/sim/<配置名>/simulation_result.json`。

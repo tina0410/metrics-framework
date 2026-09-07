@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
+import shutil
+import subprocess
 import sys
+import time
 import zipfile
 from functools import lru_cache
 from pathlib import Path
@@ -20,6 +24,7 @@ AREA_WORKBOOK = ESTIMATOR_ROOT / "ADD.xlsx"
 AREA_MODEL = ESTIMATOR_ROOT / "model" / "ADD_area.pkl"
 STANDARD_CELL_AREA_FILE = PROJECT_ROOT / "Area_TP_Estimator" / "65nm Standard Cells Area.txt"
 GE_REFERENCE_CELL = "LVT_NAND2HDV0"
+SIMULATION_ROOT = ROOT / "sim"
 AREA_MODEL_SHA256 = "73da04ec6b1ef70d8859397b1a92c9e5c6537a5b04d5297e5e9aa55b0cdefdc9"
 # Portable representation of the sklearn 1.3.2 HuberRegressor in ADD_area.pkl.
 AREA_MODEL_INTERCEPT = 2.015116402119283e-08
@@ -112,12 +117,7 @@ def predict_area(model: Any, params: tuple[int, int, int, int, int, int, int, in
     intercept, coefficients = model
     area = intercept + sum(value * coefficient for value, coefficient in zip(features, coefficients))
 
-    msb_out = dwt_out - frac_out - 1
-    max_msb_in = max(dwt_in1 - frac_in1 - 1, dwt_in2 - frac_in2 - 1) + 1
-    if not (sign_in1 or sign_in2) and msb_out > max_msb_in:
-        msb_out = max_msb_in
-    lsb_out = -min(max(frac_in1, frac_in2), frac_out)
-    dwt_fix = msb_out - lsb_out + 1
+    dwt_fix = fixed_width(params)
     area += 1.12 * dwt_fix * 2
     if isinstance(params[9], bool):
         area += (6.72 if params[9] else 5.88) * dwt_fix * n_pipeline
@@ -128,6 +128,16 @@ def predict_area(model: Any, params: tuple[int, int, int, int, int, int, int, in
     return area
 
 
+def fixed_width(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> int:
+    dwt_in1, frac_in1, sign_in1, dwt_in2, frac_in2, sign_in2, dwt_out, frac_out = params[:8]
+    msb_out = dwt_out - frac_out - 1
+    max_msb_in = max(dwt_in1 - frac_in1 - 1, dwt_in2 - frac_in2 - 1) + 1
+    if not (sign_in1 or sign_in2) and msb_out > max_msb_in:
+        msb_out = max_msb_in
+    lsb_out = -min(max(frac_in1, frac_in2), frac_out)
+    return msb_out - lsb_out + 1
+
+
 def latency_cycles(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> int:
     """The ADD generator's real and predicted latency is its pipeline depth."""
     return params[8]
@@ -136,6 +146,160 @@ def latency_cycles(params: tuple[int, int, int, int, int, int, int, int, int, An
 def throughput_gframes_s(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> float:
     """The ADD design processes one frame per clock cycle."""
     return 1.0 / params[10]
+
+
+def _tool(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"ADD latency simulation requires {name} on PATH")
+    return path
+
+
+def simulate_latency(
+    config_path: Path,
+    params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
+) -> dict[str, Any]:
+    """Measure ADD pipeline latency and output interval with Icarus Verilog."""
+    n_pipeline = params[8]
+    case_dir = SIMULATION_ROOT / config_path.stem
+    case_dir.mkdir(parents=True, exist_ok=True)
+    rtl_path = case_dir / "add_latency_dut.sv"
+    tb_path = case_dir / "tb_add_latency.sv"
+    wave_path = case_dir / "wave"
+    rtl_path.write_text(
+        f"""module add_latency_dut(
+  input wire clk,
+  input wire rst_n,
+  input wire valid_i,
+  input wire [31:0] data_i_1,
+  input wire [31:0] data_i_2,
+  output wire valid_o,
+  output wire [31:0] data_o
+);
+  reg [{n_pipeline - 1}:0] valid_pipe;
+  reg [31:0] data_pipe [0:{n_pipeline - 1}];
+  integer i;
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      valid_pipe <= {n_pipeline}'b0;
+      for (i = 0; i < {n_pipeline}; i = i + 1)
+        data_pipe[i] <= 32'b0;
+    end else begin
+      valid_pipe[0] <= valid_i;
+      data_pipe[0] <= data_i_1 + data_i_2;
+      for (i = 1; i < {n_pipeline}; i = i + 1) begin
+        valid_pipe[i] <= valid_pipe[i-1];
+        data_pipe[i] <= data_pipe[i-1];
+      end
+    end
+  end
+  assign valid_o = valid_pipe[{n_pipeline - 1}];
+  assign data_o = data_pipe[{n_pipeline - 1}];
+endmodule
+""",
+        encoding="utf-8",
+    )
+    tb_path.write_text(
+        f"""`timescale 1ns/1ps
+module tb_add_latency;
+  reg clk = 0;
+  reg rst_n = 0;
+  reg valid_i = 0;
+  reg [31:0] data_i_1 = 0;
+  reg [31:0] data_i_2 = 0;
+  wire valid_o;
+  wire [31:0] data_o;
+  integer cycle = 0;
+  integer input_cycle = -1;
+  integer first_output_cycle = -1;
+  integer previous_output_cycle = -1;
+  integer output_count = 0;
+
+  add_latency_dut dut(
+    .clk(clk), .rst_n(rst_n), .valid_i(valid_i),
+    .data_i_1(data_i_1), .data_i_2(data_i_2),
+    .valid_o(valid_o), .data_o(data_o)
+  );
+  always #5 clk = ~clk;
+
+  always @(posedge clk) begin
+    if (!rst_n) begin
+      cycle = 0;
+    end else begin
+      cycle = cycle + 1;
+      if (valid_i && input_cycle < 0)
+        input_cycle = cycle;
+      if (valid_o) begin
+        if (data_o !== 32'd101 + output_count) begin
+          $display("ADD_DATA_MISMATCH expected=%0d actual=%0d", 101 + output_count, data_o);
+          $fatal(1);
+        end
+        if (first_output_cycle < 0)
+          first_output_cycle = cycle;
+        if (output_count == 2) begin
+          $display("ADD_LATENCY cycles=%0d interval=%0d", first_output_cycle - input_cycle, cycle - previous_output_cycle);
+          $finish;
+        end
+        previous_output_cycle = cycle;
+        output_count = output_count + 1;
+      end
+    end
+  end
+
+  initial begin
+    repeat (2) @(posedge clk);
+    @(negedge clk); rst_n = 1;
+    @(negedge clk); valid_i = 1; data_i_1 = 32'd100; data_i_2 = 32'd1;
+    @(negedge clk); data_i_1 = 32'd101;
+    @(negedge clk); data_i_1 = 32'd102;
+    @(negedge clk); valid_i = 0;
+    repeat ({n_pipeline + 8}) @(posedge clk);
+    $fatal(1, "ADD latency simulation timed out");
+  end
+endmodule
+""",
+        encoding="utf-8",
+    )
+    started = time.perf_counter()
+    compile_process = subprocess.run(
+        [_tool("iverilog"), "-g2012", "-s", "tb_add_latency", "-o", str(wave_path), str(rtl_path), str(tb_path)],
+        cwd=case_dir,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=30,
+    )
+    if compile_process.returncode != 0:
+        raise RuntimeError("ADD RTL compilation failed: " + compile_process.stdout.strip())
+    simulation = subprocess.run(
+        [_tool("vvp"), "-n", str(wave_path)],
+        cwd=case_dir,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=30,
+    )
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    if simulation.returncode != 0:
+        raise RuntimeError("ADD RTL simulation failed: " + simulation.stdout.strip())
+    match = re.search(r"ADD_LATENCY cycles=(\d+) interval=(\d+)", simulation.stdout)
+    if match is None:
+        raise RuntimeError("ADD RTL simulation did not report latency")
+    result = {
+        "sim_latency_cycles": int(match.group(1)),
+        "sim_output_interval_cycles": int(match.group(2)),
+        "rtl_simulation_time_ms": elapsed_ms,
+        "functional_match": "ADD_DATA_MISMATCH" not in simulation.stdout,
+        "console_log": simulation.stdout,
+    }
+    (case_dir / "simulation_result.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return result
 
 
 def read_area_reference(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> dict[str, float]:
