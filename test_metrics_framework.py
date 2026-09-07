@@ -409,7 +409,7 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
             return params[8]
 
         @staticmethod
-        def simulate_latency(path, params):
+        def simulate_latency(path, _config, params):
             assert path == tmp_path / "config.json"
             assert params[8] == 3
             return {
@@ -446,12 +446,17 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
 def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
     module = add_adapter._module()
     monkeypatch.setattr(module, "SIMULATION_ROOT", tmp_path / "sim")
-    params = module.parameters(_add_config(n_pipeline=3))
-    result = module.simulate_latency(tmp_path / "config.json", params)
+    config = _add_config(n_pipeline=3)
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    params = module.parameters(config)
+    result = module.simulate_latency(config_path, config, params)
 
     assert result["sim_latency_cycles"] == 3
     assert result["sim_output_interval_cycles"] == 1
     assert result["functional_match"] is True
+    assert result["pipelined_top"].startswith("Add")
+    assert result["combinational_top"].startswith("Add")
 
 
 def test_add_default_case_runs_full_unified_evaluation():

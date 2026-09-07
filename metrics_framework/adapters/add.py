@@ -102,7 +102,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         or interval is None
         or (validation_time is None and latency_speedup is None)
     ):
-        simulation = module.simulate_latency(config_path, params)
+        simulation = module.simulate_latency(config_path, config, params)
         if simulation.get("functional_match") is not True:
             raise RuntimeError("ADD RTL functional comparison failed")
         measured_cycles = int(simulation["sim_latency_cycles"])

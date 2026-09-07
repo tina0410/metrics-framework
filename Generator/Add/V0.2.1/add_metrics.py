@@ -25,6 +25,7 @@ AREA_MODEL = ESTIMATOR_ROOT / "model" / "ADD_area.pkl"
 STANDARD_CELL_AREA_FILE = PROJECT_ROOT / "Area_TP_Estimator" / "65nm Standard Cells Area.txt"
 GE_REFERENCE_CELL = "LVT_NAND2HDV0"
 SIMULATION_ROOT = ROOT / "sim"
+RTL_GENERATOR = ROOT / "generate_add_rtl.py"
 AREA_MODEL_SHA256 = "73da04ec6b1ef70d8859397b1a92c9e5c6537a5b04d5297e5e9aa55b0cdefdc9"
 # Portable representation of the sklearn 1.3.2 HuberRegressor in ADD_area.pkl.
 AREA_MODEL_INTERCEPT = 2.015116402119283e-08
@@ -157,81 +158,79 @@ def _tool(name: str) -> str:
 
 def simulate_latency(
     config_path: Path,
+    config: dict[str, Any],
     params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
 ) -> dict[str, Any]:
-    """Measure ADD pipeline latency and output interval with Icarus Verilog."""
+    """Generate the real ADD RTL, then measure its latency and interval."""
     n_pipeline = params[8]
     case_dir = SIMULATION_ROOT / config_path.stem
     case_dir.mkdir(parents=True, exist_ok=True)
-    rtl_path = case_dir / "add_latency_dut.sv"
+    rtl_dir = case_dir / "rtl"
+    rtl_dir.mkdir(parents=True, exist_ok=True)
     tb_path = case_dir / "tb_add_latency.sv"
     wave_path = case_dir / "wave"
-    rtl_path.write_text(
-        f"""module add_latency_dut(
-  input wire clk,
-  input wire rst_n,
-  input wire valid_i,
-  input wire [31:0] data_i_1,
-  input wire [31:0] data_i_2,
-  output wire valid_o,
-  output wire [31:0] data_o
-);
-  reg [{n_pipeline - 1}:0] valid_pipe;
-  reg [31:0] data_pipe [0:{n_pipeline - 1}];
-  integer i;
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      valid_pipe <= {n_pipeline}'b0;
-      for (i = 0; i < {n_pipeline}; i = i + 1)
-        data_pipe[i] <= 32'b0;
-    end else begin
-      valid_pipe[0] <= valid_i;
-      data_pipe[0] <= data_i_1 + data_i_2;
-      for (i = 1; i < {n_pipeline}; i = i + 1) begin
-        valid_pipe[i] <= valid_pipe[i-1];
-        data_pipe[i] <= data_pipe[i-1];
-      end
-    end
-  end
-  assign valid_o = valid_pipe[{n_pipeline - 1}];
-  assign data_o = data_pipe[{n_pipeline - 1}];
-endmodule
-""",
+    generator = subprocess.run(
+        [sys.executable, str(RTL_GENERATOR), str(config_path), str(rtl_dir)],
+        cwd=ROOT,
+        text=True,
         encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=30,
     )
+    if generator.returncode != 0:
+        raise RuntimeError("ADD RTL generation failed: " + generator.stdout.strip())
+    manifest = json.loads((rtl_dir / "rtl_manifest.json").read_text(encoding="utf-8"))
+    pipelined_top = manifest["pipelined_top"]
+    combinational_top = manifest["combinational_top"]
+    dwt_in_1 = int(config["input_1"]["bitwidth"])
+    dwt_in_2 = int(config["input_2"]["bitwidth"])
+    dwt_out = int(config["output"]["bitwidth"])
+    has_reset = any(params[9]) if isinstance(params[9], list) else params[9]
+    reset_port = ", .i_rst_n(rst_n)" if has_reset else ""
     tb_path.write_text(
         f"""`timescale 1ns/1ps
 module tb_add_latency;
+  localparam integer N_PIPELINE = {n_pipeline};
   reg clk = 0;
   reg rst_n = 0;
   reg valid_i = 0;
-  reg [31:0] data_i_1 = 0;
-  reg [31:0] data_i_2 = 0;
-  wire valid_o;
-  wire [31:0] data_o;
+  reg [{dwt_in_1 - 1}:0] data_i_1 = 0;
+  reg [{dwt_in_2 - 1}:0] data_i_2 = 0;
+  wire [{dwt_out - 1}:0] dut_o;
+  wire [{dwt_out - 1}:0] reference_o;
+  reg [N_PIPELINE-1:0] valid_pipe = 0;
+  reg [{dwt_out - 1}:0] expected_pipe [0:N_PIPELINE-1];
   integer cycle = 0;
   integer input_cycle = -1;
   integer first_output_cycle = -1;
   integer previous_output_cycle = -1;
   integer output_count = 0;
+  integer i;
 
-  add_latency_dut dut(
-    .clk(clk), .rst_n(rst_n), .valid_i(valid_i),
-    .data_i_1(data_i_1), .data_i_2(data_i_2),
-    .valid_o(valid_o), .data_o(data_o)
+  {pipelined_top} dut(
+    .i_data_1(data_i_1), .i_data_2(data_i_2), .o_data(dut_o),
+    .i_clk(clk){reset_port}
+  );
+  {combinational_top} reference_add(
+    .i_data_1(data_i_1), .i_data_2(data_i_2), .o_data(reference_o)
   );
   always #5 clk = ~clk;
 
   always @(posedge clk) begin
     if (!rst_n) begin
       cycle = 0;
+      valid_pipe <= 0;
+      for (i = 0; i < N_PIPELINE; i = i + 1)
+        expected_pipe[i] <= 0;
     end else begin
       cycle = cycle + 1;
       if (valid_i && input_cycle < 0)
         input_cycle = cycle;
-      if (valid_o) begin
-        if (data_o !== 32'd101 + output_count) begin
-          $display("ADD_DATA_MISMATCH expected=%0d actual=%0d", 101 + output_count, data_o);
+      if (valid_pipe[N_PIPELINE-1]) begin
+        if (dut_o !== expected_pipe[N_PIPELINE-1]) begin
+          $display("ADD_DATA_MISMATCH expected=%0d actual=%0d", expected_pipe[N_PIPELINE-1], dut_o);
           $fatal(1);
         end
         if (first_output_cycle < 0)
@@ -243,15 +242,21 @@ module tb_add_latency;
         previous_output_cycle = cycle;
         output_count = output_count + 1;
       end
+      valid_pipe[0] <= valid_i;
+      expected_pipe[0] <= reference_o;
+      for (i = 1; i < N_PIPELINE; i = i + 1) begin
+        valid_pipe[i] <= valid_pipe[i-1];
+        expected_pipe[i] <= expected_pipe[i-1];
+      end
     end
   end
 
   initial begin
     repeat (2) @(posedge clk);
     @(negedge clk); rst_n = 1;
-    @(negedge clk); valid_i = 1; data_i_1 = 32'd100; data_i_2 = 32'd1;
-    @(negedge clk); data_i_1 = 32'd101;
-    @(negedge clk); data_i_1 = 32'd102;
+    @(negedge clk); valid_i = 1; data_i_1 = 1; data_i_2 = 1;
+    @(negedge clk); data_i_1 = 2; data_i_2 = 1;
+    @(negedge clk); data_i_1 = 3; data_i_2 = 2;
     @(negedge clk); valid_i = 0;
     repeat ({n_pipeline + 8}) @(posedge clk);
     $fatal(1, "ADD latency simulation timed out");
@@ -261,8 +266,12 @@ endmodule
         encoding="utf-8",
     )
     started = time.perf_counter()
+    rtl_files = [Path(path) for path in manifest["rtl_files"]]
     compile_process = subprocess.run(
-        [_tool("iverilog"), "-g2012", "-s", "tb_add_latency", "-o", str(wave_path), str(rtl_path), str(tb_path)],
+        [
+            _tool("iverilog"), "-g2012", "-s", "tb_add_latency",
+            "-o", str(wave_path), *(str(path) for path in rtl_files), str(tb_path),
+        ],
         cwd=case_dir,
         text=True,
         encoding="utf-8",
@@ -295,6 +304,9 @@ endmodule
         "rtl_simulation_time_ms": elapsed_ms,
         "functional_match": "ADD_DATA_MISMATCH" not in simulation.stdout,
         "console_log": simulation.stdout,
+        "pipelined_top": pipelined_top,
+        "combinational_top": combinational_top,
+        "rtl_files": [str(path) for path in rtl_files],
     }
     (case_dir / "simulation_result.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
