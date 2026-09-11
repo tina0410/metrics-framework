@@ -4,5 +4,5 @@
   "output": {"bitwidth": 1, "fractional_width": -1, "signed": true},
   "n_pipeline": 1,
   "if_rst_n": false,
-  "clock": {"period_ns": 8.0}
+  "clock": {"period_ns": 10.0}
 }

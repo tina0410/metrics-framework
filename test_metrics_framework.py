@@ -708,8 +708,8 @@ def test_add_default_case_runs_full_unified_evaluation():
     assert result["延迟"]["预测结果 (cycles)"] == 1
     assert result["延迟"]["仿真结果 (cycles)"] == 1
     assert result["面积"]["真实结果 (μm²)"] == 11.48
-    assert result["Throughput"]["预测结果 (Gframes/s)"] == 0.2
-    assert result["Throughput"]["仿真结果 (Gframes/s)"] == 0.2
+    assert result["Throughput"]["预测结果 (Gframes/s)"] == 0.1
+    assert result["Throughput"]["仿真结果 (Gframes/s)"] == 0.1
 
 
 def test_incomplete_validation_does_not_write_evaluation(tmp_path, monkeypatch):
