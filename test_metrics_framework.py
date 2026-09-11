@@ -440,8 +440,10 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
 
 
 @pytest.mark.skipif(
-    shutil.which("iverilog") is None or shutil.which("vvp") is None,
-    reason="Icarus Verilog is not installed",
+    shutil.which("iverilog") is None
+    or shutil.which("vvp") is None
+    or (shutil.which("clang++") is None and shutil.which("g++") is None),
+    reason="ADD simulation toolchain is not installed",
 )
 def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
     module = add_adapter._module()
@@ -455,8 +457,11 @@ def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
     assert result["sim_latency_cycles"] == 3
     assert result["sim_output_interval_cycles"] == 1
     assert result["functional_match"] is True
-    assert result["pipelined_top"].startswith("Add")
-    assert result["combinational_top"].startswith("Add")
+    assert result["matched_output_frames"] == 3
+    assert result["testbench_source"].endswith("tests\\tb_Add.py") or result[
+        "testbench_source"
+    ].endswith("tests/tb_Add.py")
+    assert result["reference_source"] == "original ModuleCppConfig/ModuleCppRun with QuBLAS"
 
 
 def test_add_default_case_runs_full_unified_evaluation():

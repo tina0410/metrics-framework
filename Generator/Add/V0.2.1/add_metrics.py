@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -25,7 +25,7 @@ AREA_MODEL = ESTIMATOR_ROOT / "model" / "ADD_area.pkl"
 STANDARD_CELL_AREA_FILE = PROJECT_ROOT / "Area_TP_Estimator" / "65nm Standard Cells Area.txt"
 GE_REFERENCE_CELL = "LVT_NAND2HDV0"
 SIMULATION_ROOT = ROOT / "sim"
-RTL_GENERATOR = ROOT / "generate_add_rtl.py"
+RTL_VALIDATOR = ROOT / "BehaviorialVerification" / "validate_add_timing.py"
 AREA_MODEL_SHA256 = "73da04ec6b1ef70d8859397b1a92c9e5c6537a5b04d5297e5e9aa55b0cdefdc9"
 # Portable representation of the sklearn 1.3.2 HuberRegressor in ADD_area.pkl.
 AREA_MODEL_INTERCEPT = 2.015116402119283e-08
@@ -149,169 +149,38 @@ def throughput_gframes_s(params: tuple[int, int, int, int, int, int, int, int, i
     return 1.0 / params[10]
 
 
-def _tool(name: str) -> str:
-    path = shutil.which(name)
-    if path is None:
-        raise FileNotFoundError(f"ADD latency simulation requires {name} on PATH")
-    return path
-
-
 def simulate_latency(
     config_path: Path,
     config: dict[str, Any],
     params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
 ) -> dict[str, Any]:
-    """Generate the real ADD RTL, then measure its latency and interval."""
-    started = time.perf_counter()
-    n_pipeline = params[8]
-    case_dir = SIMULATION_ROOT / config_path.stem
-    case_dir.mkdir(parents=True, exist_ok=True)
-    rtl_dir = case_dir / "rtl"
-    rtl_dir.mkdir(parents=True, exist_ok=True)
-    tb_path = case_dir / "tb_add_latency.sv"
-    wave_path = case_dir / "wave"
-    generator = subprocess.run(
-        [sys.executable, str(RTL_GENERATOR), str(config_path), str(rtl_dir)],
-        cwd=ROOT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=30,
-    )
-    if generator.returncode != 0:
-        raise RuntimeError("ADD RTL generation failed: " + generator.stdout.strip())
-    manifest = json.loads((rtl_dir / "rtl_manifest.json").read_text(encoding="utf-8"))
-    pipelined_top = manifest["pipelined_top"]
-    combinational_top = manifest["combinational_top"]
-    dwt_in_1 = int(config["input_1"]["bitwidth"])
-    dwt_in_2 = int(config["input_2"]["bitwidth"])
-    dwt_out = int(config["output"]["bitwidth"])
-    has_reset = any(params[9]) if isinstance(params[9], list) else params[9]
-    reset_port = ", .i_rst_n(rst_n)" if has_reset else ""
-    tb_path.write_text(
-        f"""`timescale 1ns/1ps
-module tb_add_latency;
-  localparam integer N_PIPELINE = {n_pipeline};
-  reg clk = 0;
-  reg rst_n = 0;
-  reg valid_i = 0;
-  reg [{dwt_in_1 - 1}:0] data_i_1 = 0;
-  reg [{dwt_in_2 - 1}:0] data_i_2 = 0;
-  wire [{dwt_out - 1}:0] dut_o;
-  wire [{dwt_out - 1}:0] reference_o;
-  reg [N_PIPELINE-1:0] valid_pipe = 0;
-  reg [{dwt_out - 1}:0] expected_pipe [0:N_PIPELINE-1];
-  integer cycle = 0;
-  integer input_cycle = -1;
-  integer first_output_cycle = -1;
-  integer previous_output_cycle = -1;
-  integer output_count = 0;
-  integer i;
-
-  {pipelined_top} dut(
-    .i_data_1(data_i_1), .i_data_2(data_i_2), .o_data(dut_o),
-    .i_clk(clk){reset_port}
-  );
-  {combinational_top} reference_add(
-    .i_data_1(data_i_1), .i_data_2(data_i_2), .o_data(reference_o)
-  );
-  always #5 clk = ~clk;
-
-  always @(posedge clk) begin
-    if (!rst_n) begin
-      cycle = 0;
-      valid_pipe <= 0;
-      for (i = 0; i < N_PIPELINE; i = i + 1)
-        expected_pipe[i] <= 0;
-    end else begin
-      cycle = cycle + 1;
-      if (valid_i && input_cycle < 0)
-        input_cycle = cycle;
-      if (valid_pipe[N_PIPELINE-1]) begin
-        if (dut_o !== expected_pipe[N_PIPELINE-1]) begin
-          $display("ADD_DATA_MISMATCH expected=%0d actual=%0d", expected_pipe[N_PIPELINE-1], dut_o);
-          $fatal(1);
-        end
-        if (first_output_cycle < 0)
-          first_output_cycle = cycle;
-        if (output_count == 2) begin
-          $display("ADD_LATENCY cycles=%0d interval=%0d", first_output_cycle - input_cycle, cycle - previous_output_cycle);
-          $finish;
-        end
-        previous_output_cycle = cycle;
-        output_count = output_count + 1;
-      end
-      valid_pipe[0] <= valid_i;
-      expected_pipe[0] <= reference_o;
-      for (i = 1; i < N_PIPELINE; i = i + 1) begin
-        valid_pipe[i] <= valid_pipe[i-1];
-        expected_pipe[i] <= expected_pipe[i-1];
-      end
-    end
-  end
-
-  initial begin
-    repeat (2) @(posedge clk);
-    @(negedge clk); rst_n = 1;
-    @(negedge clk); valid_i = 1; data_i_1 = 1; data_i_2 = 1;
-    @(negedge clk); data_i_1 = 2; data_i_2 = 1;
-    @(negedge clk); data_i_1 = 3; data_i_2 = 2;
-    @(negedge clk); valid_i = 0;
-    repeat ({n_pipeline + 8}) @(posedge clk);
-    $fatal(1, "ADD latency simulation timed out");
-  end
-endmodule
-""",
-        encoding="utf-8",
-    )
-    rtl_files = [Path(path) for path in manifest["rtl_files"]]
-    compile_process = subprocess.run(
+    """Run the original ADD testbench/reference chain and return its measurements."""
+    environment = os.environ.copy()
+    environment["ADD_SIM_ROOT"] = str(SIMULATION_ROOT)
+    process = subprocess.run(
         [
-            _tool("iverilog"), "-g2012", "-s", "tb_add_latency",
-            "-o", str(wave_path), *(str(path) for path in rtl_files), str(tb_path),
+            sys.executable,
+            str(RTL_VALIDATOR),
+            "--config",
+            str(config_path),
+            "--case-label",
+            config_path.stem,
         ],
-        cwd=case_dir,
+        cwd=RTL_VALIDATOR.parent,
         text=True,
         encoding="utf-8",
         errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=30,
+        timeout=120,
+        env=environment,
     )
-    if compile_process.returncode != 0:
-        raise RuntimeError("ADD RTL compilation failed: " + compile_process.stdout.strip())
-    simulation = subprocess.run(
-        [_tool("vvp"), "-n", str(wave_path)],
-        cwd=case_dir,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=30,
-    )
-    elapsed_ms = (time.perf_counter() - started) * 1000.0
-    if simulation.returncode != 0:
-        raise RuntimeError("ADD RTL simulation failed: " + simulation.stdout.strip())
-    match = re.search(r"ADD_LATENCY cycles=(\d+) interval=(\d+)", simulation.stdout)
-    if match is None:
-        raise RuntimeError("ADD RTL simulation did not report latency")
-    result = {
-        "sim_latency_cycles": int(match.group(1)),
-        "sim_output_interval_cycles": int(match.group(2)),
-        "rtl_simulation_time_ms": elapsed_ms,
-        "functional_match": "ADD_DATA_MISMATCH" not in simulation.stdout,
-        "console_log": simulation.stdout,
-        "pipelined_top": pipelined_top,
-        "combinational_top": combinational_top,
-        "rtl_files": [str(path) for path in rtl_files],
-    }
-    (case_dir / "simulation_result.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    return result
+    if process.returncode != 0:
+        raise RuntimeError("Original ADD RTL validation failed: " + process.stdout.strip())
+    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
+    if not result_path.is_file():
+        raise FileNotFoundError(f"ADD RTL timing result was not generated: {result_path}")
+    return json.loads(result_path.read_text(encoding="utf-8"))
 
 
 def read_area_reference(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> dict[str, float]:
