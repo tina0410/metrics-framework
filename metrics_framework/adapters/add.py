@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from pathlib import Path
@@ -102,6 +103,9 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("ADD RTL functional comparison failed")
     measured_cycles = int(simulation["sim_latency_cycles"])
     measured_interval = int(simulation["sim_output_interval_cycles"])
+    throughput = float(simulation["simulated_throughput_gframes_s"])
+    if not math.isfinite(throughput) or throughput <= 0:
+        raise RuntimeError("ADD RTL measured throughput must be finite and positive")
     if measured_cycles != predicted_cycles:
         raise RuntimeError(
             f"ADD RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
@@ -121,7 +125,6 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         file=sys.stderr,
     )
 
-    throughput = 1.0 / (params[10] * int(interval))
     ge_area = module.read_ge_area()
     complexity = float(actual_area) / ge_area * actual_cycles
     return {
@@ -138,7 +141,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "reported_speedup": area_speedup,
             "source": area_source,
         },
-        "throughput": {"actual": throughput, "source": "rtl_derived"},
+        "throughput": {"actual": throughput, "source": "rtl_measured"},
         "hardware_complexity": {
             "actual_ge_cycles": complexity,
             "source": "derived",

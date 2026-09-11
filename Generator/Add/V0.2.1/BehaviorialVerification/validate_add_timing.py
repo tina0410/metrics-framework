@@ -73,6 +73,26 @@ def _rising_times(vcd_path: Path) -> dict[str, list[int]]:
     return rises
 
 
+def _timescale_ns(vcd_path: Path) -> float:
+    header = vcd_path.read_text(encoding="ascii", errors="replace")
+    match = re.search(
+        r"\$timescale\s+([0-9]+(?:\.[0-9]+)?)\s*(s|ms|us|ns|ps|fs)\s+\$end",
+        header,
+        flags=re.IGNORECASE,
+    )
+    if match is None:
+        raise ValueError(f"{vcd_path}: missing or unsupported VCD timescale")
+    unit_ns = {
+        "s": 1e9,
+        "ms": 1e6,
+        "us": 1e3,
+        "ns": 1.0,
+        "ps": 1e-3,
+        "fs": 1e-6,
+    }
+    return float(match.group(1)) * unit_ns[match.group(2).lower()]
+
+
 def measure_timing(vcd_path: Path) -> dict[str, Any]:
     rises = _rising_times(vcd_path)
     clocks = rises["clk"]
@@ -89,13 +109,31 @@ def measure_timing(vcd_path: Path) -> dict[str, Any]:
     intervals = [right - left for left, right in zip(output_cycles, output_cycles[1:])]
     if len(set(intervals)) != 1:
         raise ValueError(f"ADD output interval is not stable: {intervals}")
+    timescale_ns = _timescale_ns(vcd_path)
+    output_times_ns = [timestamp * timescale_ns for timestamp in outputs[:3]]
+    output_interval_ns_list = [
+        right - left for left, right in zip(output_times_ns, output_times_ns[1:])
+    ]
+    measured_span_ns = output_times_ns[-1] - output_times_ns[0]
+    if measured_span_ns <= 0:
+        raise ValueError(f"{vcd_path}: ADD output timestamp span must be positive")
+    simulated_throughput = (len(output_times_ns) - 1) / measured_span_ns
     return {
         "sim_latency_cycles": output_cycles[0] - input_cycle,
         "sim_output_interval_cycles": intervals[0],
         "sim_output_interval_cycle_list": intervals,
         "input_ready_time": inputs[0],
         "output_ready_times": outputs[:3],
-        "measurement_method": "original ADD testbench Input_rdy/Output_rdy transitions sampled against VCD clock edges",
+        "vcd_timescale_ns": timescale_ns,
+        "output_ready_times_ns": output_times_ns,
+        "output_interval_ns_list": output_interval_ns_list,
+        "average_output_interval_ns": measured_span_ns / (len(output_times_ns) - 1),
+        "simulated_throughput_gframes_s": simulated_throughput,
+        "measurement_method": (
+            "original ADD testbench Input_rdy/Output_rdy transitions sampled against "
+            "VCD clock edges; throughput measured directly from the first and last "
+            "of three Output_rdy timestamps"
+        ),
     }
 
 

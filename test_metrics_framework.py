@@ -602,6 +602,7 @@ def test_add_validation_real_latency_is_n_pipeline(monkeypatch, tmp_path):
             return {
                 "sim_latency_cycles": params[8],
                 "sim_output_interval_cycles": 1,
+                "simulated_throughput_gframes_s": 0.2,
                 "functional_match": True,
             }
 
@@ -668,6 +669,7 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
             return {
                 "sim_latency_cycles": 3,
                 "sim_output_interval_cycles": 1,
+                "simulated_throughput_gframes_s": 0.125,
                 "rtl_simulation_time_ms": 25.0,
                 "functional_match": True,
             }
@@ -687,7 +689,7 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
     assert result["latency"]["output_interval_cycles"] == 1
     assert result["latency"]["reported_speedup"] is None
     assert result["latency"]["source"] == "rtl"
-    assert result["throughput"] == {"actual": pytest.approx(0.2), "source": "rtl_derived"}
+    assert result["throughput"] == {"actual": pytest.approx(0.125), "source": "rtl_measured"}
 
 
 def test_add_simulation_never_accepts_stale_result(monkeypatch, tmp_path):
@@ -726,6 +728,10 @@ def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
 
     assert result["sim_latency_cycles"] == 3
     assert result["sim_output_interval_cycles"] == 1
+    assert result["simulated_throughput_gframes_s"] == pytest.approx(0.2)
+    assert (
+        result["output_ready_times_ns"][2] - result["output_ready_times_ns"][0]
+    ) == pytest.approx(10.0)
     assert result["functional_match"] is True
     assert result["matched_output_frames"] == 3
     assert result["testbench_source"].endswith("tests\\tb_Add.py") or result[

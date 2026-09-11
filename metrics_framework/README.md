@@ -115,7 +115,7 @@ ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位
 - 延迟预测值为 `n_pipeline` cycles。验证直接复用 ADD 原有 PyTB `ModuleTbAdd`、PyTV `ModuleAdd` 以及 `ModuleCppConfig/ModuleCppRun + QuBLAS` 参考文件生成链，在隔离工作区内生成完整 ADD、FxMatch、Delay 和 testbench RTL。
 - 原 C++ 链连续生成三帧输入和黄金输出，Icarus Verilog 运行原 testbench 后，统一验证器逐帧比较 RTL 输出文件，并从标准 VCD 的 `Input_rdy`、`Output_rdy` 和时钟边沿测量 `sim_latency_cycles` 与 `sim_output_interval_cycles`；真实延迟必须等于 `n_pipeline`。
 - ADD 的 `仿真时间 (ms)` 统计完整验证链耗时，计时范围包含 C++参考文件生成、PyTV RTL/testbench 生成、C++与Icarus编译、`vvp` 运行、逐帧比较和结果解析；它不是 Verilog 波形覆盖的几十个仿真 cycle 所对应的物理时间。
-- 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值按实测输出间隔计算：`actual_Gframes/s = 1 / (clock.period_ns × sim_output_interval_cycles)`。默认 ADD 固定使用 `10 ns` 时钟且输出间隔为 1 cycle，因此预测值和仿真值均为 `0.1 Gframes/s`。流水级数影响首帧延迟，但只要流水线能每拍接收数据，就不降低稳态吞吐率。
+- 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值不使用该预测公式，而是连续执行三帧后直接读取 VCD 中第一帧与第三帧的 `Output_rdy` 时间戳，按 `actual_Gframes/s = (3 - 1) / (t_output3 - t_output1)` 计算。时间戳换算为 ns 后，结果单位直接为 `Gframes/s`。默认 ADD 固定使用 `10 ns` 时钟，因此预测值和当前实测值均为 `0.1 Gframes/s`。
 - `Gframes/s` 表示每秒十亿帧，`Gbps` 表示每秒十亿比特，两者物理意义不同。只有明确每帧包含的有效比特数后，才能按 `Gbps = Gframes/s × bits_per_frame` 换算。
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。
 
