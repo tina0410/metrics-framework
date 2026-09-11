@@ -1,0 +1,303 @@
+% \documentclass[onecolumn]{article}
+\documentclass[a4paper, oneside]{report}
+\usepackage[tt=false]{libertine}
+\usepackage[a4paper]{geometry}
+\geometry{left=0.680in,right=0.680in,top=2cm,bottom=2cm}
+\usepackage{titlesec}
+\usepackage{color}
+\usepackage{pmboxdraw}
+\usepackage{newunicodechar}
+\usepackage{bm}
+\usepackage{fancyhdr} % Header & Footnotes
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{enumerate}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{indentfirst}
+\usepackage{amssymb,mathtools,amsthm}
+\usepackage{nccmath}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{lipsum}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{makecell}
+\usepackage{sectsty}
+\usepackage{url}
+\usepackage{threeparttable}
+\usepackage{pdfpages}
+\usepackage{advdate}
+\usepackage{fancyvrb}
+\usepackage[font=footnotesize,labelfont=bf]{caption}
+\captionsetup[figure]{name={Fig.}}
+\usepackage{adjustbox}
+\usepackage[backend=biber, style=ieee, maxnames=3]{biblatex}
+\usepackage[colorlinks=true,linkcolor=purple,urlcolor=blue,citecolor=red]{hyperref}
+\usepackage[many]{tcolorbox}
+\usepackage{varwidth}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{lipsum}
+\usepackage{tcolorbox}
+\usepackage{colortbl}
+\usepackage{eso-pic}
+\usepackage{pgfplots}
+\usepackage{expl3}
+\usepackage{longtable}
+\usepackage{ragged2e} % For improved text alignment inside cells
+\usepackage{settings}
+
+% Bibliography Settings
+\addbibresource{ref/ref.bib}
+\AtBeginBibliography{\small} % bib font size
+
+\modulename{Mul}
+\author{Bolin Li}
+\date{2024.11.29}
+\version{0.1.1}
+\revision{      
+                0.1.0   & Bolin Li   & 2024.11.25    & Delete all redundant contents and descriptions in \textsc{Mul} Module\\   
+                0.1.1   & Bolin Li   & 2024.11.29    & Completed the doc, major revise\\
+}
+\releasenotes{
+    There are no release notes for any previous versions.
+}
+
+\renewcommand \tabcolsep { 18pt }
+\renewcommand \arraystretch { 1.3 }
+
+\begin{document}
+    \setmainfont{TeX Gyre Heros}
+    \maketitle
+    \tableofcontents
+    \thispagestyle{empty}
+    \clearpage
+    \pagestyle{fancy}
+    \setcounter{page}{1}
+    \pagenumbering{arabic}
+    \chapter{Preliminaries}
+        \section{Purpose and scope}
+        This module will realize a general purpose \textbf{fixed-point Multiplication} operation. It will take two input specified fixed-point value and calculate their Multiplication value in specified fixed-point format.
+        \section{Notations}
+            \begin{itemize}
+                \item LSB: Least significant bit.
+                \item MSB: Most significant bit.
+                \item TCPL: Two's complement positive-only format.
+                \item SMGN: Sign-Magnitude format.
+                \item Functional description: A description of the module's combinational behavior.
+                \item Functional model: A (usually QuBLAS) model of the module's behavior.
+            \end{itemize}
+        \section{Typographic conventions}
+            \begin{longtable}{l l}
+                \toprule
+                \textbf{Visual Cue} & \textbf{Meaning} \\
+                \midrule
+                $(\text{Bullet})~\bullet$   & List of important items. \\
+                \texttt{monospace}          & Codes or commands typed on the keyboard. \\
+                \texttt{MONOSPACE}          & Constants, parameters. \\
+                \textit{italic}             & Variable values, file and directory names. \\
+                \textit{<italic>}           & Placeholder text for users to insert values with. \\[0pt]
+                [item]                      & Optional items. \\
+                \warning{bold red text}     & Important notes, warnings, or errors. \\
+                \success{bold green text}   & Indicating success. \\
+                \remark{green text}         & Comments or remarks.\\
+                \revise{blue text}          & Revised text or keywords. \\
+                \url{monospace/blue}        & URLs, links. \\
+                \textsc{Small Caps}         & Hardware submodule names.  \\
+                \bottomrule
+            \end{longtable}
+            \newpage % For prettier formatting
+        \section{Dependencies}
+            \subsection{Software dependencies}
+                \begin{longtable}{ll}
+                    \toprule
+                    \textbf{Software} & \textbf{Version} \\
+                    \midrule
+                    PyTV (verithon)     & 0.3 \\
+                    PyTU                & 0.1.0 \\
+                    % QuBLAS              & 0.1.0 \\
+                    % Qumadillo           & 0.1.0 \\
+                    \bottomrule
+                \end{longtable}
+
+            \subsection{Submodule dependencies}
+                This part lists all the PyTV submodule dependencies of the module, including the submodule name and version.
+                \begin{longtable}{ll}
+                    \toprule
+                    \textbf{Submodule} & \textbf{Version} \\
+                    \midrule
+                    \textsc{Delay}         & 0.1.0 \\
+                    \textsc{FxMatch}         & 0.1.0 \\
+                    \bottomrule
+                \end{longtable}
+
+    \chapter{Functionality}
+        \section{Overview}
+            The \textsc{Mul} Module receives two input values with configurable precisions, then output their multiplication in a configurable precision fixed-point format. Now the module supports quantization modes and overflow modes listed in section ~\ref{ch:func:sec:param:subsec:QuMode}~ and ~\ref{ch:func:sec:param:subsec:OfMode}~, respectively.  The module also supports optional \textbf{negedge reset} and \textbf{enable signal}, which can be configured by \texttt{IF\_RST\_N} and \texttt{IF\_ENABLE} parameters, respectively.
+
+        \section{Configurable parameters}
+            \begin{longtable}{llll}
+                \toprule
+                \textbf{Parameter}  & \textbf{Range}  & \textbf{Default} & \textbf{Description} \\
+                \midrule
+                
+                \texttt{QU\_IN\_1}     & $[\mathbb{N}^{+}, \mathbb{Z}, \mathbb{B}]$  & \texttt{[9,3,True]}                      &  Data 1 quantization set \\
+                \texttt{QU\_IN\_2}    & $[\mathbb{N}^{+}, \mathbb{Z}, \mathbb{B}]$  & \texttt{[9,3,True]}                      & Data 2 quantization set \\
+                \texttt{QU\_OUT}     & $[\mathbb{N}^{+}, \mathbb{Z}, \mathbb{B}]$  & \texttt{[9,3,1]}                      & Output quantization set \\
+                \texttt{QU\_MODE}    & All available modes in ~\ref{ch:func:sec:param:subsec:QuMode}~       & \texttt{QuMode.TRN.TCPL}     & Output FxMatch \textbf{Quantize Mode} \\
+                \texttt{OF\_MODE}   &  All available modes in  ~\ref{ch:func:sec:param:subsec:OfMode}~     & \texttt{OfMode.WRP.TCPL} & Output FxMatch \textbf{Overflow Mode}          \\
+                \texttt{N\_PIPELINES}  & $\mathbb{N}$  & \texttt{0}  & Number of pipeline stages \\
+                \texttt{IF\_RST\_N}  & $\mathbb{B}$  & \texttt{False}  & Sign for including negedge reset \\
+                                    & $[\mathbb{B}, ...]$ & $[\texttt{False}, ...]$ & Requires \texttt{N\_PIPELINES} >0      \\    
+                \texttt{IF\_ENABLE}  & $\mathbb{B}$  & \texttt{False}  & Sign for including enable signal \\
+                                    % & $[\mathbb{B}, ...]$ & $[\texttt{False}, ...]$ &      \\
+                % \texttt{enable}   & $\mathbb{B}$                             & 1    & Enable signal \\            
+                \bottomrule
+            \end{longtable}
+            \subsection{Quantization sets}\label{ch:func:sec:param:subsec:QuSet}
+                Quantization set describes the quantization format of value, which is originated from a \texttt{PyTU} class \texttt{QuType}. Here is a list of \texttt{QuType}'s members:
+
+            \begin{longtable}{lll}
+                \toprule
+                \textbf{Member} & \textbf{Range} & \textbf{Description} \\
+                \midrule
+                \texttt{DWT} &  $\mathbb{N}^{+}$ & Data Width \\
+                \texttt{FRAC} & $\mathbb{Z}$ & Decimal Point Offset, in bits \\
+                \texttt{IF\_SIGNED} & $\mathbb{B}$ & Signed or unsigned input format \\
+                \bottomrule
+            \end{longtable}
+
+            \subsection{Quantization modes}\label{ch:func:sec:param:subsec:QuMode}
+            Quantization mode refers to the method applied when dealing with precision loss (at LSB). This module supported the following modes:
+            \begin{longtable}{lp{.6\textwidth}}
+                \toprule
+                \textbf{Mode} & \textbf{Description} \\
+                \midrule
+                \texttt{QuMode.TRN.TCPL} & Truncate all extra LSB in TCPL format \\
+                \texttt{QuMode.TRN.SMGN} & Truncate all extra LSB in Sign-Magnitude (SMGN) format, then convert back to TCPL format \\
+                \texttt{QuMode.RND.POS\_INF} & Round to nearest quantization level, when the value is equidistant between two levels, round to the larger value  \\
+                \texttt{QuMode.RND.NEG\_INF} & Round to nearest quantization level, when the value is equidistant between two levels, round to the smaller value  \\
+                \texttt{QuMode.RND.ZERO} & Round to nearest quantization level, when the value is equidistant between two levels, round to the value closer to zero  \\
+                \texttt{QuMode.RND.INF} & Round to nearest quantization level, when the value is equidistant between two levels, round to the value further from zero  \\
+                \texttt{QuMode.RND.CONV} & Round to nearest quantization level, when the value is equidistant between two levels, round to the even value (LSB = 0) \\
+                \bottomrule
+            \end{longtable}
+
+        \subsection{Overflow modes}\label{ch:func:sec:param:subsec:OfMode}
+            Overflow mode refers to the method applied when dealing with overflow (at MSB). This module supported the following modes:
+            \begin{longtable}{lp{.6\textwidth}}
+                \toprule
+                \textbf{Mode} & \textbf{Description} \\
+                \midrule
+                \texttt{OfMode.WRP.TCPL} & Wrap around in TCPL format \\
+                \texttt{OfMode.SAT.TCPL} & Saturate to the maximum value in TCPL format \\
+                \texttt{OfMode.SAT.SMGN} & Saturate to the maximum value in SMGN format, then convert back to TCPL \\
+                \texttt{OfMode.SAT.ZERO} & Saturate to zero \\
+                \bottomrule
+            \end{longtable}           
+        \section{External interface}
+            \subsection{Clock and reset}
+                Synchronous reset and asynchronous release is the default reset behavior. If the module has a different reset behavior, it should be described here.
+                \begin{longtable}{lll}
+                    \toprule
+                    \textbf{Signal}      & \textbf{Width}    & \textbf{Description} \\
+                    \midrule
+                    \texttt{i\_clk}      & $1$                 & Clock signal (Requires \texttt{N\_PIPELINES} >0 ) \\
+                    \texttt{i\_rst\_n}   & $1$                 & Reset signal (Requires \texttt{N\_PIPELINES} >0 ) \\
+                    \bottomrule
+                \end{longtable}
+            \subsection{Main Module Interface}
+                \begin{longtable}{lll}
+                    \toprule
+                    \textbf{Signal}      & \textbf{Width}    & \textbf{Description} \\
+                    \midrule
+                    \texttt{i\_data\_1}      & \texttt{QU\_IN\_1.DWT}         & Input signal for data 1 \\
+                    \texttt{i\_data\_2}      & \texttt{QU\_IN\_2.DWT}        & Input signal for data 2 \\
+                    \texttt{o\_result}    & \texttt{QU\_OUT.DWT}         & Output signal for result \\
+                    \texttt{i\_ctrl\_en}     & $1$                 & Enable signal for the Mul module\\
+                    \bottomrule
+                \end{longtable}
+        
+        \section{Functional description}
+        Here depicts a functional description of the module.
+
+        \begin{algorithm}[H]
+            \caption{Module function}
+            \KwIn{\texttt{i\_data\_1}}
+            \KwIn{\texttt{i\_data\_2}}
+            \KwIn{\texttt{i\_ctrl\_en}}
+            \KwOut{\texttt{o\_result}}
+            \BlankLine
+            \If{\texttt{IF\_ENABLE} == True}{
+                \texttt{data\_1 = i\_data\_1 \&\& i\_ctrl\_en};
+                \BlankLine
+                \texttt{data\_2 = i\_data\_2 \&\& i\_ctrl\_en};
+            }\Else{
+                \texttt{data\_1 = i\_data\_1};
+                \BlankLine
+                \texttt{data\_2 = i\_data\_2};
+            }
+            \BlankLine
+            
+            \tcp{Calculate Quantization Set for multiplication from input data}
+            \texttt{DWT\_FIX = QU\_IN\_1.DWT + QU\_IN\_2.DWT - 1 - QU\_IN\_1.IF\_SIGNED} \&\& \texttt{QU\_IN\_2.IF\_SIGNED;} 
+            \BlankLine
+            \texttt{FRAC\_FIX = QU\_IN\_1.FRAC + QU\_IN\_2.FRAC};
+            \BlankLine
+            \texttt{SIGN\_FIX} = \texttt{QU\_IN\_1.IF\_SIGNED} || \texttt{QU\_IN\_2.IF\_SIGNED};
+            \BlankLine
+            \texttt{QU\_IN\_FIX = QuType(DWT\_FIX, FRAC\_FIX, SIGN\_FIX)};
+
+            \BlankLine
+            \tcp{Multiply}
+            \If{QU\_IN\_1.IF\_SIGNED \&\& QU\_IN\_2.IF\_SIGNED}{
+                \texttt{Sign bit is assigned to data\_1's sign bit \^ data\_2's sign bit}
+                \BlankLine
+                \textit{Perform the Multiplication}
+            }\ElseIf{QU\_IN\_1.IF\_SIGNED}{
+                \texttt{Sign bit is assigned to data\_1's sign bit}
+                \BlankLine
+                \textit{Perform the Multiplication}
+            }\ElseIf{QU\_IN\_2.IF\_SIGNED}{
+                \texttt{Sign bit is assigned to data\_2's sign bit}
+                \BlankLine
+                \textit{Perform the Multiplication}
+            }\Else{
+                \textit{Perform the Multiplication}
+            }
+            \BlankLine
+            \tcp{Quantize and handle overflow to get the specified-format final result}
+         
+            \texttt{o\_result = result\_unfixed.FxMatch(QU\_IN = QU\_IN\_FIX, QU\_OUT = QU\_OUT, QU\_MODE = QU\_MODE, OF\_MODE = OF\_MODE)};
+            % \If{\texttt{N\_PIPELINES} > 0}{
+            %     \texttt{Delay}(\texttt{o\_result}, \texttt{N\_PIPELINES});
+            % }
+            % \Else{
+            %     \texttt{o\_result} = \texttt{o\_result\_fixed};
+            % }
+           
+        \end{algorithm}
+
+        
+
+    \chapter{Implementation}
+        \section{Overall architecture}
+                The \textsc{Mul} Module relies on the \textsc{FxMatch} module to perform the fixed-point multiplication operation. The \textsc{FxMatch} module takes two input values with configurable precisions, then output their multiplied value in a configurable precision fixed-point format. The \textsc{Mul} Module then applies the specified quantization and overflow modes to the output value.
+
+                When \texttt{N\_PIPELINES} is 0, the module is a combinational module and the output value is directly generated in the combinational logic. When \texttt{N\_PIPELINES} is greater than 0, the module is a pipelined module with \texttt{N\_PIPELINES} pipeline stages, and the output value is generated in a pipeline stage.
+                
+        \section{Data and control flow}
+            The module is either a combinational module (when \texttt{N\_PIPELINES} is 0) or a fully pipelined module (when \texttt{N\_PIPELINES} > 0). 
+            \section{External sequential behavior}
+            \subsection{Latency analysis}
+                Latency are \texttt{N\_PIPELINES} clock cycles for output the result.
+            \subsection{Throughput analysis}
+                This module can handle one frame per clock cycle.
+
+
+    % \printbibliography[title={References},heading=bibintoc]
+
+\end{document}

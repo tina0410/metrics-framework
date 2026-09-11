@@ -19,6 +19,7 @@ from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
+from metrics_framework.adapters import mul as mul_adapter
 
 
 ROOT = Path(__file__).resolve().parent
@@ -27,6 +28,14 @@ ROOT = Path(__file__).resolve().parent
 def test_registered_add_uses_canonical_module_root():
     spec = Registry().get("add")
     expected = (ROOT / "Generator" / "Add" / "V0.2.1").resolve()
+    assert spec.root == expected
+    assert spec.config_dir == expected / "configs"
+    assert spec.output_root == expected / "evaluation_output"
+
+
+def test_registered_mul_uses_canonical_module_root():
+    spec = Registry().get("mul")
+    expected = (ROOT / "Generator" / "Mul" / "V0.2.1").resolve()
     assert spec.root == expected
     assert spec.config_dir == expected / "configs"
     assert spec.output_root == expected / "evaluation_output"
@@ -289,6 +298,146 @@ def _add_config(n_pipeline=4):
     }
 
 
+def _mul_config(n_pipeline=4):
+    return {
+        "input_1": {"bitwidth": 4, "fractional_width": 2, "signed": True},
+        "input_2": {"bitwidth": 4, "fractional_width": 2, "signed": True},
+        "output": {"bitwidth": 7, "fractional_width": 3, "signed": True},
+        "n_pipeline": n_pipeline,
+        "if_rst_n": False,
+        "clock": {"period_ns": 5.0},
+    }
+
+
+def test_mul_prediction_units_latency_throughput_and_complexity(monkeypatch, tmp_path):
+    models = object()
+
+    class Module:
+        GE_REFERENCE_CELL = "NAND2"
+
+        @staticmethod
+        def parameters(config):
+            return (4, 2, 1, 4, 2, 1, 7, 3, config["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+        @staticmethod
+        def load_area_models():
+            return models
+
+        @staticmethod
+        def predict_area(value, _params):
+            assert value is models
+            return 112.0
+
+        @staticmethod
+        def throughput_gframes_s(params, *, interval_cycles=1):
+            return 1.0 / (params[10] * interval_cycles)
+
+        @staticmethod
+        def read_ge_area():
+            return 1.12
+
+    monkeypatch.setattr(mul_adapter, "_module", lambda: Module)
+    result = mul_adapter.predict(tmp_path / "config.json", _mul_config())
+    assert result["latency"]["predicted_cycles"] == 4
+    assert result["throughput"]["predicted"] == pytest.approx(0.2)
+    assert result["throughput"]["unit"] == "Gframes/s"
+    assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(400.0)
+
+
+def test_mul_validation_requires_n_pipeline_and_one_cycle_interval(monkeypatch, tmp_path):
+    config = _mul_config(n_pipeline=3)
+    config["validation"] = {
+        "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0},
+        "latency": {
+            "actual_cycles": 3,
+            "simulation_time_ms": 1.0,
+            "output_interval_cycles": 1,
+        },
+    }
+
+    class Module:
+        GE_REFERENCE_CELL = "NAND2"
+
+        @staticmethod
+        def parameters(value):
+            return (4, 2, 1, 4, 2, 1, 7, 3, value["n_pipeline"], False, 5.0)
+
+        @staticmethod
+        def latency_cycles(params):
+            return params[8]
+
+        @staticmethod
+        def throughput_gframes_s(params, *, interval_cycles=1):
+            return 1.0 / (params[10] * interval_cycles)
+
+        @staticmethod
+        def read_ge_area():
+            return 1.12
+
+        @staticmethod
+        def read_area_reference(_params):
+            pytest.fail("configured area must bypass the DC workbook")
+
+    monkeypatch.setattr(mul_adapter, "_module", lambda: Module)
+    result = mul_adapter.validate(tmp_path / "config.json", config)
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["output_interval_cycles"] == 1
+    assert result["throughput"]["actual"] == pytest.approx(0.2)
+    assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(600.0)
+
+    config["validation"]["latency"]["actual_cycles"] = 4
+    with pytest.raises(ValueError, match="must equal n_pipeline"):
+        mul_adapter.validate(tmp_path / "config.json", config)
+
+
+def test_mul_area_reference_converts_seconds_to_milliseconds():
+    module = mul_adapter._module()
+    params = module.parameters(_mul_config(n_pipeline=1))
+    reference = module.read_area_reference(params)
+    assert reference["actual_area_um2"] == pytest.approx(271.879996)
+    assert reference["synthesis_time_ms"] == pytest.approx(20306.021)
+
+
+def test_mul_area_prediction_matches_workbook_automatic_result():
+    module = mul_adapter._module()
+    params = module.parameters(_mul_config(n_pipeline=1))
+    area = module.predict_area(module.load_area_models(), params)
+    assert area == pytest.approx(201.781030, abs=1e-5)
+
+
+@pytest.mark.skipif(
+    shutil.which("iverilog") is None or shutil.which("vvp") is None,
+    reason="Icarus Verilog is not installed",
+)
+def test_mul_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
+    module = mul_adapter._module()
+    monkeypatch.setattr(module, "SIMULATION_ROOT", tmp_path / "sim")
+    config = _mul_config(n_pipeline=3)
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    params = module.parameters(config)
+    result = module.simulate_latency(config_path, config, params)
+
+    assert result["sim_latency_cycles"] == 3
+    assert result["sim_output_interval_cycles"] == 1
+    assert result["functional_match"] is True
+    assert result["measurement_method"].startswith("canonical MUL PyTB + QuBLAS")
+    assert result["matched_output_frames"] == 8
+
+
+def test_mul_unsigned_default_case_runs_full_unified_evaluation():
+    result = evaluate("mul", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 1
+    assert result["延迟"]["仿真结果 (cycles)"] == 1
+    assert result["面积"]["真实结果 (μm²)"] == 220.64
+    assert result["Throughput"]["预测结果 (Gframes/s)"] == 0.2
+    assert result["Throughput"]["仿真结果 (Gframes/s)"] == 0.2
+
+
 def test_add_prediction_uses_pipeline_latency_and_one_op_per_cycle(monkeypatch, tmp_path):
     model = object()
 
@@ -455,8 +604,11 @@ def test_add_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
     assert result["sim_latency_cycles"] == 3
     assert result["sim_output_interval_cycles"] == 1
     assert result["functional_match"] is True
-    assert result["pipelined_top"].startswith("Add")
-    assert result["combinational_top"].startswith("Add")
+    assert result["matched_output_frames"] == 3
+    assert result["testbench_source"].endswith("tests\\tb_Add.py") or result[
+        "testbench_source"
+    ].endswith("tests/tb_Add.py")
+    assert result["reference_source"] == "original ModuleCppConfig/ModuleCppRun with QuBLAS"
 
 
 def test_add_default_case_runs_full_unified_evaluation():

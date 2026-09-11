@@ -1,0 +1,28 @@
+{
+  "sim_latency_cycles": 1,
+  "sim_output_interval_cycles": 1,
+  "sim_output_interval_cycle_list": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "matched_output_frames": 8,
+  "clock_period_ns": 5.0,
+  "clock_frequency_mhz": 200.0,
+  "physical_latency_ns": 5.0,
+  "functional_match": true,
+  "rtl_simulation_time_ms": 4335.097300005145,
+  "measurement_method": "canonical MUL PyTB + QuBLAS C++ reference; VCD clock-edge positions matching the complete input and output sequences",
+  "testbench": "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\TbMul0000000001.v",
+  "rtl_files": [
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\Delay0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\Delay0000000002.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\FxMatch0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\Mul0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\workspace\\RTL\\TbMul0000000001.v"
+  ]
+}

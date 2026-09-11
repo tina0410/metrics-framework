@@ -44,6 +44,17 @@
       "python_env": "ADD_METRICS_PYTHON",
       "output_root": "evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
+    },
+    "mul": {
+      "adapter": "metrics_framework/adapters/mul.py",
+      "command": ["{python}", "{adapter}"],
+      "root": "Generator/Mul/V0.2.1",
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "MUL_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     }
   }
 }

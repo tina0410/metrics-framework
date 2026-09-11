@@ -1,0 +1,8 @@
+{
+  "input_1": {"bitwidth": 5, "fractional_width": 2, "signed": false},
+  "input_2": {"bitwidth": 4, "fractional_width": 2, "signed": false},
+  "output": {"bitwidth": 9, "fractional_width": 5, "signed": false},
+  "n_pipeline": 1,
+  "if_rst_n": false,
+  "clock": {"period_ns": 5.0}
+}
