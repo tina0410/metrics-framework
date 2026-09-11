@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -62,22 +63,28 @@ config = json.loads(path.read_text(encoding="utf-8"))
 digest = hashlib.sha256(json.dumps(
     config, ensure_ascii=False, sort_keys=True, separators=(",", ":")
 ).encode("utf-8")).hexdigest()
+prediction_run = 1
+if action == "predict" and config.get("count_prediction_runs"):
+    counter_path = path.with_suffix(".prediction_runs")
+    if counter_path.exists():
+        prediction_run = int(counter_path.read_text(encoding="utf-8")) + 1
+    counter_path.write_text(str(prediction_run), encoding="utf-8")
 if action == "validate" and config.get("fail_validation"):
     print("validation unavailable", file=sys.stderr)
     raise SystemExit(2)
 if action == "predict":
     metrics = {
-        "latency": {"predicted_cycles": 8, "prediction_time_ms": 0.25},
-        "area": {"predicted_um2": 100.0, "prediction_time_ms": 2.0},
+        "latency": {"predicted_cycles": 8, "prediction_time_ms": 0.25 * prediction_run},
+        "area": {"predicted_um2": 100.0, "prediction_time_ms": 2.0 * prediction_run},
         "throughput": {
             "predicted": 1.5,
             "unit": "Gbps",
             "precision": 2,
-            "prediction_time_ms": 0.5
+            "prediction_time_ms": 0.5 * prediction_run
         },
         "hardware_complexity": {
             "predicted_ge_cycles": 800.0,
-            "prediction_time_ms": 0.75,
+            "prediction_time_ms": 0.75 * prediction_run,
             "ge_reference_cell": "NAND2",
             "ge_area_um2": 1.0
         }
@@ -184,6 +191,21 @@ def test_predict_never_runs_validation(tmp_path, monkeypatch):
     _root, registry = _fixture(tmp_path, monkeypatch, [{"fail_validation": True}])
     result = predict("fake", "1", registry=registry)
     assert result["面积"]["预测结果 (μm²)"] == 100.0
+
+
+def test_predict_recomputes_times_and_ignores_previous_output(tmp_path, monkeypatch):
+    root, registry = _fixture(
+        tmp_path, monkeypatch, [{"count_prediction_runs": True}]
+    )
+    first = predict("fake", "1", registry=registry)
+    output = root / "evaluation_output" / "config1" / "prediction.json"
+    output.write_text('{"自动评估总时间 (ms)": 999}', encoding="utf-8")
+
+    second = predict("fake", "1", registry=registry)
+
+    assert first["自动评估总时间 (ms)"] == 3.5
+    assert second["自动评估总时间 (ms)"] == 7.0
+    assert json.loads(output.read_text(encoding="utf-8")) == second
 
 
 def test_evaluate_builds_reference_display_shape(tmp_path, monkeypatch):
@@ -348,7 +370,7 @@ def test_mul_prediction_units_latency_throughput_and_complexity(monkeypatch, tmp
     assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(400.0)
 
 
-def test_mul_validation_requires_n_pipeline_and_one_cycle_interval(monkeypatch, tmp_path):
+def test_mul_validation_requires_fresh_pipeline_simulation(monkeypatch, tmp_path):
     config = _mul_config(n_pipeline=3)
     config["validation"] = {
         "area": {"actual_um2": 224.0, "synthesis_time_ms": 10.0},
@@ -361,6 +383,7 @@ def test_mul_validation_requires_n_pipeline_and_one_cycle_interval(monkeypatch, 
 
     class Module:
         GE_REFERENCE_CELL = "NAND2"
+        simulation_calls = 0
 
         @staticmethod
         def parameters(value):
@@ -378,16 +401,31 @@ def test_mul_validation_requires_n_pipeline_and_one_cycle_interval(monkeypatch, 
         def read_ge_area():
             return 1.12
 
+        @classmethod
+        def simulate_latency(cls, _path, _config, params):
+            cls.simulation_calls += 1
+            return {
+                "sim_latency_cycles": params[8],
+                "sim_output_interval_cycles": 1,
+                "functional_match": True,
+            }
+
         @staticmethod
         def read_area_reference(_params):
             pytest.fail("configured area must bypass the DC workbook")
 
     monkeypatch.setattr(mul_adapter, "_module", lambda: Module)
     result = mul_adapter.validate(tmp_path / "config.json", config)
+    assert Module.simulation_calls == 1
     assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["simulation_time_ms"] > 0
+    assert result["latency"]["simulation_time_ms"] != 1.0
     assert result["latency"]["output_interval_cycles"] == 1
     assert result["throughput"]["actual"] == pytest.approx(0.2)
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(600.0)
+
+    mul_adapter.validate(tmp_path / "config.json", config)
+    assert Module.simulation_calls == 2
 
     config["validation"]["latency"]["actual_cycles"] = 4
     with pytest.raises(ValueError, match="must equal n_pipeline"):
@@ -407,6 +445,25 @@ def test_mul_area_prediction_matches_workbook_automatic_result():
     params = module.parameters(_mul_config(n_pipeline=1))
     area = module.predict_area(module.load_area_models(), params)
     assert area == pytest.approx(201.781030, abs=1e-5)
+
+
+def test_mul_simulation_never_accepts_stale_result(monkeypatch, tmp_path):
+    module = mul_adapter._module()
+    simulation_root = tmp_path / "sim"
+    stale_result = simulation_root / "config" / "simulation_result.json"
+    stale_result.parent.mkdir(parents=True)
+    stale_result.write_text('{"sim_latency_cycles": 999}', encoding="utf-8")
+    monkeypatch.setattr(module, "SIMULATION_ROOT", simulation_root)
+    monkeypatch.setattr(
+        module.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, "", ""),
+    )
+
+    config = _mul_config(n_pipeline=3)
+    with pytest.raises(FileNotFoundError, match="was not generated"):
+        module.simulate_latency(tmp_path / "config.json", config, module.parameters(config))
+    assert not stale_result.exists()
 
 
 @pytest.mark.skipif(
@@ -490,6 +547,7 @@ def test_add_validation_real_latency_is_n_pipeline(monkeypatch, tmp_path):
 
     class Module:
         GE_REFERENCE_CELL = "NAND2"
+        simulation_calls = 0
 
         @staticmethod
         def parameters(value):
@@ -507,16 +565,31 @@ def test_add_validation_real_latency_is_n_pipeline(monkeypatch, tmp_path):
         def read_ge_area():
             return 1.12
 
+        @classmethod
+        def simulate_latency(cls, _path, _config, params):
+            cls.simulation_calls += 1
+            return {
+                "sim_latency_cycles": params[8],
+                "sim_output_interval_cycles": 1,
+                "functional_match": True,
+            }
+
         @staticmethod
         def read_area_reference(_params):
             pytest.fail("configured area must bypass the DC workbook")
 
     monkeypatch.setattr(add_adapter, "_module", lambda: Module)
     result = add_adapter.validate(tmp_path / "config.json", config)
+    assert Module.simulation_calls == 1
     assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["simulation_time_ms"] > 0
+    assert result["latency"]["simulation_time_ms"] != 1.0
     assert result["latency"]["output_interval_cycles"] == 1
     assert result["throughput"]["actual"] == pytest.approx(0.2)
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(600.0)
+
+    add_adapter.validate(tmp_path / "config.json", config)
+    assert Module.simulation_calls == 2
 
 
 def test_add_rejects_actual_latency_different_from_n_pipeline(monkeypatch, tmp_path):
@@ -578,14 +651,31 @@ def test_add_validation_uses_rtl_latency_and_interval(monkeypatch, tmp_path):
 
     monkeypatch.setattr(add_adapter, "_module", lambda: Module)
     result = add_adapter.validate(tmp_path / "config.json", config)
-    assert result["latency"] == {
-        "actual_cycles": 3,
-        "simulation_time_ms": 25.0,
-        "output_interval_cycles": 1,
-        "reported_speedup": None,
-        "source": "rtl",
-    }
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["simulation_time_ms"] > 0
+    assert result["latency"]["output_interval_cycles"] == 1
+    assert result["latency"]["reported_speedup"] is None
+    assert result["latency"]["source"] == "rtl"
     assert result["throughput"] == {"actual": pytest.approx(0.2), "source": "rtl_derived"}
+
+
+def test_add_simulation_never_accepts_stale_result(monkeypatch, tmp_path):
+    module = add_adapter._module()
+    simulation_root = tmp_path / "sim"
+    stale_result = simulation_root / "config" / "simulation_result.json"
+    stale_result.parent.mkdir(parents=True)
+    stale_result.write_text('{"sim_latency_cycles": 999}', encoding="utf-8")
+    monkeypatch.setattr(module, "SIMULATION_ROOT", simulation_root)
+    monkeypatch.setattr(
+        module.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, "", ""),
+    )
+
+    config = _add_config(n_pipeline=3)
+    with pytest.raises(FileNotFoundError, match="was not generated"):
+        module.simulate_latency(tmp_path / "config.json", config, module.parameters(config))
+    assert not stale_result.exists()
 
 
 @pytest.mark.skipif(
@@ -755,7 +845,7 @@ def _validation_config():
     }
 
 
-def test_ls_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
+def test_ls_validation_json_still_runs_fresh_rtl(monkeypatch, tmp_path):
     config = _validation_config()
     config.update({"clock": {"period_ns": 10.0}, "Number of Receiving Antennas": 2})
 
@@ -770,17 +860,19 @@ def test_ls_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
 
         @staticmethod
         def simulate_lsce(*_args, **_kwargs):
-            pytest.fail("RTL must not run")
+            return {"latency_cycles": 10, "output_interval_cycles": 4}
 
     monkeypatch.setattr(ls_adapter, "_module", lambda: Module)
     result = ls_adapter.validate(tmp_path / "config.json", config)
     assert result["area"]["actual_um2"] == 112.0
     assert result["latency"]["actual_cycles"] == 10
+    assert result["latency"]["source"] == "rtl"
+    assert result["latency"]["simulation_time_ms"] > 0
     assert result["throughput"]["actual"] == 12500.0
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
 
 
-def test_mimo_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
+def test_mimo_validation_json_still_runs_fresh_rtl(monkeypatch, tmp_path):
     config = _validation_config()
 
     class Evaluator:
@@ -790,7 +882,11 @@ def test_mimo_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
 
         @staticmethod
         def simulate_rtl(_path):
-            pytest.fail("RTL must not run")
+            return {
+                "sim_latency_cycles": 10,
+                "sim_output_interval_cycles": 4,
+                "functional_match": True,
+            }
 
     def throughput(_config, *, simulated_output_interval_cycles):
         assert simulated_output_interval_cycles == 4
@@ -815,6 +911,8 @@ def test_mimo_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     )
     result = mimo_adapter.validate(tmp_path / "config.json", config)
     assert result["throughput"]["actual"] == 0.5
+    assert result["latency"]["source"] == "rtl"
+    assert result["latency"]["simulation_time_ms"] > 0
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
 
 
@@ -914,7 +1012,7 @@ def test_mimo_rtl_validation_reports_measured_latency(
     )
 
 
-def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
+def test_bp_validation_json_still_runs_fresh_rtl(monkeypatch, tmp_path):
     config = _validation_config()
     config["decoder"] = {
         "hardware_architecture": "TypeI",
@@ -934,8 +1032,17 @@ def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
 
     class Evaluator:
         @staticmethod
+        def configured_simulation_dir(_path):
+            return tmp_path / "sim" / "config"
+
+        @staticmethod
         def simulate_rtl(*_args, **_kwargs):
-            pytest.fail("RTL must not run")
+            return {
+                "sim_latency_cycles": 10,
+                "cpp_iterations": 2.0,
+                "waveform_verified": True,
+                "decoding_verified": True,
+            }
 
     class Terms:
         decision_cycles = 4
@@ -960,6 +1067,8 @@ def test_bp_validation_json_bypasses_reference_and_rtl(monkeypatch, tmp_path):
     )
     result = bp_adapter.validate(tmp_path / "config.json", config)
     assert result["latency"]["actual_cycles"] == 10
+    assert result["latency"]["source"] == "rtl"
+    assert result["latency"]["simulation_time_ms"] > 0
     assert result["throughput"]["actual"] == pytest.approx(0.16)
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(1000.0)
 

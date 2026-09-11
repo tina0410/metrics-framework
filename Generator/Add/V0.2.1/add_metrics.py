@@ -155,6 +155,8 @@ def simulate_latency(
     params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
 ) -> dict[str, Any]:
     """Run the original ADD testbench/reference chain and return its measurements."""
+    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
+    result_path.unlink(missing_ok=True)
     environment = os.environ.copy()
     environment["ADD_SIM_ROOT"] = str(SIMULATION_ROOT)
     process = subprocess.run(
@@ -177,7 +179,6 @@ def simulate_latency(
     )
     if process.returncode != 0:
         raise RuntimeError("Original ADD RTL validation failed: " + process.stdout.strip())
-    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
     if not result_path.is_file():
         raise FileNotFoundError(f"ADD RTL timing result was not generated: {result_path}")
     return json.loads(result_path.read_text(encoding="utf-8"))

@@ -92,36 +92,35 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "validation.latency.output_interval_cycles must equal 1 for pipelined MUL"
         )
-    latency_had_config = any(
-        value is not None for value in (configured_cycles, validation_time, interval)
-    )
-    latency_source = "config"
-    if (
-        configured_cycles is None
-        or interval is None
-        or (validation_time is None and latency_speedup is None)
-    ):
-        simulation = module.simulate_latency(config_path, config, params)
-        if simulation.get("functional_match") is not True:
-            raise RuntimeError("MUL RTL functional comparison failed")
-        measured_cycles = int(simulation["sim_latency_cycles"])
-        measured_interval = int(simulation["sim_output_interval_cycles"])
-        if measured_cycles != expected_cycles:
-            raise RuntimeError(
-                f"MUL RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
-            )
-        if measured_interval != 1:
-            raise RuntimeError(
-                f"MUL RTL output interval {measured_interval} does not equal 1 cycle"
-            )
-        configured_cycles = configured_cycles or measured_cycles
-        interval = interval or measured_interval
-        validation_time = validation_time or float(simulation["rtl_simulation_time_ms"])
-        latency_source = "config+rtl" if latency_had_config else "rtl"
-        print(
-            f"Success. The RTL latency of {config_path.stem} is {measured_cycles} cycles",
-            file=sys.stderr,
+    started = time.perf_counter()
+    simulation = module.simulate_latency(config_path, config, params)
+    measured_time_ms = (time.perf_counter() - started) * 1000.0
+    if simulation.get("functional_match") is not True:
+        raise RuntimeError("MUL RTL functional comparison failed")
+    measured_cycles = int(simulation["sim_latency_cycles"])
+    measured_interval = int(simulation["sim_output_interval_cycles"])
+    if measured_cycles != expected_cycles:
+        raise RuntimeError(
+            f"MUL RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
         )
+    if measured_interval != 1:
+        raise RuntimeError(
+            f"MUL RTL output interval {measured_interval} does not equal 1 cycle"
+        )
+    if configured_cycles is not None and configured_cycles != measured_cycles:
+        raise ValueError("validation.latency.actual_cycles does not match fresh MUL RTL simulation")
+    if interval is not None and interval != measured_interval:
+        raise ValueError(
+            "validation.latency.output_interval_cycles does not match fresh MUL RTL simulation"
+        )
+    configured_cycles = measured_cycles
+    interval = measured_interval
+    validation_time = measured_time_ms
+    latency_source = "rtl"
+    print(
+        f"Success. The RTL latency of {config_path.stem} is {measured_cycles} cycles",
+        file=sys.stderr,
+    )
 
     throughput = module.throughput_gframes_s(params, interval_cycles=int(interval))
     ge_area = module.read_ge_area()

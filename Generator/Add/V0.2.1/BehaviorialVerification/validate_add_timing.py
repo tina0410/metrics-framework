@@ -140,11 +140,24 @@ def _run(command: list[str], cwd: Path) -> str:
 
 
 def validate_case(config_path: Path, case_label: str) -> dict[str, Any]:
+    if not case_label or any(
+        character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+        for character in case_label
+    ):
+        raise ValueError(f"Invalid ADD case label: {case_label!r}")
+    case_root = SIM_ROOT / case_label
+    case_root.mkdir(parents=True, exist_ok=True)
+    for artifact_name in (
+        "simulation_result.json",
+        "behavioral_output_reference.txt",
+        "rtl_output.txt",
+        "wave.vcd",
+    ):
+        (case_root / artifact_name).unlink(missing_ok=True)
     started = time.perf_counter()
     config_path = config_path.resolve()
     config = json.loads(config_path.read_text(encoding="utf-8-sig"))
     console_log = _run_original_chain(config_path, case_label)
-    case_root = SIM_ROOT / case_label
     workspace = case_root / "workspace"
     snapshot = json.loads((case_root / "config_snapshot.json").read_text(encoding="utf-8-sig"))
     if snapshot != config:

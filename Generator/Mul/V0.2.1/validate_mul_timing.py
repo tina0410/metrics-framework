@@ -260,6 +260,14 @@ def validate(config_path: Path) -> dict[str, Any]:
         raise ValueError("clock.period_ns must be finite and greater than zero")
     case_root = SIM_ROOT / config_path.stem
     case_root.mkdir(parents=True, exist_ok=True)
+    for artifact_name in (
+        "simulation_result.json",
+        "latency_check.txt",
+        "behavioral_output_reference.txt",
+        "rtl_output.txt",
+        "wave.vcd",
+    ):
+        (case_root / artifact_name).unlink(missing_ok=True)
     started = time.perf_counter()
     paths = _generate_case(config_path, config, case_root)
     rtl_files = sorted(path.name for path in paths["rtl_dir"].glob("*.v"))

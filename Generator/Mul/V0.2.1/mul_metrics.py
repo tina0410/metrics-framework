@@ -326,6 +326,8 @@ def throughput_gframes_s(params: tuple[int, ...], *, interval_cycles: int = 1) -
 
 def simulate_latency(config_path: Path, config: dict[str, Any], params: tuple[int, ...]) -> dict[str, Any]:
     """Run the module's canonical PyTB + QuBLAS C++/RTL validation program."""
+    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
+    result_path.unlink(missing_ok=True)
     environment = os.environ.copy()
     environment["MUL_SIM_ROOT"] = str(SIMULATION_ROOT)
     process = subprocess.run(
@@ -342,7 +344,6 @@ def simulate_latency(config_path: Path, config: dict[str, Any], params: tuple[in
     if process.returncode != 0:
         details = process.stderr.strip() or process.stdout.strip()
         raise RuntimeError("MUL canonical simulation failed: " + details)
-    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
     if not result_path.is_file():
         raise FileNotFoundError(f"MUL simulation result was not generated: {result_path}")
     result = json.loads(result_path.read_text(encoding="utf-8"))

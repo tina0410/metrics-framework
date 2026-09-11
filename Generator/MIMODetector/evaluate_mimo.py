@@ -93,6 +93,14 @@ def _case_id(config_path: Path) -> int:
 def simulate_rtl(config_path: Path) -> dict[str, Any]:
     case_id = _case_id(config_path)
     script = ROOT / "BehaviorialVerification" / "validate_mimo_timing.py"
+    result_path = (
+        ROOT
+        / "BehaviorialVerification"
+        / "sim"
+        / f"Testcase{case_id}"
+        / "simulation_result.json"
+    )
+    result_path.unlink(missing_ok=True)
     process = subprocess.run(
         [sys.executable, str(script), "--case", str(case_id), "--config", str(config_path)],
         cwd=script.parent,
@@ -102,13 +110,6 @@ def simulate_rtl(config_path: Path) -> dict[str, Any]:
     )
     if process.returncode != 0:
         raise RuntimeError(process.stdout)
-    result_path = (
-        ROOT
-        / "BehaviorialVerification"
-        / "sim"
-        / f"Testcase{case_id}"
-        / "simulation_result.json"
-    )
     if not result_path.exists():
         raise FileNotFoundError(f"MIMO RTL timing result was not generated: {result_path}")
     result = json.loads(result_path.read_text(encoding="utf-8"))
