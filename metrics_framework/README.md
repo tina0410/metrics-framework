@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP 和 ADD 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
+该框架统一 LS、MIMO、BP、ADD 和 MUL 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|add> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|add> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -120,3 +120,15 @@ ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。
 
 运行 `evaluate` 前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。生成的 RTL、C++输入/参考文件和仿真证据保存在 `Generator/Add/V0.2.1/sim/<配置名>/`，其中 `simulation_result.json` 记录实测延迟、输出间隔、匹配帧数、参考链来源以及参与编译的 RTL 文件。
+
+### MUL 评估与 RTL 验证
+
+MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值均为 `n_pipeline` cycles，且统一评估要求 `n_pipeline >= 1`。
+
+- 验证复用 MUL 原有的 PyTB 测试台、PyTV RTL 生成器与 QuBLAS C++ 黄金模型，然后使用 Icarus Verilog 执行 RTL 仿真；功能结果逐帧对比，延迟和输出间隔从 VCD 时钟边沿上的完整输入/输出序列独立测量。
+- 吞吐率沿用 MUL 仿真中连续帧的时序语义：`Gframes/s = 1 / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
+- 面积预测使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的等价轻量表示，面积单位为 `μm²`。真实面积从 `MUL.xlsx` 的 DC 综合结果列精确查表。
+- `MUL.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
+- 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
+
+MUL 的 RTL 和仿真证据保存在 `Generator/Mul/V0.2.1/sim/<配置名>/`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。

@@ -1,0 +1,14 @@
+{
+  "pipelined_top": "Mul0000000001",
+  "combinational_top": "Mul0000000002",
+  "rtl_files": [
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Delay0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Delay0000000002.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Delay0000000003.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Delay0000000004.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\FxMatch0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\FxMatch0000000002.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Mul0000000001.v",
+    "C:\\Users\\10312\\OneDrive\\桌面\\mjj\\mjj\\Generator\\Mul\\V0.2.1\\sim\\config_case4\\rtl\\Mul0000000002.v"
+  ]
+}
