@@ -466,6 +466,37 @@ def test_mul_simulation_never_accepts_stale_result(monkeypatch, tmp_path):
     assert not stale_result.exists()
 
 
+def test_mul_runtime_generator_import_does_not_require_pytest():
+    script = r'''
+import builtins
+import sys
+from pathlib import Path
+
+root = Path.cwd() / "Generator" / "Mul" / "V0.2.1"
+sys.path.insert(0, str(root))
+real_import = builtins.__import__
+
+def reject_pytest(name, *args, **kwargs):
+    if name == "pytest" or name.startswith("pytest."):
+        raise ModuleNotFoundError("pytest intentionally unavailable")
+    return real_import(name, *args, **kwargs)
+
+builtins.__import__ = reject_pytest
+from validate_mul_timing import _load_generators
+_load_generators()
+'''
+    process = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    assert process.returncode == 0, process.stdout
+
+
 @pytest.mark.skipif(
     shutil.which("iverilog") is None or shutil.which("vvp") is None,
     reason="Icarus Verilog is not installed",

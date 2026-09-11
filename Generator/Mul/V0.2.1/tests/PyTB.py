@@ -19,7 +19,6 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(__file__)))
 sys.path.append(dirname(__file__))
 
-import pytest
 import itertools
 import PyTU
 try:
