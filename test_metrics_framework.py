@@ -434,17 +434,18 @@ def test_mul_validation_requires_fresh_pipeline_simulation(monkeypatch, tmp_path
 
 def test_mul_area_reference_converts_seconds_to_milliseconds():
     module = mul_adapter._module()
+    assert module.AREA_WORKBOOK.name == "MUL0912.xlsx"
     params = module.parameters(_mul_config(n_pipeline=1))
     reference = module.read_area_reference(params)
-    assert reference["actual_area_um2"] == pytest.approx(271.879996)
+    assert reference["actual_area_um2"] == pytest.approx(271.879997)
     assert reference["synthesis_time_ms"] == pytest.approx(20306.021)
 
 
-def test_mul_area_prediction_matches_workbook_automatic_result():
+def test_mul_area_prediction_matches_current_estimator_result():
     module = mul_adapter._module()
     params = module.parameters(_mul_config(n_pipeline=1))
     area = module.predict_area(module.load_area_models(), params)
-    assert area == pytest.approx(201.781030, abs=1e-5)
+    assert area == pytest.approx(248.821030, abs=1e-5)
 
 
 def test_mul_simulation_never_accepts_stale_result(monkeypatch, tmp_path):

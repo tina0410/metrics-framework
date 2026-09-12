@@ -127,8 +127,8 @@ MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值
 
 - 验证复用 MUL 原有的 PyTB 测试台、PyTV RTL 生成器与 QuBLAS C++ 黄金模型，然后使用 Icarus Verilog 执行 RTL 仿真；功能结果逐帧对比，延迟和输出间隔从 VCD 时钟边沿上的完整输入/输出序列独立测量。
 - 吞吐率沿用 MUL 仿真中连续帧的时序语义：`Gframes/s = 1 / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
-- 面积预测使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的等价轻量表示，面积单位为 `μm²`。真实面积从 `MUL.xlsx` 的 DC 综合结果列精确查表。
-- `MUL.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
+- 面积预测与当前 `Est.py::Est_MUL` 保持等价，使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的轻量表示，面积单位为 `μm²`。真实面积从 `MUL0912.xlsx` 的 `dc综合结果` 列精确查表。
+- `MUL0912.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
 
 MUL 的 RTL 和仿真证据保存在 `Generator/Mul/V0.2.1/sim/<配置名>/`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。

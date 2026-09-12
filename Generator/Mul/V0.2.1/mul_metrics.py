@@ -19,7 +19,7 @@ from xml.etree import ElementTree
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parents[2]
 ESTIMATOR_ROOT = PROJECT_ROOT / "Area_TP_Estimator" / "Est"
-AREA_WORKBOOK = ESTIMATOR_ROOT / "MUL.xlsx"
+AREA_WORKBOOK = ESTIMATOR_ROOT / "MUL0912.xlsx"
 PURE_MUL_MODEL = ESTIMATOR_ROOT / "model" / "pure_MUL_area.pkl"
 OUTPUT_MODEL = ESTIMATOR_ROOT / "model" / "SU_out_FxP_area.pkl"
 SIGNED_INPUT_WORKBOOK = ESTIMATOR_ROOT / "model" / "SU_in.xlsx"
@@ -299,12 +299,13 @@ def predict_area(models: Any, params: tuple[int, ...]) -> float:
     except KeyError as error:
         raise LookupError(f"SU_in.xlsx has no row for input width {error.args[0]}") from error
     area += _linear(pure_model, _mul_features(dwt1, dwt2, dwt_mul))
-    # This transformed coordinate system exactly reproduces the estimator used
-    # to populate MUL.xlsx's automatic-area column.
+    # This transformed coordinate system reproduces the output conversion term
+    # used by the current Est.py Est_MUL implementation.
     area += _linear(
         output_model,
         _output_features(dwt_mul, 0, dwt_out, frac_out - frac1 - frac2, sign1, sign2),
     )
+    area += 5.88 * dwt_mul
     if not math.isfinite(area) or area <= 0:
         raise ValueError(f"MUL area model returned invalid area: {area!r}")
     return area
@@ -363,20 +364,20 @@ def read_area_reference(params: tuple[int, ...]) -> dict[str, float]:
         )
     expected = (dwt1, dwt2, n_pipeline, sign1, frac1, frac2, dwt_out, frac_out)
     matches = [
-        row for row in _numeric_rows(AREA_WORKBOOK, 15)
+        row for row in _numeric_rows(AREA_WORKBOOK, 16)
         if all(row[index] is not None for index in range(8))
         and tuple(int(row[index]) for index in range(8)) == expected
     ]
     if len(matches) != 1:
         raise LookupError(
-            f"MUL.xlsx expected one DC row for parameters {expected}, found {len(matches)}"
+            f"MUL0912.xlsx expected one DC row for parameters {expected}, found {len(matches)}"
         )
     row = matches[0]
-    # MUL.xlsx: DC area is column J (um^2), synthesis wall time is column M (s).
+    # MUL0912.xlsx: "dc综合结果" is column J (um^2), "time" is column N (s).
     actual_area = float(row[9])
-    synthesis_time_ms = float(row[12]) * 1000.0
+    synthesis_time_ms = float(row[13]) * 1000.0
     if actual_area <= 0 or synthesis_time_ms <= 0:
-        raise ValueError("MUL.xlsx contains a non-positive DC area or synthesis time")
+        raise ValueError("MUL0912.xlsx contains a non-positive DC area or synthesis time")
     return {"actual_area_um2": actual_area, "synthesis_time_ms": synthesis_time_ms}
 
 
