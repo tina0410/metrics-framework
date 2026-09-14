@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from pathlib import Path
@@ -35,7 +36,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     area_time_ms = (time.perf_counter() - started) * 1000.0
 
     started = time.perf_counter()
-    throughput = module.throughput_gframes_s(params)
+    throughput = module.throughput_gbps(params)
     throughput_time_ms = (time.perf_counter() - started) * 1000.0
 
     ge_area = module.read_ge_area()
@@ -55,7 +56,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         },
         "throughput": {
             "predicted": throughput,
-            "unit": "Gframes/s",
+            "unit": "Gbps",
             "precision": 3,
             "prediction_time_ms": throughput_time_ms,
             "source": "simulation_formula",
@@ -122,7 +123,9 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         file=sys.stderr,
     )
 
-    throughput = module.throughput_gframes_s(params, interval_cycles=int(interval))
+    throughput = float(simulation["simulated_throughput_gbps"])
+    if not math.isfinite(throughput) or throughput <= 0:
+        raise RuntimeError("MUL RTL measured effective-bit throughput must be finite and positive")
     ge_area = module.read_ge_area()
     complexity = float(actual_area) / ge_area * int(configured_cycles)
     return {
@@ -139,7 +142,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "reported_speedup": area_speedup,
             "source": area_source,
         },
-        "throughput": {"actual": throughput, "source": "rtl_derived"},
+        "throughput": {"actual": throughput, "source": "rtl_measured"},
         "hardware_complexity": {
             "actual_ge_cycles": complexity,
             "source": "derived",

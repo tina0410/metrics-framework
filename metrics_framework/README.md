@@ -115,8 +115,7 @@ ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位
 - 延迟预测值为 `n_pipeline` cycles。验证直接复用 ADD 原有 PyTB `ModuleTbAdd`、PyTV `ModuleAdd` 以及 `ModuleCppConfig/ModuleCppRun + QuBLAS` 参考文件生成链，在隔离工作区内生成完整 ADD、FxMatch、Delay 和 testbench RTL。
 - 原 C++ 链连续生成三帧输入和黄金输出，Icarus Verilog 运行原 testbench 后，统一验证器逐帧比较 RTL 输出文件，并从标准 VCD 的 `Input_rdy`、`Output_rdy` 和时钟边沿测量 `sim_latency_cycles` 与 `sim_output_interval_cycles`；真实延迟必须等于 `n_pipeline`。
 - ADD 的 `仿真时间 (ms)` 统计完整验证链耗时，计时范围包含 C++参考文件生成、PyTV RTL/testbench 生成、C++与Icarus编译、`vvp` 运行、逐帧比较和结果解析；它不是 Verilog 波形覆盖的几十个仿真 cycle 所对应的物理时间。
-- 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值不使用该预测公式，而是连续执行三帧后直接读取 VCD 中第一帧与第三帧的 `Output_rdy` 时间戳，按 `actual_Gframes/s = (3 - 1) / (t_output3 - t_output1)` 计算。时间戳换算为 ns 后，结果单位直接为 `Gframes/s`。默认 ADD 固定使用 `10 ns` 时钟，因此预测值和当前实测值均为 `0.1 Gframes/s`。
-- `Gframes/s` 表示每秒十亿帧，`Gbps` 表示每秒十亿比特，两者物理意义不同。只有明确每帧包含的有效比特数后，才能按 `Gbps = Gframes/s × bits_per_frame` 换算。
+- 吞吐率按有效输出 bit 计算，`effective_Gbps = output.bitwidth / (clock.period_ns × output_interval_cycles)`。预测按每拍输出一帧；仿真值继续从三帧 `Output_rdy` 的 VCD 时间戳实测输出间隔，再乘每帧的 `output.bitwidth`。默认 ADD `config_case2` 的输出宽度为 2 bit、时钟周期为 10 ns，因此预测值和当前实测值均为 `0.2 Gbps`。
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。
 
 运行 `evaluate` 前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。生成的 RTL、C++输入/参考文件和仿真证据保存在 `Generator/Add/V0.2.1/sim/<配置名>/`，其中 `simulation_result.json` 记录实测延迟、输出间隔、匹配帧数、参考链来源以及参与编译的 RTL 文件。
@@ -126,7 +125,7 @@ ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位
 MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值均为 `n_pipeline` cycles，且统一评估要求 `n_pipeline >= 1`。
 
 - 验证复用 MUL 原有的 PyTB 测试台、PyTV RTL 生成器与 QuBLAS C++ 黄金模型，然后使用 Icarus Verilog 执行 RTL 仿真；功能结果逐帧对比，延迟和输出间隔从 VCD 时钟边沿上的完整输入/输出序列独立测量。
-- 吞吐率沿用 MUL 仿真中连续帧的时序语义：`Gframes/s = 1 / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
+- 吞吐率按有效输出 bit 计算：`effective_Gbps = output.bitwidth / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
 - 面积预测与当前 `Est.py::Est_MUL` 保持等价，使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的轻量表示，面积单位为 `μm²`。真实面积从 `MUL0912.xlsx` 的 `dc综合结果` 列精确查表。
 - `MUL0912.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。

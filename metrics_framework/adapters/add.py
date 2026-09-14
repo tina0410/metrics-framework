@@ -36,7 +36,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     area_time_ms = (time.perf_counter() - started) * 1000.0
 
     started = time.perf_counter()
-    throughput = module.throughput_gframes_s(params)
+    throughput = module.throughput_gbps(params)
     throughput_time_ms = (time.perf_counter() - started) * 1000.0
 
     ge_area = module.read_ge_area()
@@ -56,7 +56,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         },
         "throughput": {
             "predicted": throughput,
-            "unit": "Gframes/s",
+            "unit": "Gbps",
             "precision": 3,
             "prediction_time_ms": throughput_time_ms,
             "source": "formula",
@@ -103,9 +103,9 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("ADD RTL functional comparison failed")
     measured_cycles = int(simulation["sim_latency_cycles"])
     measured_interval = int(simulation["sim_output_interval_cycles"])
-    throughput = float(simulation["simulated_throughput_gframes_s"])
+    throughput = float(simulation["simulated_throughput_gbps"])
     if not math.isfinite(throughput) or throughput <= 0:
-        raise RuntimeError("ADD RTL measured throughput must be finite and positive")
+        raise RuntimeError("ADD RTL measured effective-bit throughput must be finite and positive")
     if measured_cycles != predicted_cycles:
         raise RuntimeError(
             f"ADD RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"

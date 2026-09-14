@@ -316,11 +316,11 @@ def latency_cycles(params: tuple[int, ...]) -> int:
     return params[8]
 
 
-def throughput_gframes_s(params: tuple[int, ...], *, interval_cycles: int = 1) -> float:
-    """Convert the simulator's one-frame-per-interval behavior to Gframes/s."""
+def throughput_gbps(params: tuple[int, ...], *, interval_cycles: int = 1) -> float:
+    """Convert one output word per interval to effective-bit throughput in Gbps."""
     if isinstance(interval_cycles, bool) or int(interval_cycles) != interval_cycles or interval_cycles < 1:
         raise ValueError("interval_cycles must be a positive integer")
-    return 1.0 / (params[10] * int(interval_cycles))
+    return params[6] / (params[10] * int(interval_cycles))
 
 
 

@@ -144,9 +144,19 @@ def latency_cycles(params: tuple[int, int, int, int, int, int, int, int, int, An
     return params[8]
 
 
-def throughput_gframes_s(params: tuple[int, int, int, int, int, int, int, int, int, Any, float]) -> float:
-    """The ADD design processes one frame per clock cycle."""
-    return 1.0 / params[10]
+def throughput_gbps(
+    params: tuple[int, int, int, int, int, int, int, int, int, Any, float],
+    *,
+    interval_cycles: int = 1,
+) -> float:
+    """Return effective output-bit throughput in Gbps."""
+    if (
+        isinstance(interval_cycles, bool)
+        or int(interval_cycles) != interval_cycles
+        or interval_cycles < 1
+    ):
+        raise ValueError("interval_cycles must be a positive integer")
+    return params[6] / (params[10] * int(interval_cycles))
 
 
 def simulate_latency(

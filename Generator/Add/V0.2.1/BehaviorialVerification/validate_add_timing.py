@@ -93,7 +93,9 @@ def _timescale_ns(vcd_path: Path) -> float:
     return float(match.group(1)) * unit_ns[match.group(2).lower()]
 
 
-def measure_timing(vcd_path: Path) -> dict[str, Any]:
+def measure_timing(vcd_path: Path, effective_output_bits: int) -> dict[str, Any]:
+    if effective_output_bits < 1:
+        raise ValueError("ADD effective output width must be positive")
     rises = _rising_times(vcd_path)
     clocks = rises["clk"]
     inputs = rises["Input_rdy"]
@@ -117,7 +119,8 @@ def measure_timing(vcd_path: Path) -> dict[str, Any]:
     measured_span_ns = output_times_ns[-1] - output_times_ns[0]
     if measured_span_ns <= 0:
         raise ValueError(f"{vcd_path}: ADD output timestamp span must be positive")
-    simulated_throughput = (len(output_times_ns) - 1) / measured_span_ns
+    simulated_frame_rate = (len(output_times_ns) - 1) / measured_span_ns
+    simulated_throughput = effective_output_bits * simulated_frame_rate
     return {
         "sim_latency_cycles": output_cycles[0] - input_cycle,
         "sim_output_interval_cycles": intervals[0],
@@ -128,11 +131,13 @@ def measure_timing(vcd_path: Path) -> dict[str, Any]:
         "output_ready_times_ns": output_times_ns,
         "output_interval_ns_list": output_interval_ns_list,
         "average_output_interval_ns": measured_span_ns / (len(output_times_ns) - 1),
-        "simulated_throughput_gframes_s": simulated_throughput,
+        "effective_output_bits": effective_output_bits,
+        "simulated_frame_rate_gframes_s": simulated_frame_rate,
+        "simulated_throughput_gbps": simulated_throughput,
         "measurement_method": (
             "original ADD testbench Input_rdy/Output_rdy transitions sampled against "
-            "VCD clock edges; throughput measured directly from the first and last "
-            "of three Output_rdy timestamps"
+            "VCD clock edges; effective-bit throughput measured from the first and "
+            "last of three Output_rdy timestamps and output.bitwidth"
         ),
     }
 
@@ -235,7 +240,9 @@ def validate_case(config_path: Path, case_label: str) -> dict[str, Any]:
             f"Original ADD comparison failed: expected {len(expected)} frames, got {len(actual)}"
         )
 
-    result = measure_timing(rtl_dir / "wave.vcd")
+    result = measure_timing(
+        rtl_dir / "wave.vcd", int(config["output"]["bitwidth"])
+    )
     elapsed_ms = (time.perf_counter() - started) * 1000.0
     result.update(
         {
