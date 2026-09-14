@@ -327,7 +327,7 @@ def _mul_config(n_pipeline=4):
         "output": {"bitwidth": 7, "fractional_width": 3, "signed": True},
         "n_pipeline": n_pipeline,
         "if_rst_n": False,
-        "clock": {"period_ns": 5.0},
+        "clock": {"period_ns": 10.0},
     }
 
 
@@ -339,7 +339,7 @@ def test_mul_prediction_units_latency_throughput_and_complexity(monkeypatch, tmp
 
         @staticmethod
         def parameters(config):
-            return (4, 2, 1, 4, 2, 1, 7, 3, config["n_pipeline"], False, 5.0)
+            return (4, 2, 1, 4, 2, 1, 7, 3, config["n_pipeline"], False, 10.0)
 
         @staticmethod
         def latency_cycles(params):
@@ -365,7 +365,7 @@ def test_mul_prediction_units_latency_throughput_and_complexity(monkeypatch, tmp
     monkeypatch.setattr(mul_adapter, "_module", lambda: Module)
     result = mul_adapter.predict(tmp_path / "config.json", _mul_config())
     assert result["latency"]["predicted_cycles"] == 4
-    assert result["throughput"]["predicted"] == pytest.approx(1.4)
+    assert result["throughput"]["predicted"] == pytest.approx(0.7)
     assert result["throughput"]["unit"] == "Gbps"
     assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(400.0)
 
@@ -387,7 +387,7 @@ def test_mul_validation_requires_fresh_pipeline_simulation(monkeypatch, tmp_path
 
         @staticmethod
         def parameters(value):
-            return (4, 2, 1, 4, 2, 1, 7, 3, value["n_pipeline"], False, 5.0)
+            return (4, 2, 1, 4, 2, 1, 7, 3, value["n_pipeline"], False, 10.0)
 
         @staticmethod
         def latency_cycles(params):
@@ -407,7 +407,7 @@ def test_mul_validation_requires_fresh_pipeline_simulation(monkeypatch, tmp_path
             return {
                 "sim_latency_cycles": params[8],
                 "sim_output_interval_cycles": 1,
-                "simulated_throughput_gbps": 1.4,
+                "simulated_throughput_gbps": 0.7,
                 "functional_match": True,
             }
 
@@ -422,7 +422,7 @@ def test_mul_validation_requires_fresh_pipeline_simulation(monkeypatch, tmp_path
     assert result["latency"]["simulation_time_ms"] > 0
     assert result["latency"]["simulation_time_ms"] != 1.0
     assert result["latency"]["output_interval_cycles"] == 1
-    assert result["throughput"]["actual"] == pytest.approx(1.4)
+    assert result["throughput"]["actual"] == pytest.approx(0.7)
     assert result["hardware_complexity"]["actual_ge_cycles"] == pytest.approx(600.0)
 
     mul_adapter.validate(tmp_path / "config.json", config)
@@ -515,7 +515,7 @@ def test_mul_rtl_simulator_measures_pipeline_depth(monkeypatch, tmp_path):
     assert result["sim_latency_cycles"] == 3
     assert result["sim_output_interval_cycles"] == 1
     assert result["effective_output_bits"] == 7
-    assert result["simulated_throughput_gbps"] == pytest.approx(1.4)
+    assert result["simulated_throughput_gbps"] == pytest.approx(0.7)
     assert result["functional_match"] is True
     assert result["measurement_method"].startswith("canonical MUL PyTB + QuBLAS")
     assert result["matched_output_frames"] == 8
@@ -526,8 +526,8 @@ def test_mul_unsigned_default_case_runs_full_unified_evaluation():
     assert result["延迟"]["预测结果 (cycles)"] == 1
     assert result["延迟"]["仿真结果 (cycles)"] == 1
     assert result["面积"]["真实结果 (μm²)"] == 220.64
-    assert result["Throughput"]["预测结果 (Gbps)"] == 1.6
-    assert result["Throughput"]["仿真结果 (Gbps)"] == 1.6
+    assert result["Throughput"]["预测结果 (Gbps)"] == 0.8
+    assert result["Throughput"]["仿真结果 (Gbps)"] == 0.8
 
 
 def test_add_prediction_uses_pipeline_latency_and_one_op_per_cycle(monkeypatch, tmp_path):
