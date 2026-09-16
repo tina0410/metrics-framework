@@ -102,7 +102,7 @@ python adapter.py validate CONFIG
 
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
-`Generator/BasicModules`，测试入口位于 `Generator/BasicTests/<Module>`。
+`Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
 目前 Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
@@ -120,14 +120,14 @@ MIMO 的面积项目与 RTL 项目存在同名旧模块，因此其 adapter 使�
 
 ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数。统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`，五个默认 case 均保持 `n_pipeline = 1`。
 
-- 延迟预测值为 `n_pipeline` cycles。验证从 `Generator/BasicTests/Add` 调用测试链，并从 `Generator/BasicModules` 加载 `ModuleAdd`、`FxMatch` 和 `Delay`；`ModuleCppConfig/ModuleCppRun + QuBLAS` 仍用作行为参考。
+- 延迟预测值为 `n_pipeline` cycles。验证从 `Generator/BasicModules/Add/tests` 调用测试链，并从 `Generator/BasicModules/Add` 加载 `ModuleAdd`、`FxMatch` 和 `Delay`；`ModuleCppConfig/ModuleCppRun + QuBLAS` 仍用作行为参考。
 - 原 C++ 链连续生成三帧输入和黄金输出，Icarus Verilog 运行原 testbench 后，统一验证器逐帧比较 RTL 输出文件，并从标准 VCD 的 `Input_rdy`、`Output_rdy` 和时钟边沿测量 `sim_latency_cycles` 与 `sim_output_interval_cycles`；真实延迟必须等于 `n_pipeline`。
 - ADD 的 `仿真时间 (ms)` 统计完整验证链耗时，计时范围包含 C++参考文件生成、PyTV RTL/testbench 生成、C++与Icarus编译、`vvp` 运行、逐帧比较和结果解析；它不是 Verilog 波形覆盖的几十个仿真 cycle 所对应的物理时间。
 - 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值按实测输出间隔计算：`actual_Gframes/s = 1 / (clock.period_ns × sim_output_interval_cycles)`。默认 ADD 的输出间隔为 1 cycle，因此预测值和仿真值一致。流水级数影响首帧延迟，但只要流水线能每拍接收数据，就不降低稳态吞吐率。
 - `Gframes/s` 表示每秒十亿帧，`Gbps` 表示每秒十亿比特，两者物理意义不同。只有明确每帧包含的有效比特数后，才能按 `Gbps = Gframes/s × bits_per_frame` 换算。
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。
 
-运行 `evaluate` 前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。生成的 RTL、C++输入/参考文件和仿真证据保存在 `Generator/BasicTests/Add/sim/<配置名>/`，其中 `simulation_result.json` 记录实测延迟、输出间隔、匹配帧数、参考链来源以及参与编译的 RTL 文件。
+运行 `evaluate` 前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。生成的 RTL、C++输入/参考文件和仿真证据保存在 `Generator/BasicModules/Add/sim/<配置名>/`，其中 `simulation_result.json` 记录实测延迟、输出间隔、匹配帧数、参考链来源以及参与编译的 RTL 文件。
 
 ### MUL 评估与 RTL 验证
 
@@ -139,4 +139,4 @@ MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值
 - `MUL.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
 
-MUL 的 RTL 从 `Generator/BasicModules` 加载，测试链和仿真证据位于 `Generator/BasicTests/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。
+MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。

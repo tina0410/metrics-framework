@@ -27,24 +27,20 @@ ROOT = Path(__file__).resolve().parent
 
 def test_registered_add_uses_canonical_module_root():
     spec = Registry().get("add")
-    expected = (ROOT / "Generator" / "BasicTests" / "Add").resolve()
+    expected = (ROOT / "Generator" / "BasicModules" / "Add").resolve()
     assert spec.root == expected
-    assert spec.source == (ROOT / "Generator" / "BasicModules" / "Add.py").resolve()
-    assert spec.config_dir == (ROOT / "Generator" / "Add" / "V0.2.1" / "configs").resolve()
-    assert spec.output_root == (
-        ROOT / "Generator" / "Add" / "V0.2.1" / "evaluation_output"
-    ).resolve()
+    assert spec.source == (expected / "Add.py").resolve()
+    assert spec.config_dir == (expected / "configs").resolve()
+    assert spec.output_root == (expected / "evaluation_output").resolve()
 
 
 def test_registered_mul_uses_canonical_module_root():
     spec = Registry().get("mul")
-    expected = (ROOT / "Generator" / "BasicTests" / "Mul").resolve()
+    expected = (ROOT / "Generator" / "BasicModules" / "Mul").resolve()
     assert spec.root == expected
-    assert spec.source == (ROOT / "Generator" / "BasicModules" / "Mul.py").resolve()
-    assert spec.config_dir == (ROOT / "Generator" / "Mul" / "V0.2.1" / "configs").resolve()
-    assert spec.output_root == (
-        ROOT / "Generator" / "Mul" / "V0.2.1" / "evaluation_output"
-    ).resolve()
+    assert spec.source == (expected / "Mul.py").resolve()
+    assert spec.config_dir == (expected / "configs").resolve()
+    assert spec.output_root == (expected / "evaluation_output").resolve()
 
 
 @pytest.mark.parametrize(
@@ -64,8 +60,9 @@ def test_registered_mul_uses_canonical_module_root():
 def test_basic_module_is_registered(name, directory, source):
     spec = Registry().get(name)
     assert spec.status == "registered"
-    assert spec.root == (ROOT / "Generator" / "BasicTests" / directory).resolve()
-    assert spec.source == (ROOT / "Generator" / "BasicModules" / source).resolve()
+    expected = (ROOT / "Generator" / "BasicModules" / directory).resolve()
+    assert spec.root == expected
+    assert spec.source == (expected / source).resolve()
     assert spec.capabilities == frozenset({"rtl_verification"})
 
 

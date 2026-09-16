@@ -36,82 +36,82 @@
     },
     "fxmatch": {
       "status": "registered",
-      "source": "Generator/BasicModules/FxMatch.py",
-      "root": "Generator/BasicTests/FxMatch",
+      "source": "Generator/BasicModules/FxMatch/FxMatch.py",
+      "root": "Generator/BasicModules/FxMatch",
       "capabilities": ["rtl_verification"]
     },
     "delay": {
       "status": "registered",
-      "source": "Generator/BasicModules/Delay.py",
-      "root": "Generator/BasicTests/Delay",
+      "source": "Generator/BasicModules/Delay/Delay.py",
+      "root": "Generator/BasicModules/Delay",
       "capabilities": ["rtl_verification"]
     },
     "neg": {
       "status": "registered",
-      "source": "Generator/BasicModules/Neg.py",
-      "root": "Generator/BasicTests/Neg",
+      "source": "Generator/BasicModules/Neg/Neg.py",
+      "root": "Generator/BasicModules/Neg",
       "capabilities": ["rtl_verification"]
     },
     "abs": {
       "status": "registered",
-      "source": "Generator/BasicModules/Abs.py",
-      "root": "Generator/BasicTests/Abs",
+      "source": "Generator/BasicModules/Abs/Abs.py",
+      "root": "Generator/BasicModules/Abs",
       "capabilities": ["rtl_verification"]
     },
     "mux": {
       "status": "registered",
-      "source": "Generator/BasicModules/MUX.py",
-      "root": "Generator/BasicTests/MUX",
+      "source": "Generator/BasicModules/MUX/MUX.py",
+      "root": "Generator/BasicModules/MUX",
       "capabilities": ["rtl_verification"]
     },
     "add": {
       "status": "active",
-      "source": "Generator/BasicModules/Add.py",
+      "source": "Generator/BasicModules/Add/Add.py",
       "adapter": "metrics_framework/adapters/add.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicTests/Add",
-      "config_dir": "../../Add/V0.2.1/configs",
+      "root": "Generator/BasicModules/Add",
+      "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "ADD_METRICS_PYTHON",
-      "output_root": "../../Add/V0.2.1/evaluation_output",
+      "output_root": "evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "sub": {
       "status": "registered",
-      "source": "Generator/BasicModules/Sub.py",
-      "root": "Generator/BasicTests/Sub",
+      "source": "Generator/BasicModules/Sub/Sub.py",
+      "root": "Generator/BasicModules/Sub",
       "capabilities": ["rtl_verification"]
     },
     "mul": {
       "status": "active",
-      "source": "Generator/BasicModules/Mul.py",
+      "source": "Generator/BasicModules/Mul/Mul.py",
       "adapter": "metrics_framework/adapters/mul.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicTests/Mul",
-      "config_dir": "../../Mul/V0.2.1/configs",
+      "root": "Generator/BasicModules/Mul",
+      "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "MUL_METRICS_PYTHON",
-      "output_root": "../../Mul/V0.2.1/evaluation_output",
+      "output_root": "evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "comp": {
       "status": "registered",
-      "source": "Generator/BasicModules/Comp.py",
-      "root": "Generator/BasicTests/Comp",
+      "source": "Generator/BasicModules/Comp/Comp.py",
+      "root": "Generator/BasicModules/Comp",
       "capabilities": ["rtl_verification"]
     },
     "comptree": {
       "status": "registered",
-      "source": "Generator/BasicModules/CompTree.py",
-      "root": "Generator/BasicTests/CompTree",
+      "source": "Generator/BasicModules/CompTree/CompTree.py",
+      "root": "Generator/BasicModules/CompTree",
       "capabilities": ["rtl_verification"]
     },
     "addertree": {
       "status": "registered",
-      "source": "Generator/BasicModules/AdderTree.py",
-      "root": "Generator/BasicTests/AdderTree",
+      "source": "Generator/BasicModules/AdderTree/AdderTree.py",
+      "root": "Generator/BasicModules/AdderTree",
       "capabilities": ["rtl_verification"]
     }
   }
