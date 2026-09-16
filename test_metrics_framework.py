@@ -27,18 +27,51 @@ ROOT = Path(__file__).resolve().parent
 
 def test_registered_add_uses_canonical_module_root():
     spec = Registry().get("add")
-    expected = (ROOT / "Generator" / "Add" / "V0.2.1").resolve()
+    expected = (ROOT / "Generator" / "BasicTests" / "Add").resolve()
     assert spec.root == expected
-    assert spec.config_dir == expected / "configs"
-    assert spec.output_root == expected / "evaluation_output"
+    assert spec.source == (ROOT / "Generator" / "BasicModules" / "Add.py").resolve()
+    assert spec.config_dir == (ROOT / "Generator" / "Add" / "V0.2.1" / "configs").resolve()
+    assert spec.output_root == (
+        ROOT / "Generator" / "Add" / "V0.2.1" / "evaluation_output"
+    ).resolve()
 
 
 def test_registered_mul_uses_canonical_module_root():
     spec = Registry().get("mul")
-    expected = (ROOT / "Generator" / "Mul" / "V0.2.1").resolve()
+    expected = (ROOT / "Generator" / "BasicTests" / "Mul").resolve()
     assert spec.root == expected
-    assert spec.config_dir == expected / "configs"
-    assert spec.output_root == expected / "evaluation_output"
+    assert spec.source == (ROOT / "Generator" / "BasicModules" / "Mul.py").resolve()
+    assert spec.config_dir == (ROOT / "Generator" / "Mul" / "V0.2.1" / "configs").resolve()
+    assert spec.output_root == (
+        ROOT / "Generator" / "Mul" / "V0.2.1" / "evaluation_output"
+    ).resolve()
+
+
+@pytest.mark.parametrize(
+    ("name", "directory", "source"),
+    [
+        ("fxmatch", "FxMatch", "FxMatch.py"),
+        ("delay", "Delay", "Delay.py"),
+        ("neg", "Neg", "Neg.py"),
+        ("abs", "Abs", "Abs.py"),
+        ("mux", "MUX", "MUX.py"),
+        ("sub", "Sub", "Sub.py"),
+        ("comp", "Comp", "Comp.py"),
+        ("comptree", "CompTree", "CompTree.py"),
+        ("addertree", "AdderTree", "AdderTree.py"),
+    ],
+)
+def test_basic_module_is_registered(name, directory, source):
+    spec = Registry().get(name)
+    assert spec.status == "registered"
+    assert spec.root == (ROOT / "Generator" / "BasicTests" / directory).resolve()
+    assert spec.source == (ROOT / "Generator" / "BasicModules" / source).resolve()
+    assert spec.capabilities == frozenset({"rtl_verification"})
+
+
+def test_registered_only_basic_module_reports_metrics_unavailable():
+    with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
+        predict("fxmatch")
 
 
 def test_registered_ls_uses_canonical_module_root():

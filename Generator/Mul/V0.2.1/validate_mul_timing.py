@@ -18,11 +18,12 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parents[2]
-TESTS_ROOT = ROOT / "tests"
-DESIGNS_ROOT = ROOT / "designs"
+TESTS_ROOT = PROJECT_ROOT / "Generator" / "BasicTests" / "Mul"
+BASIC_MODULES_ROOT = PROJECT_ROOT / "Generator" / "BasicModules"
+LEGACY_TESTS_ROOT = ROOT / "tests"
 PYTV_ROOT = PROJECT_ROOT / "Generator" / "LSCE" / "BehaviorialVerification"
 SIM_ROOT = Path(os.environ.get("MUL_SIM_ROOT", ROOT / "sim")).resolve()
-QUBLAS_SOURCE = TESTS_ROOT / "sim" / "CppModules" / "include" / "QuBLAS.h"
+QUBLAS_SOURCE = LEGACY_TESTS_ROOT / "sim" / "CppModules" / "include" / "QuBLAS.h"
 
 
 def _run(command: list[str], cwd: Path) -> str:
@@ -51,10 +52,19 @@ def _single(path: Path, pattern: str) -> Path:
 def _load_generators():
     original_argv = sys.argv[:]
     sys.argv = [sys.argv[0]]
-    sys.path[:0] = [str(TESTS_ROOT), str(DESIGNS_ROOT), str(PYTV_ROOT), str(ROOT)]
+    sys.path[:0] = [
+        str(TESTS_ROOT),
+        str(BASIC_MODULES_ROOT),
+        str(PROJECT_ROOT),
+        str(PYTV_ROOT),
+        str(ROOT),
+    ]
     try:
         import PyTU
-        from BehavModel_Mul import ModuleCppConfig, ModuleCppRun
+        from BehavModel_Mul import (
+            ModuleMulCppConfig as ModuleCppConfig,
+            ModuleMulCppRun as ModuleCppRun,
+        )
         from tb_Mul import ModuleTbMul
         from pytv.ModuleLoader import moduleloader
     finally:
@@ -127,13 +137,13 @@ def _generate_case(config_path: Path, config: dict[str, Any], case_root: Path) -
             QU_IN_1=qu_in1, QU_IN_2=qu_in2, QU_OUT=qu_out,
             QU_MODE=qu_mode, OF_MODE=of_mode,
         )
-    _single(include_dir, "CppConfig*.h").replace(include_dir / "config.h")
+    _single(include_dir, "*CppConfig*.h").replace(include_dir / "config.h")
 
     moduleloader.set_language_mode("CPP")
     moduleloader.set_root_dir(str(cpp_dir))
     with contextlib.redirect_stdout(sys.stderr):
         cpp_run(N_FRAMES=n_frames)
-    _single(cpp_dir, "CppRun*.cpp").replace(cpp_dir / "Mul.cpp")
+    _single(cpp_dir, "*CppRun*.cpp").replace(cpp_dir / "Mul.cpp")
     compiler = shutil.which("clang++") or shutil.which("g++")
     if compiler is None:
         raise FileNotFoundError("MUL simulation requires clang++ or g++ on PATH")
@@ -157,7 +167,7 @@ def _generate_case(config_path: Path, config: dict[str, Any], case_root: Path) -
             OF_MODE=of_mode,
             # The generated Verilog runs from workspace/RTL. A relative ASCII
             # path also avoids simulator filename-encoding differences.
-            input_file_dir="../",
+            io_file_dir="../",
             N_FRAMES=n_frames,
             CLK_PERIOD=float(config["clock"]["period_ns"]),
         )

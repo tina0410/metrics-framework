@@ -34,27 +34,85 @@
       "output_root": "evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity", "iterations"]
     },
+    "fxmatch": {
+      "status": "registered",
+      "source": "Generator/BasicModules/FxMatch.py",
+      "root": "Generator/BasicTests/FxMatch",
+      "capabilities": ["rtl_verification"]
+    },
+    "delay": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Delay.py",
+      "root": "Generator/BasicTests/Delay",
+      "capabilities": ["rtl_verification"]
+    },
+    "neg": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Neg.py",
+      "root": "Generator/BasicTests/Neg",
+      "capabilities": ["rtl_verification"]
+    },
+    "abs": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Abs.py",
+      "root": "Generator/BasicTests/Abs",
+      "capabilities": ["rtl_verification"]
+    },
+    "mux": {
+      "status": "registered",
+      "source": "Generator/BasicModules/MUX.py",
+      "root": "Generator/BasicTests/MUX",
+      "capabilities": ["rtl_verification"]
+    },
     "add": {
+      "status": "active",
+      "source": "Generator/BasicModules/Add.py",
       "adapter": "metrics_framework/adapters/add.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/Add/V0.2.1",
-      "config_dir": "configs",
+      "root": "Generator/BasicTests/Add",
+      "config_dir": "../../Add/V0.2.1/configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "ADD_METRICS_PYTHON",
-      "output_root": "evaluation_output",
+      "output_root": "../../Add/V0.2.1/evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
+    "sub": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Sub.py",
+      "root": "Generator/BasicTests/Sub",
+      "capabilities": ["rtl_verification"]
+    },
     "mul": {
+      "status": "active",
+      "source": "Generator/BasicModules/Mul.py",
       "adapter": "metrics_framework/adapters/mul.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/Mul/V0.2.1",
-      "config_dir": "configs",
+      "root": "Generator/BasicTests/Mul",
+      "config_dir": "../../Mul/V0.2.1/configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "MUL_METRICS_PYTHON",
-      "output_root": "evaluation_output",
+      "output_root": "../../Mul/V0.2.1/evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
+    },
+    "comp": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Comp.py",
+      "root": "Generator/BasicTests/Comp",
+      "capabilities": ["rtl_verification"]
+    },
+    "comptree": {
+      "status": "registered",
+      "source": "Generator/BasicModules/CompTree.py",
+      "root": "Generator/BasicTests/CompTree",
+      "capabilities": ["rtl_verification"]
+    },
+    "addertree": {
+      "status": "registered",
+      "source": "Generator/BasicModules/AdderTree.py",
+      "root": "Generator/BasicTests/AdderTree",
+      "capabilities": ["rtl_verification"]
     }
   }
 }

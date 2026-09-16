@@ -1,0 +1,626 @@
+% !TeX program = xelatex
+\documentclass[a4paper,oneside,11pt]{ctexrep}
+
+\usepackage[a4paper,left=0.78in,right=0.78in,top=2cm,bottom=2cm]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Heros}
+\setCJKmainfont{Microsoft YaHei}
+\usepackage{fancyhdr}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{siunitx}
+\usepackage{booktabs,longtable,multirow,makecell,array,tabularx}
+\usepackage{graphicx,float,adjustbox}
+\usepackage{xcolor,colortbl}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[colorlinks=true,linkcolor=purple,urlcolor=blue,citecolor=red]{hyperref}
+\usepackage{url}
+
+\definecolor{HeaderBlue}{HTML}{17365D}
+\definecolor{LightBlue}{HTML}{DCE6F1}
+\definecolor{LightOrange}{HTML}{FCE5CD}
+\definecolor{LightGreen}{HTML}{D9EAD3}
+\definecolor{LightGray}{HTML}{F3F3F3}
+
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{7pt}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.25em}
+\captionsetup[figure]{name={图}}
+\captionsetup[table]{name={表}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\small 基带电路自动评估测试框架\quad\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\lstdefinelanguage{json}{
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!45},
+    backgroundcolor=\color{LightGray},
+    literate=
+     *{0}{{{\color{blue!65!black}0}}}{1}
+      {1}{{{\color{blue!65!black}1}}}{1}
+      {2}{{{\color{blue!65!black}2}}}{1}
+      {3}{{{\color{blue!65!black}3}}}{1}
+      {4}{{{\color{blue!65!black}4}}}{1}
+      {5}{{{\color{blue!65!black}5}}}{1}
+      {6}{{{\color{blue!65!black}6}}}{1}
+      {7}{{{\color{blue!65!black}7}}}{1}
+      {8}{{{\color{blue!65!black}8}}}{1}
+      {9}{{{\color{blue!65!black}9}}}{1}
+}
+
+\lstdefinestyle{command}{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!45},
+    backgroundcolor=\color{LightGray},
+    showstringspaces=false
+}
+
+\newcommand{\metricheader}[1]{\textbf{#1}}
+
+\title{基带电路自动评估测试框架}
+\author{}
+\date{2026年9月}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{3.0cm}
+    {\Huge\bfseries 基带电路自动评估测试框架\par}
+    \vspace{1.2cm}
+    {\Large 第一版\par}
+    \vspace{2.2cm}
+    \begin{tabular}{ll}
+        \toprule
+        文档类型 & 测试框架与接入说明 \\
+        覆盖范围 & Metrics框架及已有五个模块 \\
+        当前版本 & 0.1 \\
+        日期 & 2026年9月 \\
+        \bottomrule
+    \end{tabular}
+    \vfill
+\end{titlepage}
+
+\tableofcontents
+\thispagestyle{empty}
+\clearpage
+\setcounter{page}{1}
+
+\chapter{测试目标和模块范围}
+
+\section{目的}
+
+本文档介绍基带电路自动评估框架的使用流程、软件接口及结果输出方式。用户首先通过JSON配置文件设置待测模块的结构参数、量化参数和时钟参数；框架据此生成面积、延迟、吞吐率和硬件计算复杂度的预测结果。参考值由传统评估流程获得，其中Design Compiler用于生成面积及综合时序结果，Icarus Verilog用于执行RTL仿真，并结合C/C++黄金模型验证功能正确性以及获取周期级延迟和输出间隔。框架最终统一输出预测值、参考值、预测误差、评估时间和速度提升倍数。
+
+\section{评估与验收指标}
+
+框架通过Predict、Validate和Evaluate三条处理链完成自动评估。Predict链根据模块配置和时钟参数生成各项指标的预测值；Validate链调用C/C++参考程序、RTL仿真工具和逻辑综合工具，完成功能核验并获得对应参考值；Evaluate链汇总两条链的结果，计算预测误差、评估时间和速度提升倍数。
+
+功能正确性是开展指标评估的前提。只有当RTL输出与C/C++黄金输出逐项一致时，对应Case才进入误差、时间和速度提升倍数的统计；若功能验证未通过，则记录验证失败原因，但不将该Case纳入指标验收结果。
+
+在功能验证通过的基础上，框架按照表中规定的计算口径和验收要求对自动评估结果进行判定。
+
+\section{评估指标}
+
+\begin{longtable}{p{0.34\textwidth}p{0.20\textwidth}p{0.36\textwidth}}
+    \toprule
+    \metricheader{评估指标} & \metricheader{验收要求} & \metricheader{判定数据} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \metricheader{功能指标} & \metricheader{验收要求} & \metricheader{判定数据} \\
+    \midrule
+    \endhead
+    基带电路自动评估时间 & 不超过\SI{10}{\second} & 四项指标预测时间之和 \\
+    基带电路自动评估速度提升 & 不低于10倍 & 参考评估时间与自动评估时间之比 \\
+    基带电路自动评估误差 & 不超过25\% & 预测值与参考值的绝对相对误差 \\
+    定点计算复杂度评估误差 & 不超过15\% & 预测与参考$\mathrm{GE\cdot cycle}$的绝对相对误差 \\
+    \bottomrule
+\end{longtable}
+
+\section{模块范围}
+
+框架计划覆盖FxMatch、Delay、Neg、AbsMux（2:1和N:M）、Add、Sub、Mul、Comp、Mac Systolic Array、CompTree、AdderTree、BCB、Perm、Counter、Early Stop、Hard Decision、5G PUSCH CE、INSA-MMSE MIMO Detector和BP Polar Decoder。
+
+本阶段先展开框架中已有的Add、Mul、5G PUSCH CE、INSA-MMSE MIMO Detector和BP Polar Decoder。每个模块选取一个已有Case说明预测和验证过程，其余模块后续按照相同接口接入。
+
+\section{主要符号}
+
+\begin{longtable}{lp{0.72\textwidth}}
+    \toprule
+    \metricheader{符号} & \metricheader{含义} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \metricheader{符号} & \metricheader{含义} \\
+    \midrule
+    \endhead
+    $A_{\mathrm{pred}}$ & 面积预测值，单位为$\mu\mathrm{m}^{2}$ \\
+    $A_{\mathrm{ref}}$ & 综合报告或参考数据库给出的面积 \\
+    $L_{\mathrm{pred}}$ & 延迟预测值，单位为cycle \\
+    $L_{\mathrm{RTL}}$ & 从RTL波形测得的延迟，单位为cycle \\
+    $I_{\mathrm{pred}}$ & 预测输出间隔，单位为cycle \\
+    $I_{\mathrm{RTL}}$ & RTL实测输出间隔，单位为cycle \\
+    $B_{\mathrm{valid}}$ & 一次有效输出包含的有效比特数 \\
+    $A_{\mathrm{GE}}$ & 一个基准等效门的面积 \\
+    \bottomrule
+\end{longtable}
+
+\chapter{Metrics框架和模块接入}
+
+前述预测、验证和指标计算流程由Metrics框架统一组织。该框架通过标准化配置文件接收测试参数，以模块Adapter屏蔽不同算法模块在运行环境、调用命令和结果格式方面的差异，并将各模块内部的预测程序、参考程序、RTL仿真流程和综合流程接入统一的Predict、Validate和Evaluate接口。本章首先介绍Metrics框架的软件结构和调用关系，随后说明各类基带模块的接入方式及结果返回协议。
+\section{现有软件结构}
+
+仓库根目录中的\texttt{metrics\_framework}负责统一命令行入口、模块注册、配置解析、子进程调度、协议检查和结果渲染。各算法模块保留各自的源码目录、Python运行环境、RTL生成程序和参考验证工具，并通过Adapter接入Metrics框架，从而在不改变模块内部实现的情况下完成统一调用和结果汇总。
+
+\begin{longtable}{p{0.22\textwidth}p{0.31\textwidth}p{0.37\textwidth}}
+    \toprule
+    \metricheader{组成} & \metricheader{仓库位置} & \metricheader{职责} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \metricheader{组成} & \metricheader{仓库位置} & \metricheader{职责} \\
+    \midrule
+    \endhead
+    CLI入口 & \path{metrics_framework/cli.py} & 解析模块名、模式和Case参数，输出机器可解析JSON \\
+    Core调度层 & \path{metrics_framework/core.py} & 解析配置、启动Adapter、校验协议、计算误差和写入结果 \\
+    模块注册表 & \path{metrics_framework/registry.json} & 记录模块目录、Adapter、解释器、配置规则和能力 \\
+    公共协议封装 & \path{metrics_framework/adapters/common.py} & 统一Adapter的参数读取、返回码和协议JSON \\
+    模块Adapter & \path{metrics_framework/adapters/*.py} & 将统一动作转换为模块内部预测和验证调用 \\
+    模块实现 & 各模块独立目录 & 保存模型、RTL生成器、行为参考程序和仿真工作区 \\
+    \bottomrule
+\end{longtable}
+
+\section{当前注册模块}
+
+\begin{longtable}{llll}
+    \toprule
+    \metricheader{模块名} & \metricheader{模块目录} & \metricheader{Adapter} & \metricheader{默认Case} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \metricheader{模块名} & \metricheader{模块目录} & \metricheader{Adapter} & \metricheader{默认Case} \\
+    \midrule
+    \endhead
+    \texttt{add} & \path{Generator/BasicTests/Add} & \path{adapters/add.py} & 1--5 \\
+    \texttt{mul} & \path{Generator/BasicTests/Mul} & \path{adapters/mul.py} & 1--5 \\
+    \texttt{ls} & \path{Generator/LSCE} & \path{adapters/ls.py} & 1--5 \\
+    \texttt{mimo} & \path{Generator/MIMODetector} & \path{adapters/mimo.py} & 1--5 \\
+    \texttt{bp} & \path{BPPredIter/BP_Evaluation} & \path{adapters/bp.py} & 1--5 \\
+    \bottomrule
+\end{longtable}
+
+注册表不要求不同模块使用同一套配置字段。它只统一模块定位、配置文件查找、输出目录和Adapter调用方式。新模块接入时实现自己的Predict和Validate函数，并在\texttt{registry.json}增加一条模块记录。
+
+\section{对外调用方法}
+
+命令行调用格式为：
+
+\begin{lstlisting}[style=command]
+python -m metrics_framework <module> <predict|evaluate> [case-or-config]
+\end{lstlisting}
+
+例如：
+
+\begin{lstlisting}[style=command]
+python -m metrics_framework add predict 1
+python -m metrics_framework add evaluate 1
+python -m metrics_framework mimo evaluate 1
+python -m metrics_framework bp evaluate BPPredIter/BP_Evaluation/config/config1.json
+\end{lstlisting}
+
+省略Case参数时，框架按照注册表中的\texttt{default\_cases}运行默认Case。数字参数按模块的\texttt{config\_pattern}解析为配置文件路径；路径参数则直接指向指定的\texttt{config.json}。
+
+Python API可直接调用：
+
+\begin{lstlisting}[language=Python,style=command]
+from metrics_framework import predict, evaluate
+
+prediction = predict("add", "1")
+evaluation = evaluate("mimo", "1")
+\end{lstlisting}
+
+\section{内部接入关系}
+
+统一入口取得模块名后，从\texttt{registry.json}读取模块根目录、Adapter路径、配置规则和Python解释器环境变量。Core调度层随后在模块自己的工作目录中启动Adapter子进程，避免不同模块的依赖、同名包或ABI相互干扰。
+
+Adapter内部提供两个动作：
+
+\begin{itemize}
+    \item \texttt{predict CONFIG}：调用模块预测函数，返回四项预测指标及分项计时；
+    \item \texttt{validate CONFIG}：调用行为参考、RTL仿真和综合参考，返回真实值及验证证据。
+\end{itemize}
+
+\texttt{validate}是框架内部动作，不是统一CLI面向用户公开的运行模式。用户执行\texttt{evaluate}时，Core先调用Adapter的\texttt{predict}，再调用同一Adapter的\texttt{validate}，最后组合两次返回值。
+
+\section{Predict Validate和Evaluate}
+
+三者的关系为：
+
+\begin{equation}
+    \mathrm{Evaluate}
+    =\mathrm{Predict}+\mathrm{Validate}+\mathrm{ResultCalculation}.
+\end{equation}
+
+Predict不运行RTL仿真和逻辑综合，也不读取待比较的真实值。Validate负责功能验证、RTL时序测量和综合参考提取。Evaluate负责顺序调用、配置一致性校验、误差计算、时间统计和结果保存。
+
+预测和验证协议均包含模块名、动作、配置路径、配置摘要、证据路径、指标来源和未舍入指标值。Core比较两次调用的配置摘要，防止预测和验证使用不同配置。
+
+若Validate返回参考数据不可用，Evaluate不输出不完整的\texttt{evaluation.json}，并在诊断目录保存预测协议结果和失败原因。批量Evaluate中任一Case失败时，批次不输出部分JSON。
+
+\section{框架调用流程}
+
+\begin{figure}[H]
+    \centering
+    \resizebox{0.96\textwidth}{!}{%
+    \begin{tikzpicture}[
+        node distance=8mm and 14mm,
+        box/.style={draw=HeaderBlue,rounded corners,thick,align=center,minimum height=10mm,text width=44mm},
+        predict/.style={box,fill=LightBlue},
+        validate/.style={box,fill=LightOrange},
+        result/.style={box,fill=LightGreen},
+        line/.style={-Latex,thick,draw=gray!75}
+    ]
+        \node[predict] (config) {模块\texttt{config.json}\\与时钟参数};
+        \node[result,below=of config] (eval) {Evaluate统一入口};
+        \node[predict,below left=13mm and 17mm of eval] (pred) {Predict链\\面积 延迟 吞吐率 复杂度};
+        \node[validate,below right=13mm and 17mm of eval] (val) {Validate链\\C/C++ RTL 综合结果};
+        \node[predict,below=of pred] (predout) {预测结果与分项计时\\$A_{pred},L_{pred},R_{pred},C_{pred}$};
+        \node[validate,below=of val] (valout) {功能匹配与参考结果\\$A_{ref},L_{RTL},I_{RTL}$\\$R_{ref},C_{ref}$};
+        \node[result,below=19mm of eval,yshift=-42mm] (calc) {误差与时间计算\\自动评估时间 速度提升};
+        \node[result,below=of calc] (output) {\texttt{evaluation.json}与汇总表};
+        \draw[line] (config) -- (eval);
+        \draw[line] (eval) -- (pred);
+        \draw[line] (eval) -- (val);
+        \draw[line] (pred) -- (predout);
+        \draw[line] (val) -- (valout);
+        \draw[line] (predout) -- (calc);
+        \draw[line] (valout) -- (calc);
+        \draw[line] (calc) -- (output);
+    \end{tikzpicture}%
+    }
+    \caption{Metrics框架调用与模块接入关系}
+    \label{fig:metrics-flow}
+\end{figure}
+
+\section{输出文件}
+
+\begin{longtable}{p{0.24\textwidth}p{0.48\textwidth}p{0.19\textwidth}}
+    \toprule
+    \metricheader{结果} & \metricheader{内容} & \metricheader{生成条件} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \metricheader{结果} & \metricheader{内容} & \metricheader{生成条件} \\
+    \midrule
+    \endhead
+    \texttt{prediction.json} & 四项预测值、分项预测时间和自动评估总时间 & Predict成功 \\
+    Validate协议结果 & 功能比对、RTL延迟、输出间隔、综合面积和参考时间 & Validate成功 \\
+    \texttt{evaluation.json} & 预测值、参考值、误差、时间和速度提升倍数 & 两条链均成功 \\
+    诊断记录 & 配置、协议、功能比对、仿真或参考数据错误 & Evaluate未完成 \\
+    \bottomrule
+\end{longtable}
+
+\chapter{测试输入 Validate验证和指标计算}
+
+\section{测试输入}
+
+\subsection{模块配置文件}
+
+各模块使用自己的\texttt{config.json}描述设计参数。以Add模块Case 1为例：
+
+\begin{lstlisting}[language=json]
+{
+  "input_1": {"bitwidth": 1, "fractional_width": -1, "signed": false},
+  "input_2": {"bitwidth": 1, "fractional_width": -1, "signed": false},
+  "output": {"bitwidth": 1, "fractional_width": 0, "signed": false},
+  "n_pipeline": 1,
+  "if_rst_n": false,
+  "clock": {"period_ns": 10.0}
+}
+\end{lstlisting}
+
+该配置给出两路输入和输出的总位宽、小数位宽及符号属性，同时给出流水级数、复位形式和时钟周期。系统级模块还包含天线数量、并行度、量化方式、调制阶数、码长、码率和迭代次数等参数。
+
+\subsection{时钟参数}
+
+若测试条件给出时钟频率，框架先换算为时钟周期：
+
+\begin{equation}
+    T_{\mathrm{clk}}(\mathrm{ns})
+    =\frac{1000}{f_{\mathrm{clk}}(\mathrm{MHz})}.
+\end{equation}
+
+延迟以cycle输出，吞吐率使用时钟周期换算为单位时间内的有效输出量。
+
+\section{Validate功能验证和参考值提取}
+
+Validate使用同一份配置和输入数据分别运行C/C++行为模型与RTL仿真程序。输入、黄金输出和RTL输出通过帧编号、样本编号或矩阵元素位置建立一一对应关系。
+
+\begin{algorithm}[H]
+    \caption{Validate通用功能验证流程}
+    \KwIn{模块名称$Module$，模块配置$Config$}
+    \KwOut{功能匹配结论及参考指标}
+    $ConfigData \leftarrow LoadAndCheck(Config)$\;
+    $InputData \leftarrow GenerateInput(ConfigData)$\;
+    $CPPOutput \leftarrow RunCPPReference(ConfigData, InputData)$\;
+    $RTLFiles \leftarrow GenerateRTL(Module, ConfigData)$\;
+    $(RTLOutput, Waveform, T_{RTL}) \leftarrow RunRTLSimulation(RTLFiles, InputData)$\;
+    \If{$Count(RTLOutput) \neq Count(CPPOutput)$}{
+        \Return Fail\;
+    }
+    \ForEach{$SampleID$}{
+        $CPPValue \leftarrow NormalizeFixedPoint(CPPOutput[SampleID])$\;
+        $RTLValue \leftarrow NormalizeFixedPoint(RTLOutput[SampleID])$\;
+        \If{$RTLValue \neq CPPValue$}{
+            $RecordMismatch(SampleID, CPPValue, RTLValue)$\;
+        }
+    }
+    \If{$MismatchCount > 0$}{
+        \Return Fail\;
+    }
+    $L_{RTL} \leftarrow MeasureLatency(Waveform)$\;
+    $I_{RTL} \leftarrow MeasureOutputInterval(Waveform)$\;
+    $(A_{ref},T_{syn}) \leftarrow ReadSynthesisResult(ConfigData)$\;
+    $R_{ref} \leftarrow CalculateThroughput(I_{RTL},ConfigData)$\;
+    $C_{ref} \leftarrow CalculateComplexity(A_{ref},L_{RTL})$\;
+    \Return Pass及全部参考值\;
+\end{algorithm}
+
+定点结果比较前，需要统一符号、补码、总位宽、小数位宽、舍入、截断、溢出、饱和及输出顺序。只有全部RTL输出与C/C++黄金输出一致，波形测得的延迟和输出间隔才作为有效参考值。
+
+\section{面积}
+
+Predict调用面积模型，根据位宽、流水级数、并行度和结构规模得到预测面积。Validate从逻辑综合报告或已有综合数据库取得参考面积和综合时间。面积单位为$\mu\mathrm{m}^{2}$。
+
+\begin{align}
+    A_{\mathrm{pred}} &= F_{\mathrm{area}}(Config),\\
+    E_A &= \frac{|A_{\mathrm{pred}}-A_{\mathrm{ref}}|}{A_{\mathrm{ref}}}\times100\%.
+\end{align}
+
+\section{延迟}
+
+预测延迟由流水级数、结构调度或迭代次数模型得到。RTL延迟从输入被接收的时钟边沿开始，到对应输出有效的时钟边沿结束。预测值和参考值均以cycle表示。
+
+\begin{align}
+    L_{\mathrm{RTL}} &= k_{\mathrm{out}}-k_{\mathrm{in}},\\
+    E_L &= \frac{|L_{\mathrm{pred}}-L_{\mathrm{RTL}}|}{L_{\mathrm{RTL}}}\times100\%.
+\end{align}
+
+\section{吞吐率}
+
+预测吞吐率使用预测输出间隔，参考吞吐率使用RTL波形实测输出间隔。后期各模块统一使用bit吞吐率，单位为Gbps。当前程序中的Gframes/s和kChannels/s可根据一次有效输出包含的比特数换算。
+
+\begin{align}
+    R_{\mathrm{pred}} &= \frac{B_{\mathrm{valid}}}{T_{\mathrm{clk}}I_{\mathrm{pred}}},\\
+    R_{\mathrm{RTL}} &= \frac{B_{\mathrm{valid}}}{T_{\mathrm{clk}}I_{\mathrm{RTL}}},\\
+    E_T &= \frac{|R_{\mathrm{pred}}-R_{\mathrm{RTL}}|}{R_{\mathrm{RTL}}}\times100\%.
+\end{align}
+
+其中$B_{\mathrm{valid}}$是一次有效输出包含的有效比特数。$T_{\mathrm{clk}}$以ns表示时，吞吐率结果为Gbps。
+
+\section{硬件计算复杂度}
+
+硬件计算复杂度先将面积换算为等效门数量，再乘以完成一次计算所需的周期数：
+
+\begin{align}
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}L_{\mathrm{pred}},\\
+    C_{\mathrm{ref}} &= \frac{A_{\mathrm{ref}}}{A_{\mathrm{GE}}}L_{\mathrm{RTL}},\\
+    E_C &= \frac{|C_{\mathrm{pred}}-C_{\mathrm{ref}}|}{C_{\mathrm{ref}}}\times100\%.
+\end{align}
+
+复杂度单位为$\mathrm{GE\cdot cycle}$。该指标同时反映硬件资源和计算周期，适合分析串行、流水和并行结构的面积与延迟权衡。文献\cite{nguyen2025mlkem}使用面积时间积比较ML-KEM硬件架构效率；文献\cite{curlin2025sbox}从面积、关键路径延迟、功耗和安全等维度比较AES SBox实现。两项工作均说明硬件实现需要联合考察资源和时间。
+
+$\mathrm{GE\cdot cycle}$不能替代功耗、能耗、最高工作频率或算法精度。不同设计进行横向比较时，应采用相同工艺、GE基准单元、功能规模和输入条件。
+
+\section{时间和速度提升}
+
+自动评估总时间为四项指标预测时间之和。参考时间由RTL验证时间和面积综合时间构成：
+
+\begin{align}
+    T_{\mathrm{auto}} &= T_A+T_L+T_T+T_C,\\
+    T_{\mathrm{ref}} &= T_{\mathrm{syn}}+T_{\mathrm{RTL}},\\
+    S_{\mathrm{total}} &= \frac{T_{\mathrm{ref}}}{T_{\mathrm{auto}}}.
+\end{align}
+
+\chapter{已有模块代表Case}
+
+每个模块选择一个已有Case，按照配置、预测公式、Validate过程和结果记录展开。面积模型的内部系数由模块现有模型给出，本章使用函数形式表示。
+
+\section{Add模块Case 1}
+
+\subsection{配置}
+
+两路输入均为1 bit无符号定点数，输入\texttt{fractional\_width}为$-1$；输出为1 bit无符号数；流水级数为1；时钟周期为\SI{10}{\nano\second}。
+
+\subsection{预测公式}
+
+\begin{align}
+    A_{\mathrm{pred}} &= F_{\mathrm{ADD\_area}}(Config_{case1}),\\
+    L_{\mathrm{pred}} &= n_{\mathrm{pipeline}}=1\ \mathrm{cycle},\\
+    I_{\mathrm{pred}} &= 1\ \mathrm{cycle},\\
+    R_{\mathrm{pred}} &= \frac{1\ \mathrm{bit}}{10\ \mathrm{ns}\times1}=0.1\ \mathrm{Gbps},\\
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}\times1.
+\end{align}
+
+\subsection{Validate过程}
+
+\begin{enumerate}
+    \item 按Case 1配置生成连续多帧输入，并运行C/C++定点加法参考程序。
+    \item 生成Add、FxMatch、Delay和testbench RTL，完成编译与仿真。
+    \item 逐帧比较RTL输出和C/C++输出，从VCD测量延迟及相邻输出间隔。
+    \item 读取对应综合面积和综合时间，计算参考吞吐率与$\mathrm{GE\cdot cycle}$。
+    \item 记录四项误差、自动评估时间、参考时间和速度提升倍数。
+\end{enumerate}
+
+\section{Mul模块Case 1}
+
+\subsection{配置}
+
+两路输入均为4 bit有符号定点数，小数位宽为2；输出为7 bit有符号定点数，小数位宽为3；流水级数为1；时钟周期为\SI{5}{\nano\second}。
+
+\subsection{预测公式}
+
+\begin{align}
+    A_{\mathrm{pred}} &= F_{\mathrm{MUL\_area}}(Config_{case1}),\\
+    L_{\mathrm{pred}} &= 1\ \mathrm{cycle},\qquad I_{\mathrm{pred}}=1\ \mathrm{cycle},\\
+    R_{\mathrm{pred}} &= \frac{7\ \mathrm{bits}}{5\ \mathrm{ns}\times1}=1.4\ \mathrm{Gbps},\\
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}\times1.
+\end{align}
+
+\subsection{Validate过程}
+
+Validate运行QuBLAS或C++乘法参考程序和Mul RTL仿真，逐帧比较乘法结果，检查符号、乘积位宽、小数位截断和溢出处理；随后从VCD取得实际延迟和输出间隔，从综合数据取得实际面积。
+
+\section{5G PUSCH CE模块Case 1}
+
+\subsection{配置}
+
+发送和接收天线数均为16，发送并行度为4，接收并行度为16，乘法和Adder Tree流水级数分别为1和3，时钟周期为\SI{10}{\nano\second}。
+
+\subsection{预测公式}
+
+\begin{align}
+    S_T &= \left\lceil\frac{16}{4}\right\rceil=4,\\
+    L_{\mathrm{pred}} &= 1+3+4=8\ \mathrm{cycles},\\
+    R_{\mathrm{pred}} &= \frac{10^6}{4\times10\times16}=1562.5\ \mathrm{kChannels/s},\\
+    A_{\mathrm{pred}} &= F_{\mathrm{CE\_area}}(Config_{case1}),\\
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}\times8.
+\end{align}
+
+本Case先保留程序当前的kChannels/s输出。确定每个信道估计结果的有效比特数后，再换算为Gbps。
+
+\subsection{Validate过程}
+
+Validate运行C/C++信道估计参考模型和RTL仿真，按照接收天线、发送天线及输出位置比较结果；从波形测量实际延迟和输出间隔，并从综合数据取得实际面积。
+
+\section{INSA-MMSE MIMO Detector模块Case 1}
+
+\subsection{配置}
+
+发送天线数为8，接收天线数为32，迭代次数为2，Adder Tree流水级数为3，QAM阶数为16，时钟周期为\SI{10}{\nano\second}。
+
+\subsection{预测公式}
+
+\begin{align}
+    L_{\mathrm{pred}} &= (2+1)(8+3)+4\times2-1=40\ \mathrm{cycles},\\
+    I_{\mathrm{pred}} &= N_T=8\ \mathrm{cycles},\\
+    B_{\mathrm{valid}} &= 8\log_2(16)=32\ \mathrm{bits},\\
+    R_{\mathrm{pred}} &= \frac{32}{10\times8}=0.4\ \mathrm{Gbps},\\
+    A_{\mathrm{pred}} &= F_{\mathrm{MIMO\_area}}(Config_{case1}),\\
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}\times40.
+\end{align}
+
+\subsection{Validate过程}
+
+Validate运行MIMO行为参考模型和RTL仿真，按照测试帧、发送天线和调制符号匹配完整检测向量；从VCD测量首个检测向量延迟和相邻向量输出间隔，并根据实测间隔计算参考Gbps。
+
+\section{BP Polar Decoder模块Case 1}
+
+\subsection{配置}
+
+硬件架构为TypeI，译码算法为MS，码长为1024，并行度为256，数据位宽为5，码率为0.5，$E_b/N_0$为\SI{10}{\decibel}，时钟周期为\SI{20}{\nano\second}。
+
+\subsection{预测公式}
+
+\begin{align}
+    G &= \frac{1024}{256}=4,\\
+    C_{\mathrm{iter}} &= 2G\log_2(1024)-1=79\ \mathrm{cycles},\\
+    C_{\mathrm{decision}} &= G=4\ \mathrm{cycles},\\
+    L_{\mathrm{pred}} &= 79\operatorname{round}(I_{\mathrm{pred}})+4,\\
+    B_{\mathrm{valid}} &= \operatorname{round}(1024\times0.5)=512\ \mathrm{bits},\\
+    R_{\mathrm{pred}} &= \frac{512}{20L_{\mathrm{pred}}}\ \mathrm{Gbps},\\
+    C_{\mathrm{pred}} &= \frac{A_{\mathrm{pred}}}{A_{\mathrm{GE}}}L_{\mathrm{pred}}.
+\end{align}
+
+\subsection{Validate过程}
+
+Validate运行C/C++ BP译码程序，取得译码比特和实际迭代次数；运行RTL仿真并逐比特比较Hard Decision输出，同时检查冻结位、迭代结束状态和Early Stop结果；最后从波形取得实际译码延迟并计算参考bit吞吐率。
+
+\chapter{结果记录和验收}
+
+\section{单Case结果表}
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \begin{adjustbox}{max width=\textwidth}
+    \begin{tabular}{lcccccccc}
+        \toprule
+        \metricheader{指标} & \metricheader{单位} & \metricheader{预测值} & \metricheader{参考值} & \metricheader{误差} & \metricheader{预测时间} & \metricheader{参考时间} & \metricheader{提升倍数} & \metricheader{结论} \\
+        \midrule
+        面积 & $\mu\mathrm{m}^{2}$ & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        延迟 & cycle & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        吞吐率 & Gbps & 待录入 & 待录入 & 待录入 & 待录入 & 由RTL间隔计算 & -- & 待判定 \\
+        硬件计算复杂度 & $\mathrm{GE\cdot cycle}$ & 待录入 & 待录入 & 待录入 & 待录入 & 由面积和延迟得到 & -- & 待判定 \\
+        \bottomrule
+    \end{tabular}
+    \end{adjustbox}
+    \caption{单Case指标记录模板}
+\end{table}
+
+\section{模块汇总表}
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \begin{adjustbox}{max width=\textwidth}
+    \begin{tabular}{lcccccccc}
+        \toprule
+        \metricheader{模块} & \metricheader{功能匹配} & \metricheader{自动评估时间} & \metricheader{整体提升倍数} & \metricheader{面积误差} & \metricheader{延迟误差} & \metricheader{吞吐率误差} & \metricheader{复杂度误差} & \metricheader{结论} \\
+        \midrule
+        Add & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        Mul & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        5G PUSCH CE & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        INSA-MMSE MIMO Detector & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        BP Polar Decoder & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待录入 & 待判定 \\
+        \bottomrule
+    \end{tabular}
+    \end{adjustbox}
+    \caption{已有模块指标汇总模板}
+\end{table}
+
+\section{验收规则}
+
+\begin{enumerate}
+    \item RTL输出必须与C/C++黄金输出一一对应；功能验证不通过时不判定指标误差。
+    \item 自动评估总时间不超过\SI{10}{\second}。
+    \item 相对于RTL验证和综合流程的整体速度提升不低于10倍。
+    \item 基带电路自动评估误差不超过25\%。
+    \item 硬件计算复杂度评估误差不超过15\%。
+\end{enumerate}
+
+\begin{thebibliography}{9}
+
+\bibitem{nguyen2025mlkem}
+T.-H. Nguyen, T.-K. Dang, D.-T. Dam, K.-D. Nguyen, P.-P. Duong,
+C.-K. Pham, and T.-T. Hoang,
+``An Area-Time Efficient Hardware Architecture for ML-KEM Post-Quantum
+Cryptography Standard,'' \emph{IEEE Access}, vol. 13, pp. 103834--103847,
+2025, doi: \href{https://doi.org/10.1109/ACCESS.2025.3579379}{10.1109/ACCESS.2025.3579379}.
+
+\bibitem{curlin2025sbox}
+P. S. Curlin, J. Heiges, C. Chan, and T. S. Lehman,
+``A Survey of Hardware-Based AES SBoxes: Area, Performance, and Security,''
+\emph{ACM Computing Surveys}, vol. 57, no. 9, pp. 1--37, 2025,
+doi: \href{https://doi.org/10.1145/3724114}{10.1145/3724114}.
+
+\end{thebibliography}
+
+\end{document}

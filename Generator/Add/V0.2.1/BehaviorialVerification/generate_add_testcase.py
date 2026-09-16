@@ -17,11 +17,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 ADD_ROOT = ROOT.parent
 REPOSITORY_ROOT = ADD_ROOT.parents[2]
-TESTS_ROOT = ADD_ROOT / "tests"
-DESIGNS_ROOT = ADD_ROOT / "designs"
+TESTS_ROOT = REPOSITORY_ROOT / "Generator" / "BasicTests" / "Add"
+BASIC_MODULES_ROOT = REPOSITORY_ROOT / "Generator" / "BasicModules"
+LEGACY_TESTS_ROOT = ADD_ROOT / "tests"
 PYTV_ROOT = REPOSITORY_ROOT / "Generator" / "LSCE" / "BehaviorialVerification"
 SIM_ROOT = Path(os.environ.get("ADD_SIM_ROOT", ADD_ROOT / "sim")).resolve()
-QUBLAS_SOURCE = TESTS_ROOT / "sim" / "CppModules" / "include" / "QuBLAS.h"
+QUBLAS_SOURCE = LEGACY_TESTS_ROOT / "sim" / "CppModules" / "include" / "QuBLAS.h"
 
 
 def _remove_workspace(path: Path) -> None:
@@ -58,11 +59,19 @@ def _run(command: list[str], cwd: Path) -> str:
 def _load_generators():
     original_argv = sys.argv[:]
     sys.argv = [sys.argv[0]]
-    inserted = [str(TESTS_ROOT), str(ADD_ROOT), str(DESIGNS_ROOT), str(PYTV_ROOT)]
+    inserted = [
+        str(TESTS_ROOT),
+        str(BASIC_MODULES_ROOT),
+        str(REPOSITORY_ROOT),
+        str(PYTV_ROOT),
+    ]
     sys.path[:0] = inserted
     try:
         import PyTU
-        from BehavModel_Add import ModuleCppConfig, ModuleCppRun
+        from BehavModel_Add import (
+            ModuleCppConfigAdd as ModuleCppConfig,
+            ModuleCppRunAdd as ModuleCppRun,
+        )
         from tb_Add import ModuleTbAdd
         from pytv.ModuleLoader import moduleloader
     finally:
@@ -131,13 +140,13 @@ def generate_testcase(config_path: Path, case_label: str) -> Path:
             QU_MODE=qu_mode,
             OF_MODE=of_mode,
         )
-    _single(include_dir, "CppConfig*.h").replace(include_dir / "config.h")
+    _single(include_dir, "*CppConfig*.h").replace(include_dir / "config.h")
 
     moduleloader.set_language_mode("CPP")
     moduleloader.set_root_dir(str(cpp_dir))
     with contextlib.redirect_stdout(sys.stderr):
         cpp_run(N_FRAMES=frames)
-    _single(cpp_dir, "CppRun*.cpp").replace(cpp_dir / "Add.cpp")
+    _single(cpp_dir, "*CppRun*.cpp").replace(cpp_dir / "Add.cpp")
     compiler = shutil.which("clang++") or shutil.which("g++")
     if compiler is None:
         raise FileNotFoundError("ADD reference generation requires clang++ or g++ on PATH")
@@ -159,7 +168,7 @@ def generate_testcase(config_path: Path, case_label: str) -> Path:
             IF_RST_N=config.get("if_rst_n", False),
             QU_MODE=qu_mode,
             OF_MODE=of_mode,
-            input_file_dir="../",
+            io_file_dir="../",
             N_FRAMES=frames,
             CLK_PERIOD=float(config["clock"]["period_ns"]),
         )
