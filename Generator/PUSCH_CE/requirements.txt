@@ -1,0 +1,24 @@
+# Python requirements for the TOP RTL generator and its end-to-end test suite.
+#
+# Install inside a Python 3.13 environment:
+#   conda create -n pytv python=3.13
+#   conda run -n pytv pip install -r requirements.txt
+#
+# Pin at the verified versions below; all are available from PyPI (or the
+# project's private index for ``verithon``).
+#
+# Verilator is a system-level simulator and therefore NOT listed here (pip
+# cannot install it). See README.md "0. Environment" for installation steps.
+
+numpy==2.2.5            # numerical / coefficient generation (via scipy)
+scipy==1.15.3           # channel model / interpolation coefficient generation
+pandas==2.2.3           # area-case table and workbook handling
+joblib==1.4.2           # serialized area-estimator models
+openpyxl==3.1.5         # .xlsx reader used by pandas
+verithon==2.2           # Verilog emission (provides the `pytv` import package)
+rich==14.2.0            # test dashboard / structured logging
+pytest==8.3.4           # test runner
+pytest-xdist==3.6.1     # optional parallel test (-n)
+cocotb==2.0.1           # simulator bridge
+cocotb-test==0.2.6      # cocotb pytest integration
+typing_extensions==4.15.0   # @override in TOP runner
