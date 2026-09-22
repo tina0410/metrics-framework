@@ -1,0 +1,31 @@
+{
+  "protocol": {
+    "num_RB_range": [126, 266], "num_symbols_range": [8, 11], "is_ECP": true,
+    "dmrs_Uplink": true, "dmrs_Type": "Hybrid", "is_double_dmrs": false,
+    "is_enhanced": true, "dmrs_typeA_pos": "pos2", "additional_DMRS_range": [3],
+    "antenna_ports": [4, 5, 11, 13], "slot_index_format": "QuType(5, 0, False)"
+  },
+  "architecture": {
+    "rb_parallelism": 16, "fi_lmmse_parallelism": 16, "freq_interp": "nn",
+    "time_interp": "linear", "input_mode": "A", "switchable_ports": true,
+    "fi_re_parallelism": 12, "ti_re_parallelism": 12,
+    "fi_lmmse_real_coeff": false, "ti_lmmse_real_coeff": true,
+    "fi_lmmse_coeff_source": "SRAM", "ti_lmmse_coeff_source": "ROM"
+  },
+  "quantization": {
+    "Y": "QuType(14, 4, True)", "H_LS": "QuType(14, 5, True)",
+    "H_FI": "QuType(15, 7, True)", "H_TI": "QuType(13, 10, True)",
+    "FI_LMMSE_COEFF": "QuType(15, 11, True)", "TI_LMMSE_COEFF": "QuType(16, 8, True)"
+  },
+  "arithmetic": {"ls_quant_mode": "RND.POS_INF", "ls_overflow_mode": "SAT.SMGN"},
+  "implementation": {
+    "ti_lmmse_f_d_norm": 0.01578794415916616, "ti_lmmse_w_coeffs": null,
+    "fi_lmmse_tau_rms": 2.320688204801981, "fi_lmmse_snr_linear": 144.200513180448,
+    "fi_lmmse_channel_model": "TDL-A", "fi_lmmse_delay_spread": 4.149199264468215e-7,
+    "fi_lmmse_scs": 30000.0, "sram_macro": null, "production_observation_layouts": null
+  },
+  "area": {
+    "use_config_actual_area": false, "actual_area_um2": null,
+    "use_config_actual_time": false, "actual_time_ms": null
+  }
+}

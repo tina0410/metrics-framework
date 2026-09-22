@@ -34,6 +34,18 @@
       "output_root": "evaluation_output",
       "capabilities": ["area", "latency", "throughput", "hardware_complexity", "iterations"]
     },
+    "pusch_ce": {
+      "status": "registered",
+      "adapter": "metrics_framework/adapters/pusch_ce.py",
+      "command": ["{python}", "{adapter}"],
+      "root": "Generator/PUSCH_CE",
+      "config_dir": "cases",
+      "config_pattern": "config{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "PUSCH_CE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
+    },
     "fxmatch": {
       "status": "registered",
       "source": "Generator/BasicModules/FxMatch/FxMatch.py",
