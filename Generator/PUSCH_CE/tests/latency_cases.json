@@ -1,0 +1,57 @@
+{
+  "config1": {
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 143,
+      "num_symbols": 8,
+      "dmrs_type": 1,
+      "is_double_dmrs": true,
+      "dmrs_typeA_pos": "pos3",
+      "n_additional_dmrs": 0
+    }
+  },
+  "config2": {
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 160,
+      "num_symbols": 12,
+      "dmrs_type": 2,
+      "is_double_dmrs": false,
+      "dmrs_typeA_pos": "pos3",
+      "n_additional_dmrs": 1
+    }
+  },
+  "config3": {
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 128,
+      "num_symbols": 14,
+      "dmrs_type": 1,
+      "is_double_dmrs": false,
+      "dmrs_typeA_pos": "pos2",
+      "n_additional_dmrs": 1
+    }
+  },
+  "config4": {
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 144,
+      "num_symbols": 5,
+      "dmrs_type": 1,
+      "is_double_dmrs": true,
+      "dmrs_typeA_pos": "pos3",
+      "n_additional_dmrs": 0
+    }
+  },
+  "config5": {
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 256,
+      "num_symbols": 11,
+      "dmrs_type": 2,
+      "is_double_dmrs": false,
+      "dmrs_typeA_pos": "pos2",
+      "n_additional_dmrs": 3
+    }
+  }
+}

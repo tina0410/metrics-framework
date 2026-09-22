@@ -17,6 +17,19 @@ generation parameters against `param.xlsx` and reads the matched row's `area`
 value.  If `area.use_config_actual_area` is true, `area.actual_area_um2` is used
 instead.  This is the same precedence as the MIMO area interface.
 
+The area case JSON files remain limited to generator/area inputs. Runtime
+points for latency live in `tests/latency_cases.json`; prediction and RTL
+validation read the same entry and use the accepted-`start` through
+`slot_ce_done` boundary:
+
+```bash
+python latency_interface.py cases/config1.json
+python tests/validate_pusch_ce_latency.py cases/config1.json
+```
+
+Run both commands in the PUSCH_CE Python 3.13 environment. RTL validation also
+requires Verilator, or select Icarus with `--simulator icarus`.
+
 Implementation order after review:
 
 1. Area prediction and workbook/JSON reference lookup.
