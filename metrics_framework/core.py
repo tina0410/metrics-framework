@@ -44,7 +44,9 @@ class ConfigDigestMismatch(AdapterFailure):
 class ModuleSpec:
     name: str
     root: Path
-    adapter: Path
+    source: Path | None
+    status: str
+    adapter: Path | None
     command: tuple[str, ...]
     config_dir: Path
     config_pattern: str
@@ -92,31 +94,44 @@ class Registry:
             if not isinstance(item, dict):
                 raise ValueError(f"Registry module {name!r} must be an object")
             module_root = (ROOT / str(item["root"])).resolve()
-            adapter = (ROOT / str(item["adapter"])).resolve()
+            adapter_value = item.get("adapter")
+            source_value = item.get("source")
+            status = str(item.get("status", "active"))
+            if status not in {"active", "registered"}:
+                raise ValueError(
+                    f"Registry module {name!r} has unsupported status {status!r}"
+                )
             spec = ModuleSpec(
                 name=name,
                 root=module_root,
-                adapter=adapter,
+                source=(ROOT / str(source_value)).resolve() if source_value else None,
+                status=status,
+                adapter=(ROOT / str(adapter_value)).resolve() if adapter_value else None,
                 command=tuple(
                     str(value)
-                    for value in item.get("command", ["{python}", "{adapter}"])
+                    for value in item.get(
+                        "command", ["{python}", "{adapter}"] if adapter_value else []
+                    )
                 ),
-                config_dir=(module_root / str(item["config_dir"])).resolve(),
-                config_pattern=str(item["config_pattern"]),
-                default_cases=tuple(int(case) for case in item["default_cases"]),
-                python_env=str(item["python_env"]),
-                output_root=(module_root / str(item["output_root"])).resolve(),
-                capabilities=frozenset(str(value) for value in item["capabilities"]),
+                config_dir=(module_root / str(item.get("config_dir", "."))).resolve(),
+                config_pattern=str(item.get("config_pattern", "config_case{case}.json")),
+                default_cases=tuple(int(case) for case in item.get("default_cases", [])),
+                python_env=str(item.get("python_env", "METRICS_PYTHON")),
+                output_root=(module_root / str(item.get("output_root", "evaluation_output"))).resolve(),
+                capabilities=frozenset(str(value) for value in item.get("capabilities", [])),
             )
             required = {"area", "latency", "throughput", "hardware_complexity"}
-            if not spec.command:
-                raise ValueError(f"Registry module {name!r} has an empty command")
-            missing_capabilities = sorted(required - spec.capabilities)
-            if missing_capabilities:
-                raise ValueError(
-                    f"Registry module {name!r} lacks required capabilities: "
-                    + ", ".join(missing_capabilities)
-                )
+            if spec.status == "active":
+                if spec.adapter is None:
+                    raise ValueError(f"Registry module {name!r} has no adapter")
+                if not spec.command:
+                    raise ValueError(f"Registry module {name!r} has an empty command")
+                missing_capabilities = sorted(required - spec.capabilities)
+                if missing_capabilities:
+                    raise ValueError(
+                        f"Registry module {name!r} lacks required capabilities: "
+                        + ", ".join(missing_capabilities)
+                    )
             if name in self._specs:
                 raise ValueError(f"Duplicate module name: {name}")
             self._specs[name] = spec
@@ -127,9 +142,19 @@ class Registry:
         except KeyError as error:
             supported = ", ".join(sorted(self._specs))
             raise ValueError(f"Unknown module {name!r}; supported modules: {supported}") from error
-        if not spec.adapter.is_file():
+        if spec.source is not None and not spec.source.is_file():
+            raise FileNotFoundError(f"Source not found for {name}: {spec.source}")
+        if spec.adapter is not None and not spec.adapter.is_file():
             raise FileNotFoundError(f"Adapter not found for {name}: {spec.adapter}")
         return spec
+
+
+def _require_active(spec: ModuleSpec) -> None:
+    if spec.status != "active":
+        raise EvaluationUnavailable(
+            f"{spec.name} is registered as a basic module, but its metrics adapter "
+            "and evaluation configuration are not available yet"
+        )
 
 
 def _candidate_interpreters(spec: ModuleSpec) -> Iterable[Path]:
@@ -182,6 +207,8 @@ def _output_dir(spec: ModuleSpec, config_path: Path) -> Path:
 
 
 def _run_adapter(spec: ModuleSpec, action: str, config_path: Path) -> dict[str, Any]:
+    _require_active(spec)
+    assert spec.adapter is not None
     interpreter = (
         str(_interpreter(spec))
         if any("{python}" in token for token in spec.command)
@@ -435,6 +462,7 @@ def predict(
     registry: str | Path = DEFAULT_REGISTRY,
 ) -> dict[str, Any]:
     spec = Registry(registry).get(module)
+    _require_active(spec)
     rendered: list[tuple[Path, dict[str, Any]]] = []
     for path in resolve_configs(spec, config):
         output_dir = _output_dir(spec, path)
@@ -453,6 +481,7 @@ def evaluate(
     registry: str | Path = DEFAULT_REGISTRY,
 ) -> dict[str, Any]:
     spec = Registry(registry).get(module)
+    _require_active(spec)
     rendered: list[tuple[Path, dict[str, Any]]] = []
     failures: list[str] = []
     for path in resolve_configs(spec, config):
