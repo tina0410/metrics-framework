@@ -39,3 +39,14 @@ Implementation order after review:
 2. Latency formula and RTL measurement (`start` to `slot_ce_done`).
 3. Bit throughput prediction and RTL-derived throughput.
 4. Hardware complexity in GE-cycles, derived consistently with other modules.
+
+Hardware complexity uses the same definition and 65 nm standard-cell source
+as LS, MIMO, and BP:
+
+```text
+GE-cycles = area_um2 / area(LVT_NAND2HDV0) * latency_cycles
+```
+
+The repository's reference NAND2 area is 1.12 um2. Prediction combines the
+predicted area and latency; validation combines the workbook/JSON area and RTL
+latency. No additional case input or independent RTL run is required.

@@ -12,24 +12,24 @@
 | BP | `BPPredIter/BP_Evaluation` | `BPPredIter/BP_Evaluation/sim` | `active` |
 | ADD | `Generator/BasicModules/Add` | `Generator/BasicModules/Add/sim` | `active` |
 | MUL | `Generator/BasicModules/Mul` | `Generator/BasicModules/Mul/sim` | `active` |
-| PUSCH_CE | `Generator/PUSCH_CE` | `Generator/PUSCH_CE/tests/sim` | `registered` |
+| PUSCH_CE (`ce`) | `Generator/PUSCH_CE` | `Generator/PUSCH_CE/tests/sim` | `active` |
 
-`active` 模块可以直接使用统一 `predict/evaluate` 命令。PUSCH_CE 已登记五个 case，
-并已实现面积和延迟子链；在吞吐率和硬件复杂度完成前保持 `registered`，
-防止统一入口输出不完整的评估 JSON。
+`active` 模块可以直接使用统一 `predict/evaluate` 命令。PUSCH_CE 已完成面积、
+延迟、有效 bit 吞吐率和 GE·cycles 硬件复杂度四项指标；命令使用简写 `ce`，
+同时保留 `pusch_ce` 兼容名称。
 
 ## 统一入口
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|add|mul> evaluate [配置编号或路径]
 ```
 
 安装后也可使用：
 
 ```bash
-metrics <ls|mimo|bp|add|mul> predict [配置编号或路径]
-metrics <ls|mimo|bp|add|mul> evaluate [配置编号或路径]
+metrics <ls|mimo|bp|ce|add|mul> predict [配置编号或路径]
+metrics <ls|mimo|bp|ce|add|mul> evaluate [配置编号或路径]
 ```
 
 - `predict` 只执行预测，stdout 只包含 `prediction.json` 内容。
@@ -122,10 +122,16 @@ MUL_METRICS_PYTHON
 PUSCH_CE_METRICS_PYTHON
 ```
 
-## PUSCH_CE 当前可用命令
+## PUSCH_CE 命令
 
-在四项指标全部完成、PUSCH_CE 切换为 `active` 之前，面积和延迟可通过
-内部单项入口验证。
+统一预测和评估：
+
+```bash
+python -m metrics_framework ce predict 1
+python -m metrics_framework ce evaluate 1
+```
+
+也可通过以下内部单项入口排查各子链。
 
 延迟预测：
 
@@ -168,12 +174,14 @@ Windows PowerShell 执行上述命令时，将解释器路径替换为：
 python -m pytest test_metrics_framework.py -q
 ```
 
-PUSCH_CE 面积与延迟接口回归：
+PUSCH_CE 四项指标接口回归：
 
 ```bash
 python -m pytest \
   test_pusch_ce_framework.py \
   test_pusch_ce_latency.py \
+  test_pusch_ce_throughput.py \
+  test_pusch_ce_hardware_complexity.py \
   Area_TP_Estimator/PUSCH_Est_pack/test_pusch_ce_area_interface.py \
   -q
 ```

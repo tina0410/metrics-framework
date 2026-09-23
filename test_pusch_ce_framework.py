@@ -1,8 +1,14 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from metrics_framework.adapters import pusch_ce
 from metrics_framework.adapters.pusch_ce import validate_scaffold_config
-from metrics_framework.core import Registry, resolve_configs
+from metrics_framework.core import Registry, _evaluation_view, resolve_configs
+
+
+ROOT = Path(__file__).resolve().parent
 
 
 EXPECTED_SECTIONS = {
@@ -15,9 +21,10 @@ EXPECTED_SECTIONS = {
 }
 
 
-def test_pusch_ce_scaffold_is_registered_with_five_cases():
+def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
     spec = Registry().get("pusch_ce")
-    assert spec.status == "registered"
+    assert spec.status == "active"
+    assert Registry().get("ce") == spec
     assert spec.default_cases == (1, 2, 3, 4, 5)
     assert spec.config_pattern == "config{case}.json"
     assert spec.adapter is not None and spec.adapter.is_file()
@@ -40,3 +47,117 @@ def test_pusch_ce_scaffold_is_registered_with_five_cases():
             "use_config_actual_time": False,
             "actual_time_ms": None,
         }
+
+
+def test_pusch_ce_adapter_combines_all_prediction_metrics(monkeypatch):
+    config_path = ROOT / "Generator" / "PUSCH_CE" / "cases" / "config1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    runtime_config = {**config, "latency": {"runtime": {}}}
+
+    monkeypatch.setattr(pusch_ce, "_area", lambda action, path: {
+        "predicted_area_um2": 112.0,
+        "prediction_time_ms": 2.0,
+    })
+    monkeypatch.setattr(
+        pusch_ce,
+        "_modules",
+        lambda: (
+            "LVT_NAND2HDV0",
+            lambda predicted_area, predicted_latency, **kwargs: {
+                "predicted_ge_cycles": predicted_area / 1.12 * predicted_latency,
+                "actual_ge_cycles": None,
+                "ge_area_um2": 1.12,
+            },
+            lambda path: runtime_config,
+            lambda value: {"predicted_cycles": 40, "prediction_time_ms": 1.0},
+            lambda value, latency_prediction=None: {
+                "predicted_gbps": 9.6,
+                "prediction_time_ms": 0.5,
+            },
+        ),
+    )
+    result = pusch_ce.predict(config_path, config)
+    assert result["latency"]["predicted_cycles"] == 40
+    assert result["area"]["predicted_um2"] == 112.0
+    assert result["throughput"]["predicted"] == 9.6
+    assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(4000.0)
+
+
+def test_pusch_ce_adapter_uses_one_rtl_result_for_validation(monkeypatch):
+    config_path = ROOT / "Generator" / "PUSCH_CE" / "cases" / "config1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    monkeypatch.setattr(
+        pusch_ce,
+        "_area",
+        lambda action, path: {"actual_area_um2": 123.2},
+    )
+    monkeypatch.setattr(
+        pusch_ce,
+        "_rtl",
+        lambda path: {
+            "latency": {"actual_cycles": 50, "simulation_time_ms": 200.0},
+            "throughput": {"actual_gbps": 8.0, "actual_interval_cycles": 50},
+            "rtl": {"throughput_interval_cycles": 50},
+        },
+    )
+    monkeypatch.setattr(
+        pusch_ce,
+        "_modules",
+        lambda: (
+            "LVT_NAND2HDV0",
+            lambda predicted_area, predicted_latency, **kwargs: {
+                "predicted_ge_cycles": 5500.0,
+                "actual_ge_cycles": 5500.0,
+                "ge_area_um2": 1.12,
+            },
+            None,
+            None,
+            None,
+        ),
+    )
+    result = pusch_ce.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 50
+    assert result["area"]["synthesis_time_available"] is False
+    assert result["throughput"] == {"actual": 8.0, "source": "rtl_measured"}
+    assert result["hardware_complexity"]["actual_ge_cycles"] == 5500.0
+
+
+def test_pusch_ce_evaluation_omits_unavailable_synthesis_time() -> None:
+    prediction = {
+        "module": "pusch_ce",
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"predicted_cycles": 40, "prediction_time_ms": 1.0},
+            "area": {"predicted_um2": 112.0, "prediction_time_ms": 2.0},
+            "throughput": {
+                "predicted": 9.6,
+                "unit": "Gbps",
+                "precision": 9,
+                "prediction_time_ms": 0.5,
+            },
+            "hardware_complexity": {
+                "predicted_ge_cycles": 4000.0,
+                "prediction_time_ms": 0.1,
+                "ge_reference_cell": "LVT_NAND2HDV0",
+                "ge_area_um2": 1.12,
+            },
+        },
+    }
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 50, "simulation_time_ms": 200.0},
+            "area": {
+                "actual_um2": 123.2,
+                "synthesis_time_ms": None,
+                "reported_speedup": None,
+                "synthesis_time_available": False,
+            },
+            "throughput": {"actual": 8.0},
+            "hardware_complexity": {"actual_ge_cycles": 5500.0},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["面积"]["真实结果 (μm²)"] == 123.2
+    assert "综合时间 (ms)" not in result["面积"]
+    assert "速度提升倍数 (×)" not in result["面积"]

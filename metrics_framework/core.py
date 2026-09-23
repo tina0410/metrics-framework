@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REGISTRY = Path(__file__).with_name("registry.json")
 PROTOCOL_VERSION = 1
+MODULE_ALIASES = {"ce": "pusch_ce"}
 
 
 class MetricsFrameworkError(RuntimeError):
@@ -137,10 +138,11 @@ class Registry:
             self._specs[name] = spec
 
     def get(self, name: str) -> ModuleSpec:
+        canonical = MODULE_ALIASES.get(name.lower(), name.lower())
         try:
-            spec = self._specs[name.lower()]
+            spec = self._specs[canonical]
         except KeyError as error:
-            supported = ", ".join(sorted(self._specs))
+            supported = ", ".join(sorted(set(self._specs) | set(MODULE_ALIASES)))
             raise ValueError(f"Unknown module {name!r}; supported modules: {supported}") from error
         if spec.source is not None and not spec.source.is_file():
             raise FileNotFoundError(f"Source not found for {name}: {spec.source}")
@@ -351,11 +353,17 @@ def _evaluation_view(
     )
     synthesis_time = actual["area"].get("synthesis_time_ms")
     area_reported_speedup = actual["area"].get("reported_speedup")
-    if synthesis_time is None:
+    synthesis_time_available = actual["area"].get("synthesis_time_available", True)
+    if synthesis_time is None and area_reported_speedup is None and not synthesis_time_available:
+        area_speedup = None
+    elif synthesis_time is None:
         speedup = _positive(area_reported_speedup, "area speedup")
         synthesis_time = speedup * area_prediction_time
-    synthesis_time = _positive(synthesis_time, "synthesis time")
-    area_speedup = synthesis_time / area_prediction_time
+        synthesis_time = _positive(synthesis_time, "synthesis time")
+        area_speedup = synthesis_time / area_prediction_time
+    else:
+        synthesis_time = _positive(synthesis_time, "synthesis time")
+        area_speedup = synthesis_time / area_prediction_time
 
     predicted_throughput = _positive(
         predicted["throughput"]["predicted"], "predicted throughput"
@@ -403,16 +411,22 @@ def _evaluation_view(
                 2,
             ),
         }
-    view.update(
-        {
-            "面积": {
-                "预测结果 (μm²)": round(predicted_area, 2),
-                "真实结果 (μm²)": round(actual_area, 2),
-                "误差 (%)": round(area_error, 2),
-                "预测时间 (ms)": round(area_prediction_time, 6),
+    area_view = {
+        "预测结果 (μm²)": round(predicted_area, 2),
+        "真实结果 (μm²)": round(actual_area, 2),
+        "误差 (%)": round(area_error, 2),
+        "预测时间 (ms)": round(area_prediction_time, 6),
+    }
+    if synthesis_time is not None and area_speedup is not None:
+        area_view.update(
+            {
                 "综合时间 (ms)": round(synthesis_time, 3),
                 "速度提升倍数 (×)": round(area_speedup, 2),
-            },
+            }
+        )
+    view.update(
+        {
+            "面积": area_view,
             "Throughput": {
                 f"预测结果 ({throughput['unit']})": round(
                     predicted_throughput, int(throughput["precision"])

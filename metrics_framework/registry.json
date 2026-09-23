@@ -35,7 +35,7 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity", "iterations"]
     },
     "pusch_ce": {
-      "status": "registered",
+      "status": "active",
       "adapter": "metrics_framework/adapters/pusch_ce.py",
       "command": ["{python}", "{adapter}"],
       "root": "Generator/PUSCH_CE",

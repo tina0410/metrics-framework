@@ -76,9 +76,17 @@ def throughput_gbps(bits_per_slot: Any, interval_cycles: Any, period_ns: Any) ->
     return bits / (interval * period)
 
 
-def predict_throughput(config: Mapping[str, Any]) -> dict[str, Any]:
+def predict_throughput(
+    config: Mapping[str, Any],
+    *,
+    latency_prediction: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     started = time.perf_counter()
-    latency = predict_latency(config)
+    latency = (
+        dict(latency_prediction)
+        if latency_prediction is not None
+        else predict_latency(config)
+    )
     bits = effective_output_bits(config)
     interval = int(latency["predicted_cycles"])
     period = float(latency["runtime"]["clock_period_ns"])

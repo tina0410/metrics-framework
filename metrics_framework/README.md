@@ -1,15 +1,18 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、ADD 和 MUL 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
+该框架统一 LS、MIMO、BP、PUSCH_CE、ADD 和 MUL 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
+`ce` 是 `pusch_ce` 的简写，两者使用同一 adapter、case 和输出目录。
+PUSCH_CE 的历史表只提供真实面积而不提供 DC 综合耗时，因此标准 case
+不会伪造“综合时间”和“速度提升倍数”；配置显式提供该时间后才显示这两项。
 
 旧入口也接受新模式，例如：
 
