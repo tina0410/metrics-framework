@@ -1,4 +1,4 @@
-"""Cocotb probe which measures accepted-start through ``slot_ce_done``."""
+"""Cocotb probe for PUSCH CE latency and steady-state bit throughput."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 
 import cocotb
 from cocotb.clock import Clock
@@ -70,51 +71,91 @@ async def measure_pusch_ce_latency(dut):
     await RisingEdge(dut.clk)  # latency cycle 0: start accepted
     dut.start.value = 0
 
-    measured: dict[str, int | None] = {"cycles": None}
+    ti_re_parallelism = int(architecture["ti_re_parallelism"])
+    re_groups = 12 // ti_re_parallelism
+    component_width_match = re.fullmatch(
+        r"\s*QuType\(\s*(\d+)\s*,.*", config["quantization"]["H_TI"]
+    )
+    assert component_width_match is not None
+    bits_per_valid_pulse = (
+        ti_re_parallelism
+        * num_symbols
+        * len(protocol["antenna_ports"])
+        * 2
+        * int(component_width_match.group(1))
+    )
+    expected_output_bits = (
+        num_rbs * 12 * num_symbols * len(protocol["antenna_ports"])
+        * 2 * int(component_width_match.group(1))
+    )
+    measured: dict[str, list[int]] = {"done_cycles": [], "output_bits": []}
 
-    async def watch_done() -> None:
-        timeout = num_symbols * math.ceil(num_rbs / rb_parallelism) + 16384
+    async def watch_metrics() -> None:
+        timeout = 2 * (num_symbols * math.ceil(num_rbs / rb_parallelism) + 16384)
+        pulse_count = 0
+        slot_bits = 0
         for cycle in range(1, timeout + 1):
             await RisingEdge(dut.clk)
             await Timer(1, unit="ns")
+            if int(dut.ti_data_valid.value):
+                rb_beat = pulse_count // (rb_parallelism * re_groups)
+                remainder = pulse_count % (rb_parallelism * re_groups)
+                rb_within = remainder // re_groups
+                rb_index = rb_beat * rb_parallelism + rb_within
+                if rb_index < num_rbs:
+                    slot_bits += bits_per_valid_pulse
+                pulse_count += 1
             if int(dut.slot_ce_done.value):
-                measured["cycles"] = cycle
-                return
-        raise AssertionError("slot_ce_done was not observed before the timeout")
+                measured["done_cycles"].append(cycle)
+                measured["output_bits"].append(slot_bits)
+                pulse_count = 0
+                slot_bits = 0
+                if len(measured["done_cycles"]) == 2:
+                    return
+        raise AssertionError("two slot_ce_done pulses were not observed before the timeout")
 
-    monitor = cocotb.start_soon(watch_done())
+    monitor = cocotb.start_soon(watch_metrics())
     beats = math.ceil(num_rbs / rb_parallelism)
-    for _symbol in range(num_symbols):
-        for beat in range(beats):
-            if input_mode == "A":
-                dut.Y.value = 0
-                await RisingEdge(dut.clk)
-                continue
-            active_lanes = min(rb_parallelism, num_rbs - beat * rb_parallelism)
-            for lane in range(rb_parallelism):
-                _set_if_present(dut, f"Y_valid_rb{lane}", int(lane < active_lanes))
-            while True:
-                await RisingEdge(dut.clk)
-                await Timer(1, unit="ns")
-                if all(
-                    int(getattr(dut, f"Y_ready_rb{lane}").value)
-                    for lane in range(active_lanes)
-                ):
-                    break
+    for _slot in range(2):
+        for _symbol in range(num_symbols):
+            for beat in range(beats):
+                if input_mode == "A":
+                    dut.Y.value = 0
+                    await RisingEdge(dut.clk)
+                    continue
+                active_lanes = min(rb_parallelism, num_rbs - beat * rb_parallelism)
+                for lane in range(rb_parallelism):
+                    _set_if_present(dut, f"Y_valid_rb{lane}", int(lane < active_lanes))
+                while True:
+                    await RisingEdge(dut.clk)
+                    await Timer(1, unit="ns")
+                    if all(
+                        int(getattr(dut, f"Y_ready_rb{lane}").value)
+                        for lane in range(active_lanes)
+                    ):
+                        break
 
     if input_mode == "B":
         for lane in range(rb_parallelism):
             _set_if_present(dut, f"Y_valid_rb{lane}", 0)
     await monitor
-    cycles = measured["cycles"]
-    assert cycles is not None
+    first_done, second_done = measured["done_cycles"]
+    first_bits, second_bits = measured["output_bits"]
+    assert first_bits == expected_output_bits
+    assert second_bits == expected_output_bits
+    interval_cycles = second_done - first_done
     result = {
-        "actual_cycles": cycles,
-        "actual_time_ns": cycles * period_ns,
+        "actual_cycles": first_done,
+        "actual_time_ns": first_done * period_ns,
         "clock_period_ns": period_ns,
         "measurement_start": "accepted_start",
         "measurement_end": "slot_ce_done_rising",
         "coefficient_load_included": False,
+        "throughput_interval_cycles": interval_cycles,
+        "throughput_output_bits": second_bits,
+        "throughput_gbps": second_bits / (interval_cycles * period_ns),
+        "throughput_measurement_boundary": "adjacent_slot_ce_done_rising_edges",
+        "rtl_output_valid_derived": True,
     }
     Path(os.environ["PUSCH_CE_LATENCY_RESULT"]).write_text(
         json.dumps(result, indent=2, sort_keys=True) + "\n",

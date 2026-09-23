@@ -18,12 +18,15 @@ value.  If `area.use_config_actual_area` is true, `area.actual_area_um2` is used
 instead.  This is the same precedence as the MIMO area interface.
 
 The area case JSON files remain limited to generator/area inputs. Runtime
-points for latency live in `tests/latency_cases.json`; prediction and RTL
-validation read the same entry and use the accepted-`start` through
-`slot_ce_done` boundary:
+points for latency and throughput live in `tests/latency_cases.json`.
+Latency uses the accepted-`start` through first `slot_ce_done` boundary.
+Throughput counts useful complex `H_TI` bits observed under RTL
+`ti_data_valid` and divides one slot's bits by the interval between two
+adjacent `slot_ce_done` pulses:
 
 ```bash
 python latency_interface.py cases/config1.json
+python throughput_interface.py cases/config1.json
 python tests/validate_pusch_ce_latency.py cases/config1.json
 ```
 

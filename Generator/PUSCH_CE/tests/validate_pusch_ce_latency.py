@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the selected PUSCH CE RTL and measure its end-to-end latency."""
+"""Generate PUSCH CE RTL and measure latency plus bit throughput."""
 
 from __future__ import annotations
 
@@ -157,14 +157,22 @@ def simulate(config_path: Path, *, simulator: str, build_root: Path) -> dict:
     rtl_result = _load(result_path)
     simulation_time_ms = (time.perf_counter() - started) * 1000.0
     from latency_interface import evaluate_latency
+    from throughput_interface import evaluate_throughput
 
     evaluation = evaluate_latency(
         config,
         actual_cycles=int(rtl_result["actual_cycles"]),
         simulation_time_ms=simulation_time_ms,
     )
+    throughput = evaluate_throughput(
+        config,
+        actual_interval_cycles=int(rtl_result["throughput_interval_cycles"]),
+        actual_output_bits=int(rtl_result["throughput_output_bits"]),
+        simulation_time_ms=simulation_time_ms,
+    )
     return {
         "latency": evaluation,
+        "throughput": throughput,
         "rtl": {
             **rtl_result,
             "simulation_time_ms": simulation_time_ms,
