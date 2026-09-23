@@ -9,7 +9,12 @@ import time
 from pathlib import Path
 from typing import Any, Mapping
 
-from metrics_framework.adapters.common import configured_area, run_cli
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+MODULE_ROOT = PROJECT_ROOT / "Generator" / "PUSCH_CE"
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(MODULE_ROOT))
+
+from metrics_framework.adapters.common import configured_area, run_cli  # noqa: E402
 
 
 MODULE_NAME = "pusch_ce"

@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -19,6 +21,23 @@ EXPECTED_SECTIONS = {
     "implementation",
     "area",
 }
+
+
+def test_pusch_ce_adapter_starts_from_module_working_directory() -> None:
+    adapter = ROOT / "metrics_framework" / "adapters" / "pusch_ce.py"
+    module_root = ROOT / "Generator" / "PUSCH_CE"
+    process = subprocess.run(
+        [sys.executable, str(adapter)],
+        cwd=module_root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    assert process.returncode == 1
+    assert "usage: pusch_ce.py predict|validate CONFIG" in process.stdout
+    assert "ModuleNotFoundError" not in process.stdout
 
 
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
