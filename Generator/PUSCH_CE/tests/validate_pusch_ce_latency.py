@@ -90,9 +90,21 @@ def _semantic_config(config: dict):
     return protocol, architecture, quants, arithmetic, physical
 
 
+def _load_generators():
+    """Import PyTV generators without exposing this script's CLI arguments."""
+
+    original_argv = sys.argv[:]
+    sys.argv = [sys.argv[0]]
+    try:
+        from pytv.ModuleLoader import moduleloader
+        from top_api import ModuleTOP
+    finally:
+        sys.argv = original_argv
+    return moduleloader, ModuleTOP
+
+
 def _generate(config: dict, output_dir: Path) -> list[Path]:
-    from pytv.ModuleLoader import moduleloader
-    from top_api import ModuleTOP
+    moduleloader, ModuleTOP = _load_generators()
 
     output_dir.mkdir(parents=True, exist_ok=True)
     moduleloader.reset()

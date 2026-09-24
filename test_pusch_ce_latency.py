@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import builtins
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -117,3 +119,36 @@ def test_structural_timing_does_not_require_rtl_top(case):
     assert timing.rb_parallelism > 0
     assert timing.ti_re_parallelism > 0
     assert timing.early_ls_drain > 0
+
+
+def test_rtl_generator_import_hides_validator_cli_arguments(monkeypatch):
+    tests_root = PUSCH_ROOT / "tests"
+    sys.path.insert(0, str(tests_root))
+    try:
+        from validate_pusch_ce_latency import _load_generators
+    finally:
+        sys.path.remove(str(tests_root))
+
+    original_import = builtins.__import__
+    observed_argv = []
+    fake_loader = object()
+    fake_top = object()
+
+    def controlled_import(name, *args, **kwargs):
+        if name == "pytv.ModuleLoader":
+            observed_argv.append(sys.argv[:])
+            return SimpleNamespace(moduleloader=fake_loader)
+        if name == "top_api":
+            observed_argv.append(sys.argv[:])
+            return SimpleNamespace(ModuleTOP=fake_top)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", controlled_import)
+    monkeypatch.setattr(sys, "argv", ["validator.py", "/tmp/config1.json"])
+
+    moduleloader, module_top = _load_generators()
+
+    assert moduleloader is fake_loader
+    assert module_top is fake_top
+    assert observed_argv == [["validator.py"], ["validator.py"]]
+    assert sys.argv == ["validator.py", "/tmp/config1.json"]
