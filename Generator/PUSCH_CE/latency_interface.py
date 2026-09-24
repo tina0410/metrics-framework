@@ -13,6 +13,7 @@ import json
 import math
 from pathlib import Path
 import re
+import subprocess
 import sys
 import time
 from typing import Any, Mapping
@@ -290,57 +291,33 @@ def _parse_qutype(text: Any):
 
 
 def timing_from_config(config: Mapping[str, Any]) -> LatencyTiming:
-    """Ask the RTL generator for the exact structural timing constants."""
+    """Derive exact structural constants without importing the RTL TOP."""
 
-    protocol = config["protocol"]
-    architecture = config["architecture"]
-    quants = config["quantization"]
-    from v_top import _prepare_top_context
-
-    y = _parse_qutype(quants["Y"])
-    h_ls = _parse_qutype(quants["H_LS"])
-    h_fi = _parse_qutype(quants["H_FI"])
-    fi_coeff = _parse_qutype(quants["FI_LMMSE_COEFF"])
-    context = _prepare_top_context(
-        pusch_params={
-            "num_RB_range": protocol["num_RB_range"],
-            "num_symbols_range": protocol["num_symbols_range"],
-            "is_ECP": protocol["is_ECP"],
-        },
-        puschdmrs_params={
-            "dmrs_Uplink": protocol["dmrs_Uplink"],
-            "dmrs_Type": protocol["dmrs_Type"],
-            "is_double_dmrs": protocol["is_double_dmrs"],
-            "is_enhanced": protocol["is_enhanced"],
-            "dmrs_typeA_pos": protocol["dmrs_typeA_pos"],
-            "additional_DMRS_range": protocol["additional_DMRS_range"],
-        },
-        Y=y,
-        RB_PARALLELISM=int(architecture["rb_parallelism"]),
-        ANTENNA_PORTS=list(protocol["antenna_ports"]),
-        H_interp_f_DWT=2 * h_fi.DWT,
-        freq_interp_method=architecture["freq_interp"],
-        time_interp_method=architecture["time_interp"],
-        switchable_ports=bool(architecture["switchable_ports"]),
-        INPUT_MODE=architecture["input_mode"],
-        QU_H_LS=h_ls,
-        LMMSE_INTERP_PARALLELISM=int(architecture["fi_lmmse_parallelism"]),
-        TI_LMMSE_COEFF_SOURCE=architecture["ti_lmmse_coeff_source"],
-        FI_LMMSE_COEFF_SOURCE=architecture["fi_lmmse_coeff_source"],
-        FI_LMMSE_COEFF_DWT=fi_coeff.DWT,
-        FI_LMMSE_REAL_COEFF=bool(architecture["fi_lmmse_real_coeff"]),
-        FI_RE_PARALLELISM=int(architecture["fi_re_parallelism"]),
-        TI_RE_PARALLELISM=int(architecture["ti_re_parallelism"]),
+    helper = Path(__file__).with_name("structural_timing.py")
+    process = subprocess.run(
+        [sys.executable, str(helper)],
+        input=json.dumps(dict(config), ensure_ascii=False),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or "structural timing failed")
+    try:
+        context = json.loads(process.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("structural timing helper returned invalid JSON") from error
     return LatencyTiming(
-        rb_parallelism=int(architecture["rb_parallelism"]),
-        ti_re_parallelism=int(architecture["ti_re_parallelism"]),
-        early_ls_drain=int(context["EARLY_LS_DRAIN"]),
-        ti_pipeline_depth=int(context["TI_PIPELINE_DEPTH"]),
-        has_pre_fi_buf=bool(context["HAS_PRE_FI_BUF"]),
-        fi_window_size=int(context["FI_WINDOW_SIZE"]),
-        fi_cycles_per_occ=int(context["FI_CYCLES_PER_OCC"]),
-        fi_cycles_per_occ_single=int(context["FI_CYCLES_PER_OCC_SINGLE"]),
+        rb_parallelism=int(context["rb_parallelism"]),
+        ti_re_parallelism=int(context["ti_re_parallelism"]),
+        early_ls_drain=int(context["early_ls_drain"]),
+        ti_pipeline_depth=int(context["ti_pipeline_depth"]),
+        has_pre_fi_buf=bool(context["has_pre_fi_buf"]),
+        fi_window_size=int(context["fi_window_size"]),
+        fi_cycles_per_occ=int(context["fi_cycles_per_occ"]),
+        fi_cycles_per_occ_single=int(context["fi_cycles_per_occ_single"]),
     )
 
 

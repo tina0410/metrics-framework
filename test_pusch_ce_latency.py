@@ -17,6 +17,7 @@ from latency_interface import (  # noqa: E402
     load_case_config,
     predict_from_terms,
     runtime_from_config,
+    timing_from_config,
 )
 
 
@@ -106,3 +107,13 @@ def test_runtime_cases_are_kept_outside_area_configs(case):
 
     assert "latency" not in raw
     assert runtime_from_config(combined).num_rbs > 0
+
+
+@pytest.mark.parametrize("case", range(1, 6))
+def test_structural_timing_does_not_require_rtl_top(case):
+    path = PUSCH_ROOT / "cases" / f"config{case}.json"
+    timing = timing_from_config(load_case_config(path))
+
+    assert timing.rb_parallelism > 0
+    assert timing.ti_re_parallelism > 0
+    assert timing.early_ls_drain > 0
