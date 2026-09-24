@@ -40,6 +40,22 @@ def test_pusch_ce_adapter_starts_from_module_working_directory() -> None:
     assert "ModuleNotFoundError" not in process.stdout
 
 
+def test_pusch_ce_rtl_generator_sources_are_versioned() -> None:
+    module_root = ROOT / "Generator" / "PUSCH_CE"
+    required = (
+        "top_api.py",
+        "v_top.py",
+        "v_controller.py",
+        "v_ls.py",
+        "v_freq_interp.py",
+        "v_time_interp.py",
+        "basic_modules/PyTU.py",
+        "helpers/config_space.py",
+    )
+    missing = [name for name in required if not (module_root / name).is_file()]
+    assert not missing, f"missing PUSCH_CE RTL generator sources: {missing}"
+
+
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
     spec = Registry().get("pusch_ce")
     assert spec.status == "active"
