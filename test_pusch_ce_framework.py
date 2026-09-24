@@ -82,6 +82,16 @@ def test_complex_mul_uses_converter_safe_port_maps() -> None:
         ports = next(keyword.value for keyword in call.keywords if keyword.arg == "PORTS")
         assert isinstance(ports, ast.Name)
 
+    submodule_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in {"ModuleMul", "ModuleAdd", "ModuleSub"}
+    ]
+    assert len(submodule_calls) == 14
+    assert all(call.lineno == call.end_lineno for call in submodule_calls)
+
 
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
     spec = Registry().get("pusch_ce")
