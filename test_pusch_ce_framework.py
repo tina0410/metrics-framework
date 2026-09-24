@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 import subprocess
@@ -62,6 +63,24 @@ def test_pusch_ce_requirements_include_area_model_runtime() -> None:
     ).read_text(encoding="utf-8")
     assert "scikit-learn==1.6.1" in requirements
     assert "joblib==1.4.2" in requirements
+
+
+def test_complex_mul_uses_converter_safe_port_maps() -> None:
+    source = (
+        ROOT / "Generator" / "PUSCH_CE" / "basic_modules" / "ComplexMul.py"
+    ).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    module_mul_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "ModuleMul"
+    ]
+    assert len(module_mul_calls) == 7
+    for call in module_mul_calls:
+        ports = next(keyword.value for keyword in call.keywords if keyword.arg == "PORTS")
+        assert isinstance(ports, ast.Name)
 
 
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():

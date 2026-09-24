@@ -130,28 +130,60 @@ def ModuleComplexMul(QU_IN_1: QuType, QU_IN_2: QuType, QU_OUT: QuType, N_CLK: in
         #/ wire [`COMP_DWT_O`-1:0] prod_ai_br;
 
         # Mul 1: a_re * b_re
+        ports_mul_ar_br = {
+            'i_data_1': 'a_re',
+            'i_data_2': 'b_re',
+            'o_data': 'prod_ar_br',
+        }
+        if N_CLK > 0:
+            ports_mul_ar_br['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_ar_br['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_re', 'i_data_2': 'b_re', 'o_data': 'prod_ar_br',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_ar_br)  # type: ignore
 
         # Mul 2: a_im * b_im
+        ports_mul_ai_bi = {
+            'i_data_1': 'a_im',
+            'i_data_2': 'b_im',
+            'o_data': 'prod_ai_bi',
+        }
+        if N_CLK > 0:
+            ports_mul_ai_bi['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_ai_bi['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_im', 'i_data_2': 'b_im', 'o_data': 'prod_ai_bi',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_ai_bi)  # type: ignore
 
         # Mul 3: a_re * b_im
+        ports_mul_ar_bi = {
+            'i_data_1': 'a_re',
+            'i_data_2': 'b_im',
+            'o_data': 'prod_ar_bi',
+        }
+        if N_CLK > 0:
+            ports_mul_ar_bi['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_ar_bi['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_re', 'i_data_2': 'b_im', 'o_data': 'prod_ar_bi',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_ar_bi)  # type: ignore
 
         # Mul 4: a_im * b_re
+        ports_mul_ai_br = {
+            'i_data_1': 'a_im',
+            'i_data_2': 'b_re',
+            'o_data': 'prod_ai_br',
+        }
+        if N_CLK > 0:
+            ports_mul_ai_br['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_ai_br['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_im', 'i_data_2': 'b_re', 'o_data': 'prod_ai_br',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_ai_br)  # type: ignore
 
         # Sub: z_re = prod_ar_br - prod_ai_bi (combinational)
         #/ wire [`COMP_DWT_O`-1:0] z_re;
@@ -193,24 +225,48 @@ def ModuleComplexMul(QU_IN_1: QuType, QU_IN_2: QuType, QU_OUT: QuType, N_CLK: in
 
         # k1 = a_re * b_re
         #/ wire [`COMP_DWT_O`-1:0] k1;
+        ports_mul_k1 = {
+            'i_data_1': 'a_re',
+            'i_data_2': 'b_re',
+            'o_data': 'k1',
+        }
+        if N_CLK > 0:
+            ports_mul_k1['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_k1['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_re', 'i_data_2': 'b_re', 'o_data': 'k1',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_k1)  # type: ignore
 
         # k2 = a_im * b_im
         #/ wire [`COMP_DWT_O`-1:0] k2;
+        ports_mul_k2 = {
+            'i_data_1': 'a_im',
+            'i_data_2': 'b_im',
+            'o_data': 'k2',
+        }
+        if N_CLK > 0:
+            ports_mul_k2['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_k2['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_IN_1, QU_IN_2=QU_IN_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 'a_im', 'i_data_2': 'b_im', 'o_data': 'k2',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_k2)  # type: ignore
 
         # k3 = s1 * s2
         #/ wire [`COMP_DWT_O`-1:0] k3;
+        ports_mul_k3 = {
+            'i_data_1': 's1',
+            'i_data_2': 's2',
+            'o_data': 'k3',
+        }
+        if N_CLK > 0:
+            ports_mul_k3['i_clk'] = 'i_clk'
+            if IF_RST_N:
+                ports_mul_k3['i_rst_n'] = 'i_rst_n'
         ModuleMul(QU_IN_1=QU_PRE_1, QU_IN_2=QU_PRE_2, QU_OUT=QU_OUT,
                   N_CLK=N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N=IF_RST_N,
-                  PORTS={'i_data_1': 's1', 'i_data_2': 's2', 'o_data': 'k3',
-                         **({'i_clk': 'i_clk', **({'i_rst_n': 'i_rst_n'} if IF_RST_N else {})} if N_CLK > 0 else {})})  # type: ignore
+                  PORTS=ports_mul_k3)  # type: ignore
 
         # z_re = k1 - k2 (combinational)
         #/ wire [`COMP_DWT_O`-1:0] z_re;
