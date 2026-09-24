@@ -19,6 +19,8 @@ conda run -n pytv pip install -r requirements.txt
 | Package | Purpose |
 | --- | --- |
 | numpy, scipy | numerical / coefficient generation |
+| scikit-learn, joblib | load and run the serialized area-estimator models |
+| pandas, openpyxl | area-case data and workbook handling |
 | verithon | Verilog emission (provides the `pytv` import package) |
 | rich | test dashboard / structured logging |
 | pytest, pytest-xdist | test runner |

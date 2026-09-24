@@ -12,6 +12,7 @@
 
 numpy==2.2.5            # numerical / coefficient generation (via scipy)
 scipy==1.15.3           # channel model / interpolation coefficient generation
+scikit-learn==1.6.1    # loads the area-estimator models saved by sklearn 1.3.2
 pandas==2.2.3           # area-case table and workbook handling
 joblib==1.4.2           # serialized area-estimator models
 openpyxl==3.1.5         # .xlsx reader used by pandas

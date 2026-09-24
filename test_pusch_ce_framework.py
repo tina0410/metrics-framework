@@ -56,6 +56,14 @@ def test_pusch_ce_rtl_generator_sources_are_versioned() -> None:
     assert not missing, f"missing PUSCH_CE RTL generator sources: {missing}"
 
 
+def test_pusch_ce_requirements_include_area_model_runtime() -> None:
+    requirements = (
+        ROOT / "Generator" / "PUSCH_CE" / "requirements.txt"
+    ).read_text(encoding="utf-8")
+    assert "scikit-learn==1.6.1" in requirements
+    assert "joblib==1.4.2" in requirements
+
+
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
     spec = Registry().get("pusch_ce")
     assert spec.status == "active"
