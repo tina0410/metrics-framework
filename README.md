@@ -67,33 +67,42 @@ python -m pip install -e .
 不要把 PUSCH_CE 的 Verithon、cocotb、numpy/scipy 等依赖安装到
 `.venv-framework`。统一框架通过独立子进程调用模块解释器。
 
-### 2. PUSCH_CE 独立环境
+### 2. PUSCH_CE Python 3.13 统一环境
 
-PUSCH_CE 生成器和 TOP 仿真链按项目要求使用 **Python 3.13**。可以在
-`.venv-framework` 仍处于激活状态时创建模块环境；下面的命令显式使用
-Python 3.13，不会把依赖写入框架环境。
+PUSCH_CE 生成器、TOP 仿真链和统一 CLI 共用 **Python 3.13** 环境
+`.venv-framework313`。首次创建并安装：
 
 Linux / WSL：
 
 ```bash
-python3.13 -m venv Generator/PUSCH_CE/.venv
-Generator/PUSCH_CE/.venv/bin/python -m pip install --upgrade pip
-Generator/PUSCH_CE/.venv/bin/python -m pip install -r Generator/PUSCH_CE/requirements.txt
-export PUSCH_CE_METRICS_PYTHON="$PWD/Generator/PUSCH_CE/.venv/bin/python"
+python3.13 -m venv .venv-framework313
+source .venv-framework313/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m pip install -r Generator/PUSCH_CE/requirements.txt
+export PUSCH_CE_METRICS_PYTHON="$PWD/.venv-framework313/bin/python"
 ```
 
 Windows PowerShell：
 
 ```powershell
-py -3.13 -m venv Generator\PUSCH_CE\.venv
-.\Generator\PUSCH_CE\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\Generator\PUSCH_CE\.venv\Scripts\python.exe -m pip install -r Generator\PUSCH_CE\requirements.txt
-$env:PUSCH_CE_METRICS_PYTHON = "$PWD\Generator\PUSCH_CE\.venv\Scripts\python.exe"
+py -3.13 -m venv .venv-framework313
+.\.venv-framework313\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m pip install -r Generator\PUSCH_CE\requirements.txt
+$env:PUSCH_CE_METRICS_PYTHON = "$PWD\.venv-framework313\Scripts\python.exe"
 ```
 
-`PUSCH_CE_METRICS_PYTHON` 是统一框架的解释器覆盖变量。未设置时，框架会
-默认查找 `Generator/PUSCH_CE/.venv/bin/python`（Windows 为
-`Generator\PUSCH_CE\.venv\Scripts\python.exe`）。
+Linux / WSL 每次重新打开终端后，在仓库根目录执行：
+
+```bash
+source .venv-framework313/bin/activate
+export PUSCH_CE_METRICS_PYTHON="$PWD/.venv-framework313/bin/python"
+```
+
+`PUSCH_CE_METRICS_PYTHON` 明确要求统一框架使用当前 Python 3.13 环境执行
+PUSCH_CE 的面积模型、RTL 生成器和 cocotb 仿真。
 
 PUSCH_CE 的 Python 依赖统一记录在
 [`Generator/PUSCH_CE/requirements.txt`](Generator/PUSCH_CE/requirements.txt)。RTL 仿真还需
@@ -136,7 +145,7 @@ python -m metrics_framework ce evaluate 1
 延迟预测：
 
 ```bash
-Generator/PUSCH_CE/.venv/bin/python \
+"$PUSCH_CE_METRICS_PYTHON" \
   Generator/PUSCH_CE/latency_interface.py \
   Generator/PUSCH_CE/cases/config1.json
 ```
@@ -144,7 +153,7 @@ Generator/PUSCH_CE/.venv/bin/python \
 延迟 RTL 验证（从 `start` 被接受到 `slot_ce_done` 拉高）：
 
 ```bash
-Generator/PUSCH_CE/.venv/bin/python \
+"$PUSCH_CE_METRICS_PYTHON" \
   Generator/PUSCH_CE/tests/validate_pusch_ce_latency.py \
   Generator/PUSCH_CE/cases/config1.json
 ```
@@ -152,7 +161,7 @@ Generator/PUSCH_CE/.venv/bin/python \
 面积预测：
 
 ```bash
-Generator/PUSCH_CE/.venv/bin/python \
+"$PUSCH_CE_METRICS_PYTHON" \
   Area_TP_Estimator/PUSCH_Est_pack/pusch_ce_area_interface.py \
   predict Generator/PUSCH_CE/cases/config1.json
 ```
@@ -160,10 +169,10 @@ Generator/PUSCH_CE/.venv/bin/python \
 5 个面积 case 保持只包含生成器/面积模型输入；延迟运行时点独立保存在
 `Generator/PUSCH_CE/tests/latency_cases.json`，预测和 RTL 验证共用同一份数据。
 
-Windows PowerShell 执行上述命令时，将解释器路径替换为：
+Windows PowerShell 执行上述命令时，将解释器变量替换为：
 
 ```text
-.\Generator\PUSCH_CE\.venv\Scripts\python.exe
+$env:PUSCH_CE_METRICS_PYTHON
 ```
 
 ## 测试
