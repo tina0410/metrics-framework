@@ -225,15 +225,7 @@ def ModuleTIME_INTERP(antenna_port: int, max_occasions: int, max_num_RBs: int, R
             pass
         #/
 
-        ModulePILOT_SRAM_BANK(
-            max_occasions=max_occasions,
-            SRAM_DEPTH=SRAM_DEPTH,
-            Qu_H_interp_f=Qu_H_interp_f,
-            TI_RE_PARALLELISM=TI_RE_PARALLELISM,
-            RB_PARALLELISM=RB_PARALLELISM,
-            SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG,
-            PORTS=sram_ports,  # type: ignore
-        )
+        ModulePILOT_SRAM_BANK(max_occasions=max_occasions, SRAM_DEPTH=SRAM_DEPTH, Qu_H_interp_f=Qu_H_interp_f, TI_RE_PARALLELISM=TI_RE_PARALLELISM, RB_PARALLELISM=RB_PARALLELISM, SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG, PORTS=sram_ports)
 
         # ===========================================================
         # 2. Unpack SRAM bank output (post-FI)
@@ -329,8 +321,7 @@ def ModuleTIME_INTERP(antenna_port: int, max_occasions: int, max_num_RBs: int, R
                 _bs_delay = ti_ctrl_graph.build_delay_table()['occ_bank_sel']['delay']
             else:
                 _bs_delay = 1
-            ModuleDelay(DWT=BANK_SEL_W_PRE_FI, N_CLK=_bs_delay, IF_RST_N=False,
-                        PORTS={'i_data': 'occ_bank_sel_raw', 'o_data': 'occ_bank_sel', 'i_clk': 'clk'})  # type: ignore
+            ModuleDelay(DWT=BANK_SEL_W_PRE_FI, N_CLK=_bs_delay, IF_RST_N=False, PORTS={'i_data': 'occ_bank_sel_raw', 'o_data': 'occ_bank_sel', 'i_clk': 'clk'})  # type: ignore
             for occ in range(max_occasions):
                 #/ wire [`BANK_DATA_WIDTH`-1:0] `f"occ_rd_bank_{occ}"` = `f"occ_rd_q_{occ}"`[occ_bank_sel * `BANK_DATA_WIDTH` +: `BANK_DATA_WIDTH`];
                 pass
@@ -382,44 +373,15 @@ def ModuleTIME_INTERP(antenna_port: int, max_occasions: int, max_num_RBs: int, R
                 pass
 
         if time_interp_method == 'nn':
-            ModuleCORE_TIME_NN_INTERP(
-                max_occasions=max_occasions,
-                Qu_H=Qu_H_interp_f,
-                dmrs_typeA_pos=dmrs_typeA_pos,
-                is_double_dmrs=is_double_dmrs,
-                additional_DMRS_range=additional_DMRS_range,
-                num_symbols_range=num_symbols_range,
-                PORTS=core_ports,  # type: ignore
-            )
+            ModuleCORE_TIME_NN_INTERP(max_occasions=max_occasions, Qu_H=Qu_H_interp_f, dmrs_typeA_pos=dmrs_typeA_pos, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, num_symbols_range=num_symbols_range, PORTS=core_ports)
         elif time_interp_method == 'linear':
-            ModuleCORE_TIME_LIN_INTERP(
-                max_occasions=max_occasions,
-                Qu_H=Qu_H_interp_f,
-                dmrs_typeA_pos=dmrs_typeA_pos,
-                is_double_dmrs=is_double_dmrs,
-                additional_DMRS_range=additional_DMRS_range,
-                num_symbols_range=num_symbols_range,
-                PORTS=core_ports,  # type: ignore
-            )
+            ModuleCORE_TIME_LIN_INTERP(max_occasions=max_occasions, Qu_H=Qu_H_interp_f, dmrs_typeA_pos=dmrs_typeA_pos, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, num_symbols_range=num_symbols_range, PORTS=core_ports)
         elif time_interp_method == 'lmmse':
             if COEFF_SOURCE == 'SRAM':
                 core_ports['coeff_wr_en'] = 'ti_coeff_wr_en'
                 core_ports['coeff_wr_addr'] = 'ti_coeff_wr_addr'
                 core_ports['coeff_wr_data'] = 'ti_coeff_wr_data'
-            ModuleCORE_TIME_LMMSE_INTERP(
-                max_occasions=max_occasions,
-                Qu_H=Qu_H_interp_f,
-                Qu_COEFF=Qu_TI_LMMSE_COEFF,
-                LMMSE_REAL_COEFF=LMMSE_REAL_COEFF,
-                dmrs_typeA_pos=dmrs_typeA_pos,
-                is_double_dmrs=is_double_dmrs,
-                additional_DMRS_range=additional_DMRS_range,
-                num_symbols_range=num_symbols_range,
-                W_coeffs=W_coeffs,
-                f_d_norm=f_d_norm,
-                COEFF_SOURCE=COEFF_SOURCE,
-                PORTS=core_ports,  # type: ignore
-            )
+            ModuleCORE_TIME_LMMSE_INTERP(max_occasions=max_occasions, Qu_H=Qu_H_interp_f, Qu_COEFF=Qu_TI_LMMSE_COEFF, LMMSE_REAL_COEFF=LMMSE_REAL_COEFF, dmrs_typeA_pos=dmrs_typeA_pos, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, num_symbols_range=num_symbols_range, W_coeffs=W_coeffs, f_d_norm=f_d_norm, COEFF_SOURCE=COEFF_SOURCE, PORTS=core_ports)
         else:
             raise ValueError(f"Invalid time_interp_method: {time_interp_method}")
 

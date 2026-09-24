@@ -325,15 +325,13 @@ def ModuleCORE_NN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pilo
     dp_first = {'i_data': 'first_RB', 'o_data': 'first_RB_d', 'i_clk': 'clk'}
     if IF_RST_N:
         dp_first['i_rst_n'] = 'rst_n'
-    ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N,
-                PORTS=dp_first)  # type: ignore
+    ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=dp_first)  # type: ignore
 
     #/ wire last_RB_d;
     dp_last = {'i_data': 'last_RB', 'o_data': 'last_RB_d', 'i_clk': 'clk'}
     if IF_RST_N:
         dp_last['i_rst_n'] = 'rst_n'
-    ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N,
-                PORTS=dp_last)  # type: ignore
+    ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=dp_last)  # type: ignore
 
     # Per-lane logical-last-RB flag, delayed 1 clk to match the NN pipeline depth.
     # On a partial final beat the logical last RB is `lane = remainder-1`, not
@@ -345,8 +343,7 @@ def ModuleCORE_NN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pilo
         dp_ll = {'i_data': 'lane_last', 'o_data': 'lane_last_d', 'i_clk': 'clk'}
         if IF_RST_N:
             dp_ll['i_rst_n'] = 'rst_n'
-        ModuleDelay(DWT=RB_PARALLELISM, N_CLK=1, IF_RST_N=IF_RST_N,
-                    PORTS=dp_ll)  # type: ignore
+        ModuleDelay(DWT=RB_PARALLELISM, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=dp_ll)  # type: ignore
         for rb in range(RB_PARALLELISM):
             #/ wire `ll_d[rb]` = lane_last_d[`rb`];
             pass

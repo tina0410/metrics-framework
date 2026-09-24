@@ -586,10 +586,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
             _pd_ports = {'i_clk': 'clk_g', 'i_data': orig, 'o_data': delayed}
             if IF_RST_N:
                 _pd_ports['i_rst_n'] = 'rst_n'
-            ModuleDelay(
-                DWT=CPLX_DWT_IN, IF_RST_N=IF_RST_N, N_CLK=1,
-                PORTS=_pd_ports  # type: ignore
-            )
+            ModuleDelay(DWT=CPLX_DWT_IN, IF_RST_N=IF_RST_N, N_CLK=1, PORTS=_pd_ports)
             pilot_signals[q] = delayed
         #/ 
 
@@ -606,10 +603,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
         _en_ports = {'i_clk': 'clk', 'i_data': 'enable', 'o_data': 'enable_gated'}
         if IF_RST_N:
             _en_ports['i_rst_n'] = 'rst_n'
-        ModuleDelay(
-            DWT=1, IF_RST_N=IF_RST_N, N_CLK=_en_delay,
-            PORTS=_en_ports  # type: ignore
-        )
+        ModuleDelay(DWT=1, IF_RST_N=IF_RST_N, N_CLK=_en_delay, PORTS=_en_ports)
         gate_enable = 'enable_gated'
     else:
         gate_enable = 'enable'
@@ -658,18 +652,8 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
                         mul_ports_re['i_rst_n'] = 'rst_n'
                         mul_ports_im['i_rst_n'] = 'rst_n'
 
-                ModuleMul(
-                    QU_IN_1=Qu_H_LS, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD,
-                    N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                    IF_RST_N=IF_RST_N,
-                    PORTS=mul_ports_re  # type: ignore
-                )
-                ModuleMul(
-                    QU_IN_1=Qu_H_LS, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD,
-                    N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                    IF_RST_N=IF_RST_N,
-                    PORTS=mul_ports_im  # type: ignore
-                )
+                ModuleMul(QU_IN_1=Qu_H_LS, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, PORTS=mul_ports_re)
+                ModuleMul(QU_IN_1=Qu_H_LS, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, PORTS=mul_ports_im)
             else:
                 prod_name = f"prod_{k}_{q}"
                 #/ wire [`2*QU_PROD.DWT`-1:0] `prod_name`;
@@ -684,12 +668,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
                     if IF_RST_N:
                         cmul_ports['i_rst_n'] = 'rst_n'
 
-                ModuleComplexMul(
-                    QU_IN_1=Qu_H_LS, QU_IN_2=QU_CPLX_COEFF, QU_OUT=QU_PROD,
-                    N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    IF_RST_N=IF_RST_N, METHOD='4mul',
-                    PORTS=cmul_ports  # type: ignore
-                )
+                ModuleComplexMul(QU_IN_1=Qu_H_LS, QU_IN_2=QU_CPLX_COEFF, QU_OUT=QU_PROD, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, IF_RST_N=IF_RST_N, METHOD='4mul', PORTS=cmul_ports)
     #/ 
 
     # =========================================================================
@@ -706,10 +685,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
                 _pcr_ports = {'i_clk': 'clk_g', 'i_data': prod_name, 'o_data': prod_d_name}
                 if IF_RST_N:
                     _pcr_ports['i_rst_n'] = 'rst_n'
-                ModuleDelay(
-                    DWT=2*QU_PROD.DWT, IF_RST_N=IF_RST_N, N_CLK=1,
-                    PORTS=_pcr_ports  # type: ignore
-                )
+                ModuleDelay(DWT=2 * QU_PROD.DWT, IF_RST_N=IF_RST_N, N_CLK=1, PORTS=_pcr_ports)
         #/ 
 
     # =========================================================================
@@ -750,20 +726,8 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
                         tree_ports_re['i_rst_n'] = 'rst_n'
                         tree_ports_im['i_rst_n'] = 'rst_n'
 
-                ModuleAdderTree(
-                    QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT,
-                    N_PIPELINES=TREE_DEPTH,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                    IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A',
-                    PORTS=tree_ports_re  # type: ignore
-                )
-                ModuleAdderTree(
-                    QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT,
-                    N_PIPELINES=TREE_DEPTH,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                    IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A',
-                    PORTS=tree_ports_im  # type: ignore
-                )
+                ModuleAdderTree(QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT, N_PIPELINES=TREE_DEPTH, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A', PORTS=tree_ports_re)
+                ModuleAdderTree(QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT, N_PIPELINES=TREE_DEPTH, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A', PORTS=tree_ports_im)
         else:
             _psuf = '_d' if REG_POST_CMUL else ''
             _tree_pipes = TREE_DEPTH - 1 if REG_POST_CMUL else TREE_DEPTH
@@ -794,13 +758,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
                         if IF_RST_N:
                             tree_ports['i_rst_n'] = 'rst_n'
 
-                    ModuleAdderTree(
-                        QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT,
-                        N_PIPELINES=_tree_pipes,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A',
-                        PORTS=tree_ports  # type: ignore
-                    )
+                    ModuleAdderTree(QU_IN=QU_TREE_IN, QU_OUT=QU_TREE_OUT, N_PIPELINES=_tree_pipes, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, N_INPUTS=N_PILOTS_PER_BEAT, CONFIG_MODE='A', PORTS=tree_ports)
     #/ 
 
     # =========================================================================
@@ -824,8 +782,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
             _dp = {'i_clk': 'clk', 'i_data': 'fill_cnt', 'o_data': _dst}
             if IF_RST_N:
                 _dp['i_rst_n'] = 'rst_n'
-            ModuleDelay(DWT=_dwt, IF_RST_N=IF_RST_N, N_CLK=_n_clk,
-                        PORTS=_dp)  # type: ignore
+            ModuleDelay(DWT=_dwt, IF_RST_N=IF_RST_N, N_CLK=_n_clk, PORTS=_dp)  # type: ignore
 
         if OUTPUT_GROUPS > 1:
             if FILL_BEATS_ORIG > 1:
@@ -910,18 +867,8 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
             fxm_im = f"fxm_im_{k}"
             #/ wire [`COMP_DWT_OUT`-1:0] `fxm_re`;
             #/ wire [`COMP_DWT_OUT`-1:0] `fxm_im`;
-            ModuleFxMatch(
-                QU_IN=QU_ACC, QU_OUT=Qu_H,
-                QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                N_CLK=0, IF_RST_N=False,
-                PORTS={'i_data': f"acc_re_{k}", 'o_data': fxm_re}  # type: ignore
-            )
-            ModuleFxMatch(
-                QU_IN=QU_ACC, QU_OUT=Qu_H,
-                QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                N_CLK=0, IF_RST_N=False,
-                PORTS={'i_data': f"acc_im_{k}", 'o_data': fxm_im}  # type: ignore
-            )
+            ModuleFxMatch(QU_IN=QU_ACC, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'acc_re_{k}', 'o_data': fxm_re})
+            ModuleFxMatch(QU_IN=QU_ACC, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'acc_im_{k}', 'o_data': fxm_im})
 
         for k in range(N_OUTPUT):
             #/ reg [`CPLX_DWT_OUT`-1:0] `f"out_buf_{k}"`;
@@ -1044,31 +991,11 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
             #/ wire [`COMP_DWT_OUT`-1:0] `out_im_name`;
 
             if REAL_COEFF:
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=Qu_H,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': sum_re, 'o_data': out_re_name}  # type: ignore
-                )
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=Qu_H,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': sum_im, 'o_data': out_im_name}  # type: ignore
-                )
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': sum_re, 'o_data': out_re_name})
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': sum_im, 'o_data': out_im_name})
             else:
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=Qu_H,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': sum_re, 'o_data': out_re_name}  # type: ignore
-                )
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=Qu_H,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': sum_im, 'o_data': out_im_name}  # type: ignore
-                )
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': sum_re, 'o_data': out_re_name})
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': sum_im, 'o_data': out_im_name})
 
             reg_out_name = f"reg_out_{k}"
             #/ wire [`CPLX_DWT_OUT`-1:0] `reg_out_name`;
@@ -1080,10 +1007,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
             if IF_RST_N:
                 delay_ports['i_rst_n'] = 'rst_n'
 
-            ModuleDelay(
-                DWT=CPLX_DWT_OUT, N_CLK=1, IF_RST_N=IF_RST_N,
-                PORTS=delay_ports  # type: ignore
-            )
+            ModuleDelay(DWT=CPLX_DWT_OUT, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports)
 
         # A one-beat window still has a real multiplier/tree/output-register
         # pipeline.  Its valid must be a pulse aligned with reg_out, not a
@@ -1103,10 +1027,7 @@ def ModuleCORE_LMMSE_INTERP(IF_RST_N: bool, LMMSE_P: int, RB_PARALLELISM: int, Q
         }
         if IF_RST_N:
             _valid_ports['i_rst_n'] = 'rst_n'
-        ModuleDelay(
-            DWT=1, N_CLK=_direct_valid_delay, IF_RST_N=IF_RST_N,
-            PORTS=_valid_ports  # type: ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=_direct_valid_delay, IF_RST_N=IF_RST_N, PORTS=_valid_ports)
 
         #/ // ===== Output Assignment =====
         for k in range(N_OUTPUT):

@@ -1469,39 +1469,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
     _output_groups = (12 // FI_RE_PARALLELISM) if HAS_PRE_FI_BUF else 1
     _fi_fill_beats = _fi_fill_beats_orig * _output_groups
 
-    ModuleCONTROLLER(
-        min_num_RBs=min_num_RBs,
-        max_num_RBs=max_num_RBs,
-        RB_PARALLELISM=RB_PARALLELISM,
-        max_pusch_symbols=max_pusch_symbols,
-        is_double_dmrs=is_double_dmrs,
-        additional_DMRS_range=additional_DMRS_range,
-        dmrs_typeA_pos=dmrs_typeA_pos,
-        num_symbols_range=num_symbols_range,
-        LS_DRAIN_CYCLES=EARLY_LS_DRAIN,
-        TI_PIPELINE_DEPTH=TI_PIPELINE_DEPTH,
-        TI_RE_PARALLELISM=TI_RE_PARALLELISM,
-        HAS_COEFF_SRAM=HAS_COEFF_SRAM,
-        ls_ctrl_graph=ls_ctrl_graph,
-        freq_interp_method=freq_interp_method,
-        max_occasions=max_occasions,
-        counter_width=counter_width,
-        SRAM_ADDR_WIDTH=SRAM_ADDR_WIDTH,
-        Qu_symbol_idx=Qu_symbol_idx,
-        INPUT_MODE=INPUT_MODE,
-        is_enhanced=is_enhanced,
-        dmrs_Type=dmrs_Type,
-        is_ECP=is_ECP,
-        switchable_ports=switchable_ports,
-        ANTENNA_PORTS=ANTENNA_PORTS,
-        has_pre_fi_buf=HAS_PRE_FI_BUF,
-        FI_WINDOW_SIZE=FI_WINDOW_SIZE,
-        FI_CYCLES_PER_OCC=FI_CYCLES_PER_OCC,
-        FI_CYCLES_PER_OCC_SINGLE=FI_CYCLES_PER_OCC_SINGLE,
-        FI_FILL_BEATS=_fi_fill_beats,
-        HAS_TI_GATE=False,
-        PORTS=ports_controller,  # type: ignore
-    )
+    ModuleCONTROLLER(min_num_RBs=min_num_RBs, max_num_RBs=max_num_RBs, RB_PARALLELISM=RB_PARALLELISM, max_pusch_symbols=max_pusch_symbols, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, dmrs_typeA_pos=dmrs_typeA_pos, num_symbols_range=num_symbols_range, LS_DRAIN_CYCLES=EARLY_LS_DRAIN, TI_PIPELINE_DEPTH=TI_PIPELINE_DEPTH, TI_RE_PARALLELISM=TI_RE_PARALLELISM, HAS_COEFF_SRAM=HAS_COEFF_SRAM, ls_ctrl_graph=ls_ctrl_graph, freq_interp_method=freq_interp_method, max_occasions=max_occasions, counter_width=counter_width, SRAM_ADDR_WIDTH=SRAM_ADDR_WIDTH, Qu_symbol_idx=Qu_symbol_idx, INPUT_MODE=INPUT_MODE, is_enhanced=is_enhanced, dmrs_Type=dmrs_Type, is_ECP=is_ECP, switchable_ports=switchable_ports, ANTENNA_PORTS=ANTENNA_PORTS, has_pre_fi_buf=HAS_PRE_FI_BUF, FI_WINDOW_SIZE=FI_WINDOW_SIZE, FI_CYCLES_PER_OCC=FI_CYCLES_PER_OCC, FI_CYCLES_PER_OCC_SINGLE=FI_CYCLES_PER_OCC_SINGLE, FI_FILL_BEATS=_fi_fill_beats, HAS_TI_GATE=False, PORTS=ports_controller)
 
     # -- 4.2 CFG_LATCH (per-slot configuration freeze) --
     #/ // ========== Config Latching ==========
@@ -1546,21 +1514,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_cfg_latch[f'port_enable_{_i}'] = f'port_enable_p{_port}'
             ports_cfg_latch[f'cfg_port_enable_{_i}'] = f'cfg_port_enable_p{_port}'
 
-    ModuleCFG_LATCH(
-        Qu_slot_idx=Qu_slot_idx,
-        counter_width=counter_width,
-        N_CLK=1,
-        IF_RST_N=True,
-        has_is_double_dmrs=(is_double_dmrs == "Hybrid"),
-        has_is_enhanced=(is_enhanced == "Hybrid"),
-        has_dmrs_type=(dmrs_Type == "Hybrid"),
-        has_typeA_pos=(dmrs_typeA_pos == "Hybrid"),
-        cdm_sel_bits=_cdm_sel_bits,
-        has_is_ECP=(is_ECP == "Hybrid"),
-        n_add_width=_n_add_width_latch,
-        num_ports=_num_ports_latch,
-        PORTS=ports_cfg_latch,  # type: ignore
-    )
+    ModuleCFG_LATCH(Qu_slot_idx=Qu_slot_idx, counter_width=counter_width, N_CLK=1, IF_RST_N=True, has_is_double_dmrs=is_double_dmrs == 'Hybrid', has_is_enhanced=is_enhanced == 'Hybrid', has_dmrs_type=dmrs_Type == 'Hybrid', has_typeA_pos=dmrs_typeA_pos == 'Hybrid', cdm_sel_bits=_cdm_sel_bits, has_is_ECP=is_ECP == 'Hybrid', n_add_width=_n_add_width_latch, num_ports=_num_ports_latch, PORTS=ports_cfg_latch)
 
     # -- 4.3 PORT_ENABLE (runtime port gating) --
     if switchable_ports:
@@ -1576,14 +1530,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_port_enable[f'port_enable_ext_{i}'] = f'cfg_port_enable_p{port}'
         ports_port_enable['ports_enable'] = 'ports_enable_combined'
 
-        ModulePORT_ENABLE(
-            antenna_ports=ANTENNA_PORTS,
-            dmrs_Type=dmrs_Type,
-            is_enhanced=is_enhanced,
-            is_double_dmrs=is_double_dmrs,
-            has_ext_enable=True,
-            PORTS=ports_port_enable,  # type: ignore
-        )
+        ModulePORT_ENABLE(antenna_ports=ANTENNA_PORTS, dmrs_Type=dmrs_Type, is_enhanced=is_enhanced, is_double_dmrs=is_double_dmrs, has_ext_enable=True, PORTS=ports_port_enable)
 
     # -- 4.4 CDM_CTRL (runtime fdCDM/tdCDM calculation) --
     if switchable_ports:
@@ -1596,11 +1543,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_cdm_ctrl[f'fdCDM_cdm{g}'] = f'fdCDM_cdm{g}'
             ports_cdm_ctrl[f'tdCDM_cdm{g}'] = f'tdCDM_cdm{g}'
 
-        ModuleCDM_CTRL(
-            antenna_ports=ANTENNA_PORTS,
-            dmrs_Type=dmrs_Type,
-            PORTS=ports_cdm_ctrl,  # type: ignore
-        )
+        ModuleCDM_CTRL(antenna_ports=ANTENNA_PORTS, dmrs_Type=dmrs_Type, PORTS=ports_cdm_ctrl)
         fdCDM = {g: 'Hybrid' for g in _cdm_active_groups}
         tdCDM = {g: 'Hybrid' for g in _cdm_active_groups}
     elif not switchable_ports and dmrs_Type == 'Hybrid':
@@ -1611,12 +1554,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_cdm_ctrl[f'fdCDM_cdm{g}'] = f'fdCDM_cdm{g}'
             ports_cdm_ctrl[f'tdCDM_cdm{g}'] = f'tdCDM_cdm{g}'
 
-        ModuleCDM_CTRL(
-            antenna_ports=ANTENNA_PORTS,
-            dmrs_Type=dmrs_Type,
-            has_ports_enable=False,
-            PORTS=ports_cdm_ctrl,  # type: ignore
-        )
+        ModuleCDM_CTRL(antenna_ports=ANTENNA_PORTS, dmrs_Type=dmrs_Type, has_ports_enable=False, PORTS=ports_cdm_ctrl)
         fdCDM = {g: 'Hybrid' for g in _cdm_active_groups}
         tdCDM = {g: 'Hybrid' for g in _cdm_active_groups}
     else:
@@ -1655,18 +1593,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
     else:
         ports_c_init['c_init'] = 'cinit_gen'
 
-    ModuleC_INIT_GENERATION(
-        Qu_symbol_idx=Qu_symbol_idx,
-        Qu_slot_idx=Qu_slot_idx,
-        N_CLK=N_CLK_CINIT,
-        dmrs_Type=dmrs_Type,
-        dmrs_Uplink=dmrs_Uplink,
-        is_ECP=is_ECP,
-        ENABLED_CDM_GROUPS_TYPE1=ENABLED_CDM_GROUPS_TYPE1,
-        ENABLED_CDM_GROUPS_TYPE2=ENABLED_CDM_GROUPS_TYPE2,
-        ENABLED_CDM_GROUPS_TYPE3=ENABLED_CDM_GROUPS_TYPE3,
-        PORTS=ports_c_init,  # type: ignore
-    )
+    ModuleC_INIT_GENERATION(Qu_symbol_idx=Qu_symbol_idx, Qu_slot_idx=Qu_slot_idx, N_CLK=N_CLK_CINIT, dmrs_Type=dmrs_Type, dmrs_Uplink=dmrs_Uplink, is_ECP=is_ECP, ENABLED_CDM_GROUPS_TYPE1=ENABLED_CDM_GROUPS_TYPE1, ENABLED_CDM_GROUPS_TYPE2=ENABLED_CDM_GROUPS_TYPE2, ENABLED_CDM_GROUPS_TYPE3=ENABLED_CDM_GROUPS_TYPE3, PORTS=ports_c_init)
 
     # -- 4.6 Y_PATH_REDUCE (+ Y_RB_ALIGN for Mode B) --
     if INPUT_MODE == 'A':
@@ -1677,13 +1604,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
         for i in range(Y_PARALLELISM):
             ports_y_path_reduce[f'data_out_{i}'] = f'Y_reduced_complex_{i}'
 
-        ModuleY_PATH_REDUCE(
-            Qu_Data=Qu_Y_Complex,
-            INPUT_INDEX_LIST=INPUT_INDEX_LIST,
-            OUTPUT_INDEX_LIST=TRUE_INDEX_LIST,
-            HAS_VALID_READY=False,
-            PORTS=ports_y_path_reduce,  # type: ignore
-        )
+        ModuleY_PATH_REDUCE(Qu_Data=Qu_Y_Complex, INPUT_INDEX_LIST=INPUT_INDEX_LIST, OUTPUT_INDEX_LIST=TRUE_INDEX_LIST, HAS_VALID_READY=False, PORTS=ports_y_path_reduce)
 
     elif INPUT_MODE == 'B':
         #/ // ========== INPUT_MODE B: Per-RB PATH_REDUCE + Barrel Align ==========
@@ -1698,13 +1619,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_y_path_reduce_rb['ready_in'] = f'Y_ready_rb{rb}'
             ports_y_path_reduce_rb['ready_out'] = f'Y_align_ready_rb{rb}'
 
-            ModuleY_PATH_REDUCE(
-                Qu_Data=Qu_Y_Complex,
-                INPUT_INDEX_LIST=list(range(12)),
-                OUTPUT_INDEX_LIST=required_re_per_rb,
-                HAS_VALID_READY=True,
-                PORTS=ports_y_path_reduce_rb,  # type: ignore
-            )
+            ModuleY_PATH_REDUCE(Qu_Data=Qu_Y_Complex, INPUT_INDEX_LIST=list(range(12)), OUTPUT_INDEX_LIST=required_re_per_rb, HAS_VALID_READY=True, PORTS=ports_y_path_reduce_rb)
 
         # -- Y_RB_ALIGN (barrel shifter for Mode B boundary alignment) --
         if RB_PARALLELISM > 1:
@@ -1725,12 +1640,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_y_rb_align[f'Y_ready_rb_{rb}'] = f'Y_align_ready_rb{rb}'
             ports_y_rb_align[f'Y_out_rb_{rb}'] = f'Y_rb_out_{rb}'
 
-        ModuleY_RB_ALIGN(
-            Qu_Y=Y,
-            RB_PARALLELISM=RB_PARALLELISM,
-            RE_PER_RB=RE_PER_RB,
-            PORTS=ports_y_rb_align,  # type: ignore
-        )
+        ModuleY_RB_ALIGN(Qu_Y=Y, RB_PARALLELISM=RB_PARALLELISM, RE_PER_RB=RE_PER_RB, PORTS=ports_y_rb_align)
 
     # -- 4.7 LS Channel Estimation --
     #/ // ========== LS Channel Estimation ==========
@@ -1803,35 +1713,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
                     f'H_avg_port{ant_port}_rb{rb}_re{re_k}_complex'
                 ] = wire_name
 
-    ModuleLS(
-        Qu_Y=Y,
-        QU_H_LS=QU_H_LS,
-        QU_MODE_LS=QU_MODE_LS,
-        OF_MODE_LS=OF_MODE_LS,
-        N_CLK_Y_PRE=N_CLK_Y_PRE,
-        N_CLK_DMRS_SEQ=N_CLK_DMRS_SEQ,
-        N_CLK_LS_ROT=N_CLK_LS_ROT,
-        dmrs_Type=dmrs_Type,
-        dmrs_Uplink=dmrs_Uplink,
-        is_ECP=is_ECP,
-        is_enhanced=is_enhanced,
-        is_double_dmrs=is_double_dmrs,
-        antenna_ports=ANTENNA_PORTS,
-        TRUE_INDEX_LIST=TRUE_INDEX_LIST,
-        switchable_ports=switchable_ports,
-        RB_PARALLELISM=RB_PARALLELISM,
-        fdCDM=fdCDM,
-        tdCDM=tdCDM,
-        max_num_RBs=max_num_RBs,
-        HAS_LFSR_ENABLE=True,
-        HAS_LFSR_CTX=(HAS_PRE_FI_BUF and freq_interp_method == 'lmmse'),
-        HAS_AVG_SYM_SWITCH=(HAS_PRE_FI_BUF and freq_interp_method == 'lmmse' and _symbols_per_occasion > 1),
-        N_LFSR_CTX_SLOTS=_ybuf_total_planes,
-        SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG,
-        REPLAY_TOKEN_DWT=_replay_token_dwt if (HAS_PRE_FI_BUF and freq_interp_method == 'lmmse') else 0,
-        N_CLK_AVG=ls_timing['N_CLK_AVG'],
-        PORTS=ports_ls,  # type: ignore
-    )
+    ModuleLS(Qu_Y=Y, QU_H_LS=QU_H_LS, QU_MODE_LS=QU_MODE_LS, OF_MODE_LS=OF_MODE_LS, N_CLK_Y_PRE=N_CLK_Y_PRE, N_CLK_DMRS_SEQ=N_CLK_DMRS_SEQ, N_CLK_LS_ROT=N_CLK_LS_ROT, dmrs_Type=dmrs_Type, dmrs_Uplink=dmrs_Uplink, is_ECP=is_ECP, is_enhanced=is_enhanced, is_double_dmrs=is_double_dmrs, antenna_ports=ANTENNA_PORTS, TRUE_INDEX_LIST=TRUE_INDEX_LIST, switchable_ports=switchable_ports, RB_PARALLELISM=RB_PARALLELISM, fdCDM=fdCDM, tdCDM=tdCDM, max_num_RBs=max_num_RBs, HAS_LFSR_ENABLE=True, HAS_LFSR_CTX=HAS_PRE_FI_BUF and freq_interp_method == 'lmmse', HAS_AVG_SYM_SWITCH=HAS_PRE_FI_BUF and freq_interp_method == 'lmmse' and (_symbols_per_occasion > 1), N_LFSR_CTX_SLOTS=_ybuf_total_planes, SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG, REPLAY_TOKEN_DWT=_replay_token_dwt if HAS_PRE_FI_BUF and freq_interp_method == 'lmmse' else 0, N_CLK_AVG=ls_timing['N_CLK_AVG'], PORTS=ports_ls)
 
     # -- 4.8 Frequency Interpolation --
     #/ // ========== Frequency Interpolation ==========
@@ -1853,19 +1735,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
                 'rd_data': _rd_data_w,
             }
 
-            ModuleCOEFF_SRAM(
-                N_OUTPUT=_spec['n_output'],
-                N_PILOTS=_spec['n_pilots'],
-                Qu_COEFF=Qu_FI_LMMSE_COEFF,
-                COEFF_STORAGE='SRAM',
-                is_hybrid=False,
-                rom_data_bank0=None,
-                rom_data_bank1=None,
-                BEAT_MODE=True,
-                N_PILOTS_PER_BEAT=_spec['n_pilots_per_beat'],
-                FILL_BEATS=_spec['fill_beats'],
-                PORTS=_ssram_ports,  # type: ignore
-            )
+            ModuleCOEFF_SRAM(N_OUTPUT=_spec['n_output'], N_PILOTS=_spec['n_pilots'], Qu_COEFF=Qu_FI_LMMSE_COEFF, COEFF_STORAGE='SRAM', is_hybrid=False, rom_data_bank0=None, rom_data_bank1=None, BEAT_MODE=True, N_PILOTS_PER_BEAT=_spec['n_pilots_per_beat'], FILL_BEATS=_spec['fill_beats'], PORTS=_ssram_ports)
 
     _production_layout_by_port = {
         metadata.antenna_port: metadata.canonical_dict()
@@ -1914,24 +1784,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
                 ports_interp['ls_buf_rd_data'] = f"ls_buf_rd_data_port{ant_port}"
                 ports_interp['ls_buf_rd_en'] = f"ls_buf_rd_en_port{ant_port}"
                 ports_interp['ls_buf_rd_beat'] = f"ls_buf_rd_beat_port{ant_port}"
-            ModuleFREQ_INTERP(
-                IF_RST_N=False,
-                RB_parallelism=RB_PARALLELISM,
-                Qu_H_LS=QU_H_LS,
-                Qu_H=Qu_H_interp_f,
-                antenna_port=ant_port,
-                RE_INDEX_LIST=info.pilot_re_list,
-                method=freq_interp_method,
-                dmrs_Type=dmrs_Type,
-                pilot_re_compact=info.pilot_re_compact if info.is_dual_type else None,
-                compact_t2_slots=info.compact_t2_slots if info.is_dual_type else None,
-                compact_zero_slots=info.compact_zero_slots if info.is_dual_type else None,
-                pilot_re_t1=info.re_list_type1 if info.is_dual_type else None,
-                pilot_re_t2=info.re_list_type2 if info.is_dual_type else None,
-                has_pre_fi_buf=HAS_PRE_FI_BUF,
-                production_observation_layout=_production_layout,
-                PORTS=ports_interp,  # type: ignore
-            )
+            ModuleFREQ_INTERP(IF_RST_N=False, RB_parallelism=RB_PARALLELISM, Qu_H_LS=QU_H_LS, Qu_H=Qu_H_interp_f, antenna_port=ant_port, RE_INDEX_LIST=info.pilot_re_list, method=freq_interp_method, dmrs_Type=dmrs_Type, pilot_re_compact=info.pilot_re_compact if info.is_dual_type else None, compact_t2_slots=info.compact_t2_slots if info.is_dual_type else None, compact_zero_slots=info.compact_zero_slots if info.is_dual_type else None, pilot_re_t1=info.re_list_type1 if info.is_dual_type else None, pilot_re_t2=info.re_list_type2 if info.is_dual_type else None, has_pre_fi_buf=HAS_PRE_FI_BUF, production_observation_layout=_production_layout, PORTS=ports_interp)
         elif freq_interp_method == 'lmmse':
             if not HAS_PRE_FI_BUF:
                 ports_interp['enable'] = 'ctrl_freq_interp_en'
@@ -1956,46 +1809,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
                     _idx_nc = f"{_srd_idx}_port{ant_port}_nc"
                     ports_interp['coeff_rd_idx'] = _idx_nc
 
-            ModuleFREQ_INTERP(
-                IF_RST_N=False,
-                RB_parallelism=RB_PARALLELISM,
-                Qu_H_LS=QU_H_LS,
-                Qu_H=Qu_H_interp_f,
-                antenna_port=ant_port,
-                RE_INDEX_LIST=info.pilot_re_list,
-                method='lmmse',
-                dmrs_Type=dmrs_Type,
-                LMMSE_P=LMMSE_INTERP_PARALLELISM,
-                Qu_COEFF=Qu_FI_LMMSE_COEFF,
-                REAL_COEFF=FI_LMMSE_REAL_COEFF,
-                tau_rms=FI_LMMSE_tau_rms,
-                snr_linear=FI_LMMSE_snr_linear,
-                COEFF_SOURCE=FI_LMMSE_COEFF_SOURCE,
-                COEFF_SRAM_SHARED=_coeff_shared,
-                channel_model=FI_LMMSE_channel_model,
-                delay_spread=FI_LMMSE_delay_spread,
-                scs=FI_LMMSE_scs,
-                pilot_re_compact=info.pilot_re_compact if info.is_dual_type else None,
-                compact_t2_slots=info.compact_t2_slots if info.is_dual_type else None,
-                compact_zero_slots=info.compact_zero_slots if info.is_dual_type else None,
-                pilot_re_t1=info.re_list_type1 if info.is_dual_type else None,
-                pilot_re_t2=info.re_list_type2 if info.is_dual_type else None,
-                FI_RE_PARALLELISM=FI_RE_PARALLELISM,
-                has_pre_fi_buf=HAS_PRE_FI_BUF,
-                fi_core_graph=build_fi_core_graph(
-                    N_PILOTS_PER_RB=len(
-                        production_lane_representatives.get(
-                            ant_port, info.pilot_re_compact or info.pilot_re_list
-                        )
-                    ),
-                    LMMSE_P=LMMSE_INTERP_PARALLELISM, RB_PARALLELISM=RB_PARALLELISM,
-                    H_DWT=H_interp_f_DWT // 2, COEFF_DWT=FI_LMMSE_COEFF_DWT,
-                    REAL_COEFF=FI_LMMSE_REAL_COEFF,
-                    FI_RE_PARALLELISM=FI_RE_PARALLELISM, has_pre_fi_buf=HAS_PRE_FI_BUF,
-                )[0],
-                production_observation_layout=_production_layout,
-                PORTS=ports_interp,  # type: ignore
-            )
+            ModuleFREQ_INTERP(IF_RST_N=False, RB_parallelism=RB_PARALLELISM, Qu_H_LS=QU_H_LS, Qu_H=Qu_H_interp_f, antenna_port=ant_port, RE_INDEX_LIST=info.pilot_re_list, method='lmmse', dmrs_Type=dmrs_Type, LMMSE_P=LMMSE_INTERP_PARALLELISM, Qu_COEFF=Qu_FI_LMMSE_COEFF, REAL_COEFF=FI_LMMSE_REAL_COEFF, tau_rms=FI_LMMSE_tau_rms, snr_linear=FI_LMMSE_snr_linear, COEFF_SOURCE=FI_LMMSE_COEFF_SOURCE, COEFF_SRAM_SHARED=_coeff_shared, channel_model=FI_LMMSE_channel_model, delay_spread=FI_LMMSE_delay_spread, scs=FI_LMMSE_scs, pilot_re_compact=info.pilot_re_compact if info.is_dual_type else None, compact_t2_slots=info.compact_t2_slots if info.is_dual_type else None, compact_zero_slots=info.compact_zero_slots if info.is_dual_type else None, pilot_re_t1=info.re_list_type1 if info.is_dual_type else None, pilot_re_t2=info.re_list_type2 if info.is_dual_type else None, FI_RE_PARALLELISM=FI_RE_PARALLELISM, has_pre_fi_buf=HAS_PRE_FI_BUF, fi_core_graph=build_fi_core_graph(N_PILOTS_PER_RB=len(production_lane_representatives.get(ant_port, info.pilot_re_compact or info.pilot_re_list)), LMMSE_P=LMMSE_INTERP_PARALLELISM, RB_PARALLELISM=RB_PARALLELISM, H_DWT=H_interp_f_DWT // 2, COEFF_DWT=FI_LMMSE_COEFF_DWT, REAL_COEFF=FI_LMMSE_REAL_COEFF, FI_RE_PARALLELISM=FI_RE_PARALLELISM, has_pre_fi_buf=HAS_PRE_FI_BUF)[0], production_observation_layout=_production_layout, PORTS=ports_interp)
 
     # -- 4.8b LS_BUF instantiation (pre-FI mode only) --
     if HAS_PRE_FI_BUF:
@@ -2048,13 +1862,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             #/ // --- LS_BUF for antenna port `ant_port` ---
             _lsbuf_depth = _pilot_bank_depth if freq_interp_method == 'lmmse' else SRAM_DEPTH
             _lsbuf_occ = 1 if freq_interp_method == 'lmmse' else max_occasions
-            ModuleLS_BUF(
-                max_occasions=_lsbuf_occ,
-                SRAM_DEPTH=_lsbuf_depth,
-                DATA_WIDTH=_ls_buf_dw,
-                SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG,
-                PORTS=ports_lsbuf,  # type: ignore
-            )
+            ModuleLS_BUF(max_occasions=_lsbuf_occ, SRAM_DEPTH=_lsbuf_depth, DATA_WIDTH=_ls_buf_dw, SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG, PORTS=ports_lsbuf)
 
     # -- 4.8c Rate-Matched LS-FI: Y_BUF + Window Controller --
     if (HAS_PRE_FI_BUF and freq_interp_method == 'lmmse'):
@@ -2073,13 +1881,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
             ports_ybuf['wr_plane_sel'] = 'ybuf_wr_plane_sel'
             ports_ybuf['rd_plane_sel'] = 'wctrl_ybuf_rd_plane_sel'
 
-        ModuleY_BUF(
-            max_occasions=max_occasions,
-            symbols_per_occasion=_symbols_per_occasion,
-            SRAM_DEPTH=SRAM_DEPTH,
-            DATA_WIDTH=_ybuf_data_w,
-            PORTS=ports_ybuf,  # type: ignore
-        )
+        ModuleY_BUF(max_occasions=max_occasions, symbols_per_occasion=_symbols_per_occasion, SRAM_DEPTH=SRAM_DEPTH, DATA_WIDTH=_ybuf_data_w, PORTS=ports_ybuf)
         #/ // ========== LS-FI Window Controller ==========
         ports_wctrl = {
             'clk': 'clk',
@@ -2121,18 +1923,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
         if max_occasions > 1:
             ports_wctrl['cur_occasion'] = 'wctrl_cur_occasion'
 
-        ModuleLS_FI_WINDOW_CTRL(
-            max_num_RBs=max_num_RBs,
-            RB_PARALLELISM=RB_PARALLELISM,
-            LMMSE_P=LMMSE_INTERP_PARALLELISM,
-            FI_RE_PARALLELISM=FI_RE_PARALLELISM,
-            max_occasions=max_occasions,
-            symbols_per_occasion=_symbols_per_occasion,
-            LS_DRAIN_CYCLES=_replay_pipe_delay,
-            is_double_dmrs=is_double_dmrs,
-            runtime_n_additional=(len(additional_DMRS_range) > 1),
-            PORTS=ports_wctrl,  # type: ignore
-        )
+        ModuleLS_FI_WINDOW_CTRL(max_num_RBs=max_num_RBs, RB_PARALLELISM=RB_PARALLELISM, LMMSE_P=LMMSE_INTERP_PARALLELISM, FI_RE_PARALLELISM=FI_RE_PARALLELISM, max_occasions=max_occasions, symbols_per_occasion=_symbols_per_occasion, LS_DRAIN_CYCLES=_replay_pipe_delay, is_double_dmrs=is_double_dmrs, runtime_n_additional=len(additional_DMRS_range) > 1, PORTS=ports_wctrl)
 
     # -- 4.9 Time-Domain Interpolation (per antenna port) --
     #/ // ========== Time-Domain Interpolation ==========
@@ -2192,34 +1983,7 @@ def ModuleTOP(protocol: ProtocolSpec, architecture: ArchitectureConfig, quants: 
                 out_wire = f"h_ti_port{ant_port}_re{re_lane}_sym{sym}"
                 ports_ti[f'h_time_re{re_lane}_sym{sym}'] = out_wire
 
-        ModuleTIME_INTERP(
-            antenna_port=ant_port,
-            max_occasions=max_occasions,
-            max_num_RBs=max_num_RBs,
-            RB_PARALLELISM=RB_PARALLELISM,
-            TI_RE_PARALLELISM=TI_RE_PARALLELISM,
-            Qu_H_interp_f=Qu_H_interp_f,
-            Qu_H_interp_t=Qu_H_interp_t,
-            time_interp_method=time_interp_method,
-            dmrs_typeA_pos=dmrs_typeA_pos,
-            is_double_dmrs=is_double_dmrs,
-            additional_DMRS_range=additional_DMRS_range,
-            num_symbols_range=list(
-                range(min_pusch_symbols, max_pusch_symbols + 1)
-            ),
-            LMMSE_REAL_COEFF=TI_LMMSE_REAL_COEFF,
-            Qu_TI_LMMSE_COEFF=Qu_TI_LMMSE_COEFF,
-            n_additional_dmrs_fixed=max(additional_DMRS_range),
-            f_d_norm=TI_LMMSE_f_d_norm,
-            W_coeffs=TI_LMMSE_W_coeffs,
-            COEFF_SOURCE=TI_LMMSE_COEFF_SOURCE,
-            SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG,
-            has_pre_fi_buf=HAS_PRE_FI_BUF,
-            FI_RE_PARALLELISM=FI_RE_PARALLELISM,
-            FI_WINDOW_SIZE=FI_WINDOW_SIZE,
-            ti_ctrl_graph=ti_ctrl_graph,
-            PORTS=ports_ti,  # type: ignore
-        )
+        ModuleTIME_INTERP(antenna_port=ant_port, max_occasions=max_occasions, max_num_RBs=max_num_RBs, RB_PARALLELISM=RB_PARALLELISM, TI_RE_PARALLELISM=TI_RE_PARALLELISM, Qu_H_interp_f=Qu_H_interp_f, Qu_H_interp_t=Qu_H_interp_t, time_interp_method=time_interp_method, dmrs_typeA_pos=dmrs_typeA_pos, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, num_symbols_range=list(range(min_pusch_symbols, max_pusch_symbols + 1)), LMMSE_REAL_COEFF=TI_LMMSE_REAL_COEFF, Qu_TI_LMMSE_COEFF=Qu_TI_LMMSE_COEFF, n_additional_dmrs_fixed=max(additional_DMRS_range), f_d_norm=TI_LMMSE_f_d_norm, W_coeffs=TI_LMMSE_W_coeffs, COEFF_SOURCE=TI_LMMSE_COEFF_SOURCE, SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG, has_pre_fi_buf=HAS_PRE_FI_BUF, FI_RE_PARALLELISM=FI_RE_PARALLELISM, FI_WINDOW_SIZE=FI_WINDOW_SIZE, ti_ctrl_graph=ti_ctrl_graph, PORTS=ports_ti)
 
     # =================================================================
     # REGION 5: Latency summary + endmodule

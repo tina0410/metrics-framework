@@ -186,41 +186,21 @@ def ModuleY_PRE(N_CLK: int, Y_parallelism: int, Qu_Y: QuType, Qu_OUT: QuType, QU
                 #/ wire [`Qu_OUT.DWT`-1:0] `wire_out_362`;
                 #/ assign `wire_4Y` = {`wire_2Y`, 1'b0};
 
-                ModuleAdd(
-                    QU_IN_1=Qu_4Y, QU_IN_2=Qu_Y, QU_OUT=Qu_T,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_4Y, 'i_data_2': signal_in, 'o_data': wire_T}
-                )
+                ModuleAdd(QU_IN_1=Qu_4Y, QU_IN_2=Qu_Y, QU_OUT=Qu_T, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_4Y, 'i_data_2': signal_in, 'o_data': wire_T})
 
                 #/ assign `wire_8T`  = {`wire_T`, 3'b0};
                 #/ assign `wire_64T` = {`wire_8T`, 3'b0};
 
-                ModuleAdd(
-                    QU_IN_1=Qu_64T, QU_IN_2=Qu_8T, QU_OUT=Qu_72T,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_64T, 'i_data_2': wire_8T, 'o_data': wire_72T}
-                )
+                ModuleAdd(QU_IN_1=Qu_64T, QU_IN_2=Qu_8T, QU_OUT=Qu_72T, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_64T, 'i_data_2': wire_8T, 'o_data': wire_72T})
 
-                ModuleAdd(
-                    QU_IN_1=Qu_72T, QU_IN_2=Qu_2Y, QU_OUT=Qu_362Y,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_72T, 'i_data_2': wire_2Y, 'o_data': wire_362Y}
-                )
+                ModuleAdd(QU_IN_1=Qu_72T, QU_IN_2=Qu_2Y, QU_OUT=Qu_362Y, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_72T, 'i_data_2': wire_2Y, 'o_data': wire_362Y})
 
-                ModuleFxMatch(
-                    QU_IN=Qu_362Y_temp, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': wire_362Y, 'o_data': wire_out_362}
-                )
+                ModuleFxMatch(QU_IN=Qu_362Y_temp, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS={'i_data': wire_362Y, 'o_data': wire_out_362})
 
             if MAX_CDM_GROUPS >= 2:
                 wire_out_direct = f"Y_res_direct_{suffix}"
                 #/ wire [`Qu_OUT.DWT`-1:0] `wire_out_direct`;
-                ModuleFxMatch(
-                    QU_IN=Qu_Y_half, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': signal_in, 'o_data': wire_out_direct}
-                )
+                ModuleFxMatch(QU_IN=Qu_Y_half, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS={'i_data': signal_in, 'o_data': wire_out_direct})
 
             if MAX_CDM_GROUPS >= 3:
                 wire_out_209 = f"Y_res_209_{suffix}"
@@ -237,32 +217,16 @@ def ModuleY_PRE(N_CLK: int, Y_parallelism: int, Qu_Y: QuType, Qu_OUT: QuType, QU
                 #/ wire [`Qu_209Y.DWT`-1:0] `wire_209Y`;
                 #/ wire [`Qu_OUT.DWT`-1:0] `wire_out_209`;
 
-                ModuleAdd(
-                    QU_IN_1=Qu_2Y, QU_IN_2=Qu_Y, QU_OUT=Qu_3Y,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_2Y, 'i_data_2': signal_in, 'o_data': wire_3Y}
-                )
+                ModuleAdd(QU_IN_1=Qu_2Y, QU_IN_2=Qu_Y, QU_OUT=Qu_3Y, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_2Y, 'i_data_2': signal_in, 'o_data': wire_3Y})
 
                 #/ assign `wire_48Y`  = {`wire_3Y`, 4'b0};
                 #/ assign `wire_256Y` = {`signal_in`, 8'b0};
 
-                ModuleSub(
-                    QU_IN_1=Qu_256Y, QU_IN_2=Qu_48Y, QU_OUT=Qu_208Y,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_256Y, 'i_data_2': wire_48Y, 'o_data': wire_208Y}
-                )
+                ModuleSub(QU_IN_1=Qu_256Y, QU_IN_2=Qu_48Y, QU_OUT=Qu_208Y, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_256Y, 'i_data_2': wire_48Y, 'o_data': wire_208Y})
 
-                ModuleAdd(
-                    QU_IN_1=Qu_208Y, QU_IN_2=Qu_Y, QU_OUT=Qu_209Y,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,
-                    PORTS={'i_data_1': wire_208Y, 'i_data_2': signal_in, 'o_data': wire_209Y}
-                )
+                ModuleAdd(QU_IN_1=Qu_208Y, QU_IN_2=Qu_Y, QU_OUT=Qu_209Y, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': wire_208Y, 'i_data_2': signal_in, 'o_data': wire_209Y})
 
-                ModuleFxMatch(
-                    QU_IN=Qu_209Y_temp, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': wire_209Y, 'o_data': wire_out_209}
-                )
+                ModuleFxMatch(QU_IN=Qu_209Y_temp, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS={'i_data': wire_209Y, 'o_data': wire_out_209})
 
             wire_final = f"Y_final_{suffix}"
             reg_final = f"Y_final_{suffix}_reg"
@@ -290,14 +254,7 @@ def ModuleY_PRE(N_CLK: int, Y_parallelism: int, Qu_Y: QuType, Qu_OUT: QuType, QU
                 #/ assign `wire_final` = `wire_out_362`;
                 pass
 
-            ModuleDelay(
-                DWT=Qu_OUT.DWT, N_CLK=N_CLK, IF_RST_N=False,
-                PORTS={ # type: ignore
-                    "i_data": wire_final,
-                    "o_data": reg_final,
-                    "i_clk": "clk"
-                }
-            )
+            ModuleDelay(DWT=Qu_OUT.DWT, N_CLK=N_CLK, IF_RST_N=False, PORTS={'i_data': wire_final, 'o_data': reg_final, 'i_clk': 'clk'})
 
         reg_final_real_reg = f"Y_final_{i}_real_reg"
         reg_final_imag_reg = f"Y_final_{i}_imag_reg"

@@ -250,10 +250,7 @@ def ModuleCORE_TIME_NN_INTERP(max_occasions: int, Qu_H: QuType, dmrs_typeA_pos: 
         TOTAL_W = N_OUT_SYMS * H_DWT
         #/ wire [`TOTAL_W`-1:0] nn_concat_in = `concat_in`;
         #/ wire [`TOTAL_W`-1:0] nn_concat_out;
-        ModuleDelay(
-            DWT=TOTAL_W, N_CLK=1, IF_RST_N=False,
-            PORTS={'i_data': 'nn_concat_in', 'o_data': 'nn_concat_out', 'i_clk': 'clk'}  # type: ignore
-        )
+        ModuleDelay(DWT=TOTAL_W, N_CLK=1, IF_RST_N=False, PORTS={'i_data': 'nn_concat_in', 'o_data': 'nn_concat_out', 'i_clk': 'clk'})
         for sym in range(N_OUT_SYMS):
             lo = sym * H_DWT
             hi = lo + H_DWT - 1
@@ -347,10 +344,7 @@ def ModuleCORE_TIME_NN_INTERP(max_occasions: int, Qu_H: QuType, dmrs_typeA_pos: 
         TOTAL_W_MT = N_OUT_SYMS * H_DWT
         #/ wire [`TOTAL_W_MT`-1:0] nn_mt_concat_in = `concat_mt_in`;
         #/ wire [`TOTAL_W_MT`-1:0] nn_mt_concat_out;
-        ModuleDelay(
-            DWT=TOTAL_W_MT, N_CLK=1, IF_RST_N=False,
-            PORTS={'i_data': 'nn_mt_concat_in', 'o_data': 'nn_mt_concat_out', 'i_clk': 'clk'}  # type: ignore
-        )
+        ModuleDelay(DWT=TOTAL_W_MT, N_CLK=1, IF_RST_N=False, PORTS={'i_data': 'nn_mt_concat_in', 'o_data': 'nn_mt_concat_out', 'i_clk': 'clk'})
         for sym in range(N_OUT_SYMS):
             lo = sym * H_DWT
             hi = lo + H_DWT - 1

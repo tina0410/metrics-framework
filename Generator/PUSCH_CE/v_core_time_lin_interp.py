@@ -232,12 +232,7 @@ def ModuleCORE_TIME_LIN_INTERP(max_occasions: int, Qu_H: QuType, dmrs_typeA_pos:
             h_l_name = f"occ{oL}_{part}"
             h_r_name = f"occ{oR}_{part}"
             #/ wire [`Qu_diff.DWT`-1:0] `diff_w`;
-            ModuleSub(
-                QU_IN_1=Qu_comp, QU_IN_2=Qu_comp, QU_OUT=Qu_diff,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS={'i_data_1': h_l_name, 'i_data_2': h_r_name, 'o_data': diff_w},
-            )
+            ModuleSub(QU_IN_1=Qu_comp, QU_IN_2=Qu_comp, QU_OUT=Qu_diff, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_l_name, 'i_data_2': h_r_name, 'o_data': diff_w})
     #/ 
 
     # ================================================================
@@ -265,26 +260,13 @@ def ModuleCORE_TIME_LIN_INTERP(max_occasions: int, Qu_H: QuType, dmrs_typeA_pos:
                 pass
         elif ttype == 'mod_sub':
             _, Qu_in1, Qu_in2, Qu_out, i1, i2, out = task
-            ModuleSub(
-                QU_IN_1=Qu_in1, QU_IN_2=Qu_in2, QU_OUT=Qu_out,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS={'i_data_1': i1, 'i_data_2': i2, 'o_data': out},
-            )
+            ModuleSub(QU_IN_1=Qu_in1, QU_IN_2=Qu_in2, QU_OUT=Qu_out, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': i1, 'i_data_2': i2, 'o_data': out})
         elif ttype == 'mod_add':
             _, Qu_in1, Qu_in2, Qu_out, i1, i2, out = task
-            ModuleAdd(
-                QU_IN_1=Qu_in1, QU_IN_2=Qu_in2, QU_OUT=Qu_out,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS={'i_data_1': i1, 'i_data_2': i2, 'o_data': out},
-            )
+            ModuleAdd(QU_IN_1=Qu_in1, QU_IN_2=Qu_in2, QU_OUT=Qu_out, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': i1, 'i_data_2': i2, 'o_data': out})
         elif ttype == 'mod_delay':
             _, DWT, data_in, data_out = task
-            ModuleDelay(
-                DWT=DWT, N_CLK=1, IF_RST_N=False,
-                PORTS={'i_data': data_in, 'o_data': data_out, 'i_clk': 'clk'},
-            )
+            ModuleDelay(DWT=DWT, N_CLK=1, IF_RST_N=False, PORTS={'i_data': data_in, 'o_data': data_out, 'i_clk': 'clk'})
 
     #/ 
     #/ endmodule

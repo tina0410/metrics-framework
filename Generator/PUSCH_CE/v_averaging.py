@@ -280,13 +280,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
 
             Qu_L1 = QuType(DWT=Qu_IN.DWT, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
             Qu_L1_O = QuType(DWT=DWT_L1, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
-            ModuleAdd(
-                QU_IN_1=Qu_L1, QU_IN_2=Qu_L1,
-                QU_OUT=Qu_L1_O,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS=arith_ports(a_name, b_name, sum_name)  # type: ignore
-            )
+            ModuleAdd(QU_IN_1=Qu_L1, QU_IN_2=Qu_L1, QU_OUT=Qu_L1_O, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS=arith_ports(a_name, b_name, sum_name))
 
         # ---- Level-2 adder: l1_0 + l1_1 → l2_0 (for fdCDM=4) ----
         if MAX_FDCDM >= 4 and n_l1 >= 2:
@@ -297,13 +291,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
 
             Qu_L2 = QuType(DWT=DWT_L1, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
             Qu_L2_O = QuType(DWT=DWT_L2, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
-            ModuleAdd(
-                QU_IN_1=Qu_L2, QU_IN_2=Qu_L2,
-                QU_OUT=Qu_L2_O,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS=arith_ports(a2, b2, s2)  # type: ignore
-            )
+            ModuleAdd(QU_IN_1=Qu_L2, QU_IN_2=Qu_L2, QU_OUT=Qu_L2_O, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS=arith_ports(a2, b2, s2))
 
         # ---- Level-2 adder: l1_1 + l1_2 → l2_1 (fdCDM=4, Type1: 6 pilots, odd-RB tail group) ----
         # Required so that odd-RB pilots 2-5 form a clean 4-pilot window (l1_1+l1_2),
@@ -316,13 +304,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
 
             Qu_L2_1 = QuType(DWT=DWT_L1, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
             Qu_L2_1_O = QuType(DWT=DWT_L2, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
-            ModuleAdd(
-                QU_IN_1=Qu_L2_1, QU_IN_2=Qu_L2_1,
-                QU_OUT=Qu_L2_1_O,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS=arith_ports(a2_1, b2_1, s2_1)  # type: ignore
-            )
+            ModuleAdd(QU_IN_1=Qu_L2_1, QU_IN_2=Qu_L2_1, QU_OUT=Qu_L2_1_O, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS=arith_ports(a2_1, b2_1, s2_1))
 
         # ---- Cross-RB partial window accumulation (fdCDM=4, Type 1: 6 mod 4 = 2) ----
         if need_cross_rb_t1:
@@ -349,10 +331,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
                     pass
             else:
                 #/ wire [`DWT_L1`-1:0] `prev_tail`;
-                ModuleDelay(
-                    DWT=DWT_L1, N_CLK=1, IF_RST_N=IF_RST_N,
-                    PORTS=delay_ports(tail_l1, prev_tail, if_rst_n=IF_RST_N)  # type: ignore
-                )
+                ModuleDelay(DWT=DWT_L1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports(tail_l1, prev_tail, if_rst_n=IF_RST_N))
             #/ wire [`DWT_L1`-1:0] `prev_tail_cur` = `prev_tail`;
             pass
 
@@ -360,13 +339,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
             #/ wire [`DWT_L2`-1:0] `cross_l2`;
             Qu_L2 = QuType(DWT=DWT_L1, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
             Qu_L2_O = QuType(DWT=DWT_L2, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
-            ModuleAdd(
-                QU_IN_1=Qu_L2, QU_IN_2=Qu_L2,
-                QU_OUT=Qu_L2_O,
-                N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                IF_RST_N=False,
-                PORTS=arith_ports(prev_tail_cur, head_l1, cross_l2)  # type: ignore
-            )
+            ModuleAdd(QU_IN_1=Qu_L2, QU_IN_2=Qu_L2, QU_OUT=Qu_L2_O, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS=arith_ports(prev_tail_cur, head_l1, cross_l2))
 
         # ---- Output MUX: select per-pilot averaged value ----
         for k in range(N_PILOTS):
@@ -465,12 +438,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
                     pass
             else:
                 #/ wire [`Qu_IN.DWT`-1:0] `favg_q`;
-                ModuleDelay(
-                    DWT=Qu_IN.DWT,
-                    N_CLK=1,
-                    IF_RST_N=IF_RST_N,
-                    PORTS=delay_ports(favg_in, favg_q, if_rst_n=IF_RST_N)  # type: ignore
-                )
+                ModuleDelay(DWT=Qu_IN.DWT, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports(favg_in, favg_q, if_rst_n=IF_RST_N))
 
     # =========================================================================
     # Step 3: Time Averaging (Stage 2) -- SRAM + Adder
@@ -486,41 +454,21 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
 
         # l_quote delayed by 1 clk to align with Stage 1 output
         #/ wire l_quote_q;
-        ModuleDelay(
-            DWT=1,
-            N_CLK=1,
-            IF_RST_N=IF_RST_N,
-            PORTS=delay_ports('l_quote', 'l_quote_q', if_rst_n=IF_RST_N)  # type: ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports('l_quote', 'l_quote_q', if_rst_n=IF_RST_N))
 
         if HAS_ENABLE:
             # Valid follows the Stage-1 register just like l_quote_q.
             #/ wire enable_q;
-            ModuleDelay(
-                DWT=1,
-                N_CLK=1,
-                IF_RST_N=IF_RST_N,
-                PORTS=delay_ports('enable', 'enable_q', if_rst_n=IF_RST_N)  # type: ignore
-            )
+            ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports('enable', 'enable_q', if_rst_n=IF_RST_N))
 
         # sym_switch delayed by 1 clk to match pipeline stage
         #/ wire sym_switch_q;
-        ModuleDelay(
-            DWT=1,
-            N_CLK=1,
-            IF_RST_N=IF_RST_N,
-            PORTS=delay_ports('sym_switch', 'sym_switch_q', if_rst_n=IF_RST_N)  # type: ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports('sym_switch', 'sym_switch_q', if_rst_n=IF_RST_N))
 
         # l_quote delayed by 2 clk total to align with time-avg output
         # (1 clk for Stage 1 register + 1 clk for SRAM read latency)
         #/ wire l_quote_qq;
-        ModuleDelay(
-            DWT=1,
-            N_CLK=1,
-            IF_RST_N=IF_RST_N,
-            PORTS=delay_ports('l_quote_q', 'l_quote_qq', if_rst_n=IF_RST_N)  # type: ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports('l_quote_q', 'l_quote_qq', if_rst_n=IF_RST_N))
 
         # SRAM write/read enable (all signals now at T+1). Windowed replay
         # gates bubbles; without an enable port every beat is valid.
@@ -545,14 +493,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
         }
         if IF_RST_N:
             counter_ports['rst_n'] = 'rst_n'
-        ModuleCounter(
-            DWT=SRAM_ADDR_WIDTH,
-            STEP=1,
-            IF_RST_N=IF_RST_N,
-            HAS_CLEAR=True,
-            HAS_WRAP=False,
-            PORTS=counter_ports  # type: ignore
-        )
+        ModuleCounter(DWT=SRAM_ADDR_WIDTH, STEP=1, IF_RST_N=IF_RST_N, HAS_CLEAR=True, HAS_WRAP=False, PORTS=counter_ports)
 
         # Per RB x pilot: SRAM + time-domain adder
         if USE_MACRO:
@@ -631,42 +572,18 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
 
                 if not USE_MACRO:
                     #/ wire [`Qu_IN.DWT`-1:0] `sram_rd`;
-                    ModuleSimpleSRAM(
-                        DWT=Qu_IN.DWT,
-                        DEPTH=SRAM_DEPTH,
-                        MODE='SP',
-                        IF_RST_N=False,
-                        PORTS={
-                            'clk': 'clk',
-                            'addr': 'sram_addr',
-                            'wr_en': 'sram_wr_en',
-                            'wr_data': favg_q,
-                            'rd_en': 'sram_rd_en',
-                            'rd_data': sram_rd,
-                        }  # type: ignore
-                    )
+                    ModuleSimpleSRAM(DWT=Qu_IN.DWT, DEPTH=SRAM_DEPTH, MODE='SP', IF_RST_N=False, PORTS={'clk': 'clk', 'addr': 'sram_addr', 'wr_en': 'sram_wr_en', 'wr_data': favg_q, 'rd_en': 'sram_rd_en', 'rd_data': sram_rd})
 
                 # Delay favg_q by 1 clock to align with sram_rd
                 favg_q_d = f"rb{rb}_favg{k}_q_d"
                 #/ wire [`Qu_IN.DWT`-1:0] `favg_q_d`;
-                ModuleDelay(
-                    DWT=Qu_IN.DWT,
-                    N_CLK=1,
-                    IF_RST_N=IF_RST_N,
-                    PORTS=delay_ports(favg_q, favg_q_d, if_rst_n=IF_RST_N)  # type: ignore
-                )
+                ModuleDelay(DWT=Qu_IN.DWT, N_CLK=1, IF_RST_N=IF_RST_N, PORTS=delay_ports(favg_q, favg_q_d, if_rst_n=IF_RST_N))
 
                 # Time-domain adder (both inputs now at T+2)
                 #/ wire [`DWT_TD`-1:0] `td_sum`;
                 Qu_TD = QuType(DWT=Qu_IN.DWT, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
                 Qu_TD_O = QuType(DWT=DWT_TD, FRAC=Qu_IN.FRAC, IF_SIGNED=True)
-                ModuleAdd(
-                    QU_IN_1=Qu_TD, QU_IN_2=Qu_TD,
-                    QU_OUT=Qu_TD_O,
-                    N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                    IF_RST_N=False,
-                    PORTS=arith_ports(favg_q_d, sram_rd, td_sum)  # type: ignore
-                )
+                ModuleAdd(QU_IN_1=Qu_TD, QU_IN_2=Qu_TD, QU_OUT=Qu_TD_O, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS=arith_ports(favg_q_d, sram_rd, td_sum))
 
                 # Divide by 2
                 #/ wire [`Qu_IN.DWT`-1:0] `td_avg` = `td_sum`[`DWT_TD`-1:1];
@@ -700,15 +617,7 @@ def ModuleAVERAGING(Qu_IN: QuType, Qu_OUT: QuType, QU_MODE: QuMode.TRN | QuMode.
                 out_pre_quant = out_pre
 
             # Output quantization
-            ModuleFxMatch(
-                QU_IN=QuType(DWT=Qu_IN.DWT, FRAC=Qu_IN.FRAC, IF_SIGNED=True),
-                QU_OUT=Qu_OUT,
-                QU_MODE=QU_MODE,
-                OF_MODE=OF_MODE,
-                N_CLK=0,
-                IF_RST_N=False,
-                PORTS=fxmatch_ports(out_pre_quant, out_name)  # type: ignore
-            )
+            ModuleFxMatch(QU_IN=QuType(DWT=Qu_IN.DWT, FRAC=Qu_IN.FRAC, IF_SIGNED=True), QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS=fxmatch_ports(out_pre_quant, out_name))
 
     _min_depth = averaging_pipeline_depth(
         Qu_IN.DWT, dmrs_Type, cdm_group, fdCDM, tdCDM, RB_PARALLELISM,

@@ -156,15 +156,13 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
     dp_first = {'i_data': 'first_RB', 'o_data': 'first_RB_d', 'i_clk': 'clk'}
     if IF_RST_N:
         dp_first['i_rst_n'] = 'rst_n'
-    ModuleDelay(DWT=1, N_CLK=2, IF_RST_N=IF_RST_N,
-                PORTS=dp_first)  # type: ignore
+    ModuleDelay(DWT=1, N_CLK=2, IF_RST_N=IF_RST_N, PORTS=dp_first)  # type: ignore
 
     #/ wire last_RB_d;
     dp_last = {'i_data': 'last_RB', 'o_data': 'last_RB_d', 'i_clk': 'clk'}
     if IF_RST_N:
         dp_last['i_rst_n'] = 'rst_n'
-    ModuleDelay(DWT=1, N_CLK=2, IF_RST_N=IF_RST_N,
-                PORTS=dp_last)  # type: ignore
+    ModuleDelay(DWT=1, N_CLK=2, IF_RST_N=IF_RST_N, PORTS=dp_last)  # type: ignore
 
     # Per-lane logical-last-RB flag, delayed to match the 2-clk pipeline depth.
     if RB_PARALLELISM > 1:
@@ -173,8 +171,7 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
         dp_ll = {'i_data': 'lane_last', 'o_data': 'lane_last_d', 'i_clk': 'clk'}
         if IF_RST_N:
             dp_ll['i_rst_n'] = 'rst_n'
-        ModuleDelay(DWT=RB_PARALLELISM, N_CLK=2, IF_RST_N=IF_RST_N,
-                    PORTS=dp_ll)  # type: ignore
+        ModuleDelay(DWT=RB_PARALLELISM, N_CLK=2, IF_RST_N=IF_RST_N, PORTS=dp_ll)  # type: ignore
         # emitters to reference bit selects below
         for rb in range(RB_PARALLELISM):
             #/ wire `ll_d[rb]` = lane_last_d[`rb`];
@@ -206,26 +203,17 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
             x51_n = f"x51_{chain_tag}_{pt}"
 
             #/ wire [`Qu_diff.DWT`-1:0] `diff_n`;
-            ModuleSub(QU_IN_1=Qu_H, QU_IN_2=Qu_H, QU_OUT=Qu_diff,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': h_r, 'i_data_2': h_l, 'o_data': diff_n})  # type: ignore
+            ModuleSub(QU_IN_1=Qu_H, QU_IN_2=Qu_H, QU_OUT=Qu_diff, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_r, 'i_data_2': h_l, 'o_data': diff_n})  # type: ignore
             #/ wire [`Qu_d_s4.DWT`-1:0] `ds4_n` = {`diff_n`, 4'b0000};
             #/ wire [`Qu_x17.DWT`-1:0] `x17_n`;
             _x17_p = {'i_data_1': diff_n, 'i_data_2': ds4_n, 'o_data': x17_n, 'i_clk': 'clk'}
             if IF_RST_N:
                 _x17_p['i_rst_n'] = 'rst_n'
-            ModuleAdd(QU_IN_1=Qu_diff, QU_IN_2=Qu_d_s4, QU_OUT=Qu_x17,
-                      N_CLK=1, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=IF_RST_N,
-                      PORTS=_x17_p)  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_diff, QU_IN_2=Qu_d_s4, QU_OUT=Qu_x17, N_CLK=1, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=IF_RST_N, PORTS=_x17_p)  # type: ignore
             #/ // x17 is now registered (pipeline cut)
             #/ wire [`Qu_x17s1.DWT`-1:0] `x17s1_n` = {`x17_n`, 1'b0};
             #/ wire [`Qu_x51.DWT`-1:0] `x51_n`;
-            ModuleAdd(QU_IN_1=Qu_x17, QU_IN_2=Qu_x17s1, QU_OUT=Qu_x51,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': x17_n, 'i_data_2': x17s1_n, 'o_data': x51_n})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_x17, QU_IN_2=Qu_x17s1, QU_OUT=Qu_x51, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': x17_n, 'i_data_2': x17s1_n, 'o_data': x51_n})  # type: ignore
 
     # Helper: generate one complete linear interpolation datapath for a
     # specific pilot subset.  For Hybrid mode, called twice with prefixed
@@ -395,17 +383,7 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
                     src = _lin_pilot_wire(source, rb, port_remap)
                     out_w = f"{out_pfx}_re{re_k}"
                     #/ wire [`COMPLEX_DWT`-1:0] `out_w`;
-                    ModuleDelay(
-                        DWT=COMPLEX_DWT,
-                        N_CLK=2,
-                        IF_RST_N=IF_RST_N,
-                        PORTS={
-                            'i_data': src,
-                            'o_data': out_w,
-                            'i_clk': 'clk',
-                            **({'i_rst_n': 'rst_n'} if IF_RST_N else {}),
-                        },  # type: ignore
-                    )
+                    ModuleDelay(DWT=COMPLEX_DWT, N_CLK=2, IF_RST_N=IF_RST_N, PORTS={'i_data': src, 'o_data': out_w, 'i_clk': 'clk', **({'i_rst_n': 'rst_n'} if IF_RST_N else {})})
 
         # ---- Left-boundary REs ----
         if sub_left:
@@ -648,19 +626,13 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
             step_name = f"step_{prefix}_{pt}"
             #/ wire [`Qu_step.DWT`-1:0] `step_name` = `x51_name`;
             #/ wire [`Qu_H.DWT`-1:0] `out_name`;
-            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step, QU_OUT=Qu_H,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step, QU_OUT=Qu_H, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
         elif d == 2:
             Qu_step_d2 = QuType(Qu_step.DWT + 1, Qu_step.FRAC, True)
             step_name = f"step_{prefix}_{pt}"
             #/ wire [`Qu_step_d2.DWT`-1:0] `step_name` = {`x51_name`, 1'b0};
             #/ wire [`Qu_H.DWT`-1:0] `out_name`;
-            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d2, QU_OUT=Qu_H,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d2, QU_OUT=Qu_H, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
         elif d == 3:
             x51s1 = f"x51s1_d3_{prefix}_{pt}"
             Qu_x51s1_d3 = QuType(Qu_x51.DWT + 1, Qu_x51.FRAC, True)
@@ -668,27 +640,18 @@ def ModuleCORE_LIN_INTERP(IF_RST_N: bool, RB_PARALLELISM: int, Qu_H: QuType, pil
             x51x3 = f"x51x3_{prefix}_{pt}"
             Qu_x51x3 = QuType(Qu_x51.DWT + 2, Qu_x51.FRAC, True)
             #/ wire [`Qu_x51x3.DWT`-1:0] `x51x3`;
-            ModuleAdd(QU_IN_1=Qu_x51, QU_IN_2=Qu_x51s1_d3, QU_OUT=Qu_x51x3,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': x51_name, 'i_data_2': x51s1, 'o_data': x51x3})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_x51, QU_IN_2=Qu_x51s1_d3, QU_OUT=Qu_x51x3, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': x51_name, 'i_data_2': x51s1, 'o_data': x51x3})  # type: ignore
             Qu_step_d3 = QuType(Qu_x51x3.DWT, Qu_x51x3.FRAC + 8, True)
             step_name = f"step_{prefix}_{pt}"
             #/ wire [`Qu_step_d3.DWT`-1:0] `step_name` = `x51x3`;
             #/ wire [`Qu_H.DWT`-1:0] `out_name`;
-            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d3, QU_OUT=Qu_H,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d3, QU_OUT=Qu_H, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
         elif d == 4:
             Qu_step_d4 = QuType(Qu_step.DWT + 2, Qu_step.FRAC, True)
             step_name = f"step_{prefix}_{pt}"
             #/ wire [`Qu_step_d4.DWT`-1:0] `step_name` = {`x51_name`, 2'b00};
             #/ wire [`Qu_H.DWT`-1:0] `out_name`;
-            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d4, QU_OUT=Qu_H,
-                      N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                      IF_RST_N=False,
-                      PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
+            ModuleAdd(QU_IN_1=Qu_H, QU_IN_2=Qu_step_d4, QU_OUT=Qu_H, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': h_l, 'i_data_2': step_name, 'o_data': out_name})  # type: ignore
 
     # --- Main per-RB generation ---
     for rb in range(RB_PARALLELISM):

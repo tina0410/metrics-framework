@@ -189,28 +189,9 @@ def ModuleXOR_TREE(LFSR: list[int], N_taps: int, N_bits: int, N_CLK: int, IF_RST
     #/ // Optional pipeline delay
     if N_CLK > 0:
         if IF_RST_N:
-            ModuleDelay(
-                DWT=N_bits,
-                N_CLK=N_CLK,
-                IF_RST_N=IF_RST_N,
-                PORTS={  # type: ignore
-                    'i_data': 'o_data_comb',
-                    'o_data': 'o_data',
-                    'i_clk': 'i_clk',
-                    'i_rst_n': 'i_rst_n',
-                }
-            )
+            ModuleDelay(DWT=N_bits, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS={'i_data': 'o_data_comb', 'o_data': 'o_data', 'i_clk': 'i_clk', 'i_rst_n': 'i_rst_n'})
         else:
-            ModuleDelay(
-                DWT=N_bits,
-                N_CLK=N_CLK,
-                IF_RST_N=IF_RST_N,
-                PORTS={  # type: ignore
-                    'i_data': 'o_data_comb',
-                    'o_data': 'o_data',
-                    'i_clk': 'i_clk',
-                }
-            )
+            ModuleDelay(DWT=N_bits, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS={'i_data': 'o_data_comb', 'o_data': 'o_data', 'i_clk': 'i_clk'})
     else:
         #/ assign o_data = o_data_comb;
         pass

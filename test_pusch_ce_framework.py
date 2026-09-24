@@ -93,6 +93,35 @@ def test_complex_mul_uses_converter_safe_port_maps() -> None:
     assert all(call.lineno == call.end_lineno for call in submodule_calls)
 
 
+def test_pusch_ce_module_calls_follow_mimo_single_line_style() -> None:
+    violations = []
+    module_root = ROOT / "Generator" / "PUSCH_CE"
+    for path in module_root.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        converted_functions = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and any(
+                (isinstance(decorator, ast.Name) and decorator.id == "convert")
+                or (isinstance(decorator, ast.Attribute) and decorator.attr == "convert")
+                for decorator in node.decorator_list
+            )
+        ]
+        for function in converted_functions:
+            for call in ast.walk(function):
+                if (
+                    isinstance(call, ast.Call)
+                    and isinstance(call.func, ast.Name)
+                    and call.func.id.startswith("Module")
+                    and call.lineno != call.end_lineno
+                ):
+                    violations.append(
+                        f"{path.relative_to(ROOT)}:{call.lineno}:{call.func.id}"
+                    )
+    assert not violations, "multiline PyTV module calls: " + ", ".join(violations)
+
+
 def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
     spec = Registry().get("pusch_ce")
     assert spec.status == "active"

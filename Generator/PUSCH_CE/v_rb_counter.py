@@ -76,23 +76,10 @@ def ModuleRB_COUNTER(min_RBs:int, max_RBs: int, RB_PARALLELISM: int) -> None:
         #/ // overflow_cond: the clk before the overflow RBs. Start calculation of remainder
         #/ wire overflow_cond = (rb_counter > rb_limit_reg);
 
-        ModuleDelay(
-            DWT=1,
-            N_CLK=1,
-            IF_RST_N=True,
-            PORTS=delay_ports('overflow_cond', 'ctrl_sym_overflow', if_rst_n=True)  # type:ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=True, PORTS=delay_ports('overflow_cond', 'ctrl_sym_overflow', if_rst_n=True))
 
         # remainder = num_RBs - rb_counter
-        ModuleSub(QU_IN_1= Qu_num_RBs,
-                QU_IN_2= Qu_num_RBs,
-                QU_OUT=Qu_remainder,
-                N_CLK=1,
-                QU_MODE=QuMode.TRN.TCPL,
-                OF_MODE=OfMode.SAT.ZERO,
-                IF_RST_N=True,
-                PORTS=arith_ports('num_RBs', 'rb_counter', 'ctrl_rb_remainder', if_rst_n=True, n_clk=1)  #type:ignore
-                )
+        ModuleSub(QU_IN_1=Qu_num_RBs, QU_IN_2=Qu_num_RBs, QU_OUT=Qu_remainder, N_CLK=1, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.ZERO, IF_RST_N=True, PORTS=arith_ports('num_RBs', 'rb_counter', 'ctrl_rb_remainder', if_rst_n=True, n_clk=1))
     elif RB_PARALLELISM == 1:
         #/ // Single-RB PARALLELISM: Only counter & symbol switch are provided.
         pass
@@ -102,16 +89,7 @@ def ModuleRB_COUNTER(min_RBs:int, max_RBs: int, RB_PARALLELISM: int) -> None:
 
     # might > 8-bit ripple adder, insert a clock
     # Changed 1clk later than num_RBs changed
-    ModuleSub(
-        QU_IN_1=Qu_num_RBs,
-        QU_IN_2=Qu_RB_parallelism,
-        QU_OUT=Qu_num_RBs,
-        N_CLK=1,
-        IF_RST_N=True,
-        QU_MODE=QuMode.TRN.TCPL,
-        OF_MODE=OfMode.SAT.ZERO,
-        PORTS=arith_ports('num_RBs', f"{remainder_width+1}'d{RB_PARALLELISM}", 'rb_limit_reg', if_rst_n=True, n_clk=1)  # type:ignore
-    )
+    ModuleSub(QU_IN_1=Qu_num_RBs, QU_IN_2=Qu_RB_parallelism, QU_OUT=Qu_num_RBs, N_CLK=1, IF_RST_N=True, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.ZERO, PORTS=arith_ports('num_RBs', f"{remainder_width + 1}'d{RB_PARALLELISM}", 'rb_limit_reg', if_rst_n=True, n_clk=1))
 
     #/ // ctrl_ctr_en_d1: 1-cycle delayed ctrl_ctr_en.
     #/ // Suppresses spurious ctrl_sym_switch on the FIRST cycle of S_RUN
@@ -146,19 +124,9 @@ def ModuleRB_COUNTER(min_RBs:int, max_RBs: int, RB_PARALLELISM: int) -> None:
     #/     end
     #/ end
 
-    ModuleDelay(
-        DWT=counter_width,
-        N_CLK=1,
-        IF_RST_N=True,
-        PORTS=delay_ports('rb_counter', 'ctrl_rb_idx_r', if_rst_n=True)  # type:ignore
-    )
+    ModuleDelay(DWT=counter_width, N_CLK=1, IF_RST_N=True, PORTS=delay_ports('rb_counter', 'ctrl_rb_idx_r', if_rst_n=True))
 
-    ModuleDelay(
-        DWT=1,
-        N_CLK=1,
-        IF_RST_N=True,
-        PORTS=delay_ports('switch_cond', 'ctrl_sym_switch', if_rst_n=True)  # type:ignore
-    )
+    ModuleDelay(DWT=1, N_CLK=1, IF_RST_N=True, PORTS=delay_ports('switch_cond', 'ctrl_sym_switch', if_rst_n=True))
 
     #/ assign ctrl_rb_idx = rb_counter;
     #/ endmodule

@@ -136,17 +136,7 @@ def ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM:int, PIPE_CYCLES: int, IF_RST_
     # Conditional ports:
     #   i_clk: if (N_CLK > 0)
     #   i_rst_n: if (N_CLK > 0) and (IF_RST_N)
-    ModuleXOR_TREE(
-        LFSR=rows_x2,
-        N_taps= 1600,
-        N_bits= 31,
-        N_CLK = 0,
-        IF_RST_N=True,
-        PORTS={ #type: ignore
-            'i_data': 'c_init',
-            'o_data': 'x2_1600d'
-        }
-    )
+    ModuleXOR_TREE(LFSR=rows_x2, N_taps=1600, N_bits=31, N_CLK=0, IF_RST_N=True, PORTS={'i_data': 'c_init', 'o_data': 'x2_1600d'})
     #/ wire [30:0] x1_next;
     #/ wire [30:0] x2_next;
     #/ wire [30:0] x1_current_d;
@@ -220,27 +210,9 @@ def ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM:int, PIPE_CYCLES: int, IF_RST_
     #/ 
     #/ // Fixed 1-cycle state register for LFSR feedback
     
-    ModuleDelay(
-        DWT=31,
-        N_CLK=1,
-        IF_RST_N=False,
-        PORTS={ #type: ignore
-            'i_clk': 'clk',
-            'i_data': 'x1_current',
-            'o_data': 'x1_current_d'
-        }
-    )
+    ModuleDelay(DWT=31, N_CLK=1, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'x1_current', 'o_data': 'x1_current_d'})
     
-    ModuleDelay(
-        DWT= 31,
-        N_CLK=1,
-        IF_RST_N=False,
-        PORTS={ #type: ignore
-            'i_clk': 'clk',
-            'i_data': 'x2_current',
-            'o_data': 'x2_current_d'
-        }
-    )
+    ModuleDelay(DWT=31, N_CLK=1, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'x2_current', 'o_data': 'x2_current_d'})
     
     # =========================================================================
     # NEXT STATE LOGIC - Generate next state based on DMRS Type
@@ -248,130 +220,30 @@ def ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM:int, PIPE_CYCLES: int, IF_RST_
     
     if dmrs_Type == 1:
         # Fixed Type 1: Only generate Type 1 step
-        ModuleXOR_TREE(
-            LFSR=rows_x1,
-            N_taps=bits_step_type1,
-            N_bits= 31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x1_current_d',
-                'o_data': 'x1_next'
-            }
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2,
-            N_taps=bits_step_type1,
-            N_bits= 31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x2_current_d',
-                'o_data': 'x2_next'
-            }
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=bits_step_type1, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x1_current_d', 'o_data': 'x1_next'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=bits_step_type1, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x2_current_d', 'o_data': 'x2_next'})
     
     elif dmrs_Type == 2:
         # Fixed Type 2: Only generate Type 2 step
-        ModuleXOR_TREE(
-            LFSR=rows_x1,
-            N_taps=bits_step_type2,
-            N_bits= 31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x1_current_d',
-                'o_data': 'x1_next'
-            }
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2,
-            N_taps=bits_step_type2,
-            N_bits= 31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x2_current_d',
-                'o_data': 'x2_next'
-            }
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=bits_step_type2, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x1_current_d', 'o_data': 'x1_next'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=bits_step_type2, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x2_current_d', 'o_data': 'x2_next'})
 
     elif dmrs_Type == 3:
         # Fixed Type 3: Only generate Type 3 step (2 RE/RB)
-        ModuleXOR_TREE(
-            LFSR=rows_x1,
-            N_taps=bits_step_type3,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x1_current_d',
-                'o_data': 'x1_next'
-            }
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2,
-            N_taps=bits_step_type3,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x2_current_d',
-                'o_data': 'x2_next'
-            }
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=bits_step_type3, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x1_current_d', 'o_data': 'x1_next'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=bits_step_type3, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x2_current_d', 'o_data': 'x2_next'})
 
     else:  # Hybrid mode
         # Generate both Type 1 and Type 2 steps, then mux based on dmrs_type input
         #/ wire [30:0] x1_next_type1;
         #/ wire [30:0] x2_next_type1;
-        ModuleXOR_TREE(
-            LFSR=rows_x1,
-            N_taps=bits_step_type1,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x1_current_d',
-                'o_data': 'x1_next_type1'
-            }
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2,
-            N_taps=bits_step_type1,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x2_current_d',
-                'o_data': 'x2_next_type1'
-            }
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=bits_step_type1, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x1_current_d', 'o_data': 'x1_next_type1'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=bits_step_type1, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x2_current_d', 'o_data': 'x2_next_type1'})
         
         #/ wire [30:0] x1_next_type2;
         #/ wire [30:0] x2_next_type2;
-        ModuleXOR_TREE(
-            LFSR=rows_x1,
-            N_taps=bits_step_type2,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x1_current_d',
-                'o_data': 'x1_next_type2'
-            }
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2,
-            N_taps=bits_step_type2,
-            N_bits=31,
-            N_CLK=0,
-            IF_RST_N=False,
-            PORTS={ #type: ignore
-                'i_data': 'x2_current_d',
-                'o_data': 'x2_next_type2'
-            }
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=bits_step_type2, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x1_current_d', 'o_data': 'x1_next_type2'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=bits_step_type2, N_bits=31, N_CLK=0, IF_RST_N=False, PORTS={'i_data': 'x2_current_d', 'o_data': 'x2_next_type2'})
         
         # Mux the next state based on dmrs_type input (1 for Type 2, 0 for Type 1)
         #/ assign x1_next = dmrs_type ? x1_next_type2 : x1_next_type1;
@@ -398,14 +270,8 @@ def ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM:int, PIPE_CYCLES: int, IF_RST_
             x1_src, x2_src = 'x1_current', 'x2_current'
         else:
             x1_src, x2_src = 'x1_current_d', 'x2_current_d'
-        ModuleXOR_TREE(
-            LFSR=rows_x1, N_taps=0, N_bits=n_out_bits, N_CLK=0, IF_RST_N=False,
-            PORTS={'i_data': x1_src, 'o_data': 'x1_bits'}  # type: ignore
-        )
-        ModuleXOR_TREE(
-            LFSR=rows_x2, N_taps=0, N_bits=n_out_bits, N_CLK=0, IF_RST_N=False,
-            PORTS={'i_data': x2_src, 'o_data': 'x2_bits'}  # type: ignore
-        )
+        ModuleXOR_TREE(LFSR=rows_x1, N_taps=0, N_bits=n_out_bits, N_CLK=0, IF_RST_N=False, PORTS={'i_data': x1_src, 'o_data': 'x1_bits'})
+        ModuleXOR_TREE(LFSR=rows_x2, N_taps=0, N_bits=n_out_bits, N_CLK=0, IF_RST_N=False, PORTS={'i_data': x2_src, 'o_data': 'x2_bits'})
         x1_sig = 'x1_bits'
         x2_sig = 'x2_bits'
     else:
@@ -439,12 +305,7 @@ def ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM:int, PIPE_CYCLES: int, IF_RST_
             if IF_RST_N:
                 ports_delay['i_rst_n'] = 'rst_n'
             
-            ModuleDelay(
-                DWT=2,
-                N_CLK=PIPE_CYCLES,
-                IF_RST_N=IF_RST_N,
-                PORTS=ports_delay  # type: ignore
-            )
+            ModuleDelay(DWT=2, N_CLK=PIPE_CYCLES, IF_RST_N=IF_RST_N, PORTS=ports_delay)
     else:
         raise ValueError("PIPE_CYCLES must be non-negative.")
     #/ // Timing budget: fixed feedback register=1 clk, output PIPE_CYCLES=`PIPE_CYCLES`, dmrs_Type=`dmrs_Type`

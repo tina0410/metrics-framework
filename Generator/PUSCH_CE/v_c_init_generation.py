@@ -116,20 +116,7 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
         # n_symb_slot = 12 -> (A << 3) + (A << 2)
         # Need 1 adder
         budget.add_comb(COST_ADDER_8B, tag="stage1_add_ecp")
-        ModuleAdd(
-           QU_IN_1=Qu_slot_idx_ext3,
-           QU_IN_2=Qu_slot_idx_ext2,
-           QU_OUT=Qu_stage1_idx,
-           N_CLK=0,
-            QU_MODE=QuMode.TRN.TCPL,
-            OF_MODE=OfMode.WRP.TCPL,
-            IF_RST_N=False,
-            PORTS={ # type:ignore
-                'i_data_1': "current_slot_idx_ext3",
-                'i_data_2': "current_slot_idx_ext2",
-                'o_data': "c_init_high_stage1"
-            }
-        )
+        ModuleAdd(QU_IN_1=Qu_slot_idx_ext3, QU_IN_2=Qu_slot_idx_ext2, QU_OUT=Qu_stage1_idx, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': 'current_slot_idx_ext3', 'i_data_2': 'current_slot_idx_ext2', 'o_data': 'c_init_high_stage1'})
         pass
     elif is_ECP == False:
         # n_symb_slot = 14 -> (A << 3) + (A << 2) + (A << 1)
@@ -138,35 +125,9 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
         #/ wire [`Qu_slot_idx_ext1.DWT`-1:0 ] current_slot_idx_ext1 = {current_slot_idx, 1'b0};
         
         #/ wire [`Qu_stage1_idx.DWT`-1:0    ] c_init_high_stage1_temp;
-        ModuleAdd(
-           QU_IN_1=Qu_slot_idx_ext3,
-           QU_IN_2=Qu_slot_idx_ext2,
-           QU_OUT=Qu_stage1_idx,
-           N_CLK=0,
-            QU_MODE=QuMode.TRN.TCPL,
-            OF_MODE=OfMode.WRP.TCPL,
-            IF_RST_N=False,
-            PORTS={ # type:ignore
-                'i_data_1': "current_slot_idx_ext3",
-                'i_data_2': "current_slot_idx_ext2",
-                'o_data': "c_init_high_stage1_temp"
-            }
-        )
+        ModuleAdd(QU_IN_1=Qu_slot_idx_ext3, QU_IN_2=Qu_slot_idx_ext2, QU_OUT=Qu_stage1_idx, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': 'current_slot_idx_ext3', 'i_data_2': 'current_slot_idx_ext2', 'o_data': 'c_init_high_stage1_temp'})
         
-        ModuleAdd(
-           QU_IN_1=Qu_stage1_idx,
-           QU_IN_2=Qu_slot_idx_ext1,
-           QU_OUT=Qu_stage1_idx,
-            N_CLK=0,
-            QU_MODE=QuMode.TRN.TCPL,
-            OF_MODE=OfMode.WRP.TCPL,
-            IF_RST_N=False,
-            PORTS={ # type:ignore
-                'i_data_1': "c_init_high_stage1_temp",
-                'i_data_2': "current_slot_idx_ext1",
-                'o_data': "c_init_high_stage1"
-            }
-        )
+        ModuleAdd(QU_IN_1=Qu_stage1_idx, QU_IN_2=Qu_slot_idx_ext1, QU_OUT=Qu_stage1_idx, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': 'c_init_high_stage1_temp', 'i_data_2': 'current_slot_idx_ext1', 'o_data': 'c_init_high_stage1'})
     elif is_ECP == "Hybrid":
         # Need a selector: 2 adders + mux, then explicit register
         budget.add_comb(2 * COST_ADDER_8B, tag="stage1_add_hybrid")
@@ -174,49 +135,14 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
         #/ wire [`Qu_stage1_idx.DWT`-1:0    ] c_init_high_stage1_ECP;
         #/ wire [`Qu_stage1_idx.DWT`-1:0]     c_init_high_stage1_NCP; // normal CP
         #/ wire [`Qu_stage1_idx.DWT`-1:0    ] c_init_high_stage1_temp;
-        ModuleAdd(
-            QU_IN_1=Qu_slot_idx_ext3,
-            QU_IN_2=Qu_slot_idx_ext2,
-            QU_OUT=Qu_stage1_idx,
-            N_CLK=0,
-            QU_MODE=QuMode.TRN.TCPL,
-            OF_MODE=OfMode.WRP.TCPL,
-            IF_RST_N=False,
-            PORTS={ # type:ignore
-                'i_data_1': "current_slot_idx_ext3",
-                'i_data_2': "current_slot_idx_ext2",
-                'o_data': "c_init_high_stage1_ECP"
-            }
-        )
+        ModuleAdd(QU_IN_1=Qu_slot_idx_ext3, QU_IN_2=Qu_slot_idx_ext2, QU_OUT=Qu_stage1_idx, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': 'current_slot_idx_ext3', 'i_data_2': 'current_slot_idx_ext2', 'o_data': 'c_init_high_stage1_ECP'})
         
-        ModuleAdd(
-            QU_IN_1=Qu_stage1_idx,
-            QU_IN_2=Qu_slot_idx_ext1,
-            QU_OUT=Qu_stage1_idx,
-            N_CLK=0,
-            QU_MODE=QuMode.TRN.TCPL,
-            OF_MODE=OfMode.WRP.TCPL,
-            IF_RST_N=False,
-            PORTS={ # type:ignore
-                'i_data_1': "c_init_high_stage1_ECP",
-                'i_data_2': "current_slot_idx_ext1",
-                'o_data': "c_init_high_stage1_NCP"
-            }
-        )
+        ModuleAdd(QU_IN_1=Qu_stage1_idx, QU_IN_2=Qu_slot_idx_ext1, QU_OUT=Qu_stage1_idx, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': 'c_init_high_stage1_ECP', 'i_data_2': 'current_slot_idx_ext1', 'o_data': 'c_init_high_stage1_NCP'})
         
         # Make a selector
         #/ assign c_init_high_stage1_temp = is_ECP ? c_init_high_stage1_ECP : c_init_high_stage1_NCP;
 
-        ModuleDelay(
-                DWT = Qu_stage1_idx.DWT,
-                N_CLK = 1,
-                IF_RST_N= False,
-                PORTS = { # type:ignore
-                    'i_data': "c_init_high_stage1_temp",
-                    'o_data': "c_init_high_stage1",
-                    'i_clk': 'clk'
-                }
-            )
+        ModuleDelay(DWT=Qu_stage1_idx.DWT, N_CLK=1, IF_RST_N=False, PORTS={'i_data': 'c_init_high_stage1_temp', 'o_data': 'c_init_high_stage1', 'i_clk': 'clk'})
         budget.add_register(1, tag="stage1_hybrid_mux_reg")
     else:
         raise ValueError("is_ECP must be either True, False, or 'Hybrid'.")
@@ -237,43 +163,15 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
     if budget.pipeline_depth > 0:
         _stage2_delay_ports['i_clk'] = 'clk'
     
-    ModuleDelay(
-        DWT=Qu_symbol_idx_add_1.DWT,
-        N_CLK=budget.pipeline_depth,
-        IF_RST_N=False,
-        PORTS=_stage2_delay_ports  # type:ignore
-    )
+    ModuleDelay(DWT=Qu_symbol_idx_add_1.DWT, N_CLK=budget.pipeline_depth, IF_RST_N=False, PORTS=_stage2_delay_ports)
     # Stage 2 adder: 1 adder cost, then explicit pipeline register
     budget.add_comb(COST_ADDER_8B, tag="stage2_add")
     budget.flush(tag="stage2_pipe")  # force register after adder
-    ModuleAdd(
-        QU_IN_1=Qu_stage1_idx,
-        QU_IN_2=Qu_symbol_idx_add_1,
-        QU_OUT=Qu_stage2_idx,
-        N_CLK=1,
-        QU_MODE=QuMode.TRN.TCPL,
-        OF_MODE=OfMode.WRP.TCPL,
-        IF_RST_N=False,
-        PORTS={ # type:ignore
-            'i_clk': 'clk',
-            'i_data_1': "c_init_high_stage1",
-            'i_data_2': "current_symbol_idx_add_1_d",
-            'o_data': "c_init_high_stage2"
-        }
-    )
+    ModuleAdd(QU_IN_1=Qu_stage1_idx, QU_IN_2=Qu_symbol_idx_add_1, QU_OUT=Qu_stage2_idx, N_CLK=1, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data_1': 'c_init_high_stage1', 'i_data_2': 'current_symbol_idx_add_1_d', 'o_data': 'c_init_high_stage2'})
     #/ // Stage 3: Compute (N_ID << 1) + 1 and multiply it with previous result
     #/ wire [15:0] N_ID_stage3;
     #/ wire [16:0] N_ID_x2_1 = {N_ID_stage3, 1'b1};
-    ModuleDelay(
-        DWT=16,
-        N_CLK=budget.pipeline_depth,
-        IF_RST_N=False,
-        PORTS={ # type:ignore
-            'i_clk': 'clk',
-            'i_data': 'N_ID',
-            'o_data': 'N_ID_stage3'
-        }       
-    )
+    ModuleDelay(DWT=16, N_CLK=budget.pipeline_depth, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'N_ID', 'o_data': 'N_ID_stage3'})
     
     
     # number of higher bits is fixed to 14 bits, since the lower 17 bits is occupied by c_init_low. But we need LSBs rather than MSBs, so quantization method is NOT truncation.
@@ -286,45 +184,13 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
     # Multiplier: cost = COST_MUL_8B, pipelined with N_CLK=2
     budget.add_comb(COST_MUL_8B, tag="stage3_mul")
     budget.add_register(2, tag="stage3_mul_pipe")
-    ModuleMul(
-        QU_IN_1=Qu_stage2_idx,
-        QU_IN_2=QuType(DWT=17, FRAC=0, IF_SIGNED=False),
-        QU_OUT=Qu_mul_idx,
-        N_CLK=2,
-        QU_MODE=QuMode.TRN.TCPL,
-        OF_MODE=OfMode.WRP.TCPL, 
-        IF_RST_N=False,
-        PORTS={ #type:ignore
-            'i_clk': 'clk',
-            'i_data_1': "c_init_high_stage2",
-            'i_data_2': "N_ID_x2_1",
-            'o_data': "c_init_mul_result"
-        }
-    )
+    ModuleMul(QU_IN_1=Qu_stage2_idx, QU_IN_2=QuType(DWT=17, FRAC=0, IF_SIGNED=False), QU_OUT=Qu_mul_idx, N_CLK=2, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data_1': 'c_init_high_stage2', 'i_data_2': 'N_ID_x2_1', 'o_data': 'c_init_mul_result'})
     
     #/ wire [15:0] N_ID_stage4;
-    ModuleDelay(
-        DWT=16,
-        N_CLK=2,
-        IF_RST_N=False,
-        PORTS={ # type:ignore
-            'i_clk': 'clk',
-            'i_data': 'N_ID_stage3',
-            'o_data': 'N_ID_stage4'
-        }       
-    )
+    ModuleDelay(DWT=16, N_CLK=2, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'N_ID_stage3', 'o_data': 'N_ID_stage4'})
     
     #/ wire n_scid_stage4;
-    ModuleDelay(
-        DWT=1,
-        N_CLK=budget.pipeline_depth,
-        IF_RST_N=False,
-        PORTS={ # type:ignore
-            'i_clk': 'clk',
-            'i_data': 'n_scid',
-            'o_data': 'n_scid_stage4'
-        }       
-    )
+    ModuleDelay(DWT=1, N_CLK=budget.pipeline_depth, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'n_scid', 'o_data': 'n_scid_stage4'})
 
     if dmrs_Uplink == True or dmrs_Uplink == "Hybrid":
         # Create new QuType object to avoid aliasing Qu_stage3_idx
@@ -357,16 +223,7 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
             elif cdm_idx >= 2 and dmrs_Uplink == "Hybrid":
                 if not _dmrs_uplink_delayed:
                     #/ wire dmrs_uplink_d;
-                    ModuleDelay(
-                        DWT=1,
-                        N_CLK=budget.pipeline_depth,
-                        IF_RST_N=False,
-                        PORTS={ # type:ignore
-                            'i_clk': 'clk',
-                            'i_data': 'dmrs_uplink',
-                            'o_data': 'dmrs_uplink_d'
-                        }
-                    )
+                    ModuleDelay(DWT=1, N_CLK=budget.pipeline_depth, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'dmrs_uplink', 'o_data': 'dmrs_uplink_d'})
                     _dmrs_uplink_delayed = True
                 _offset = cdm_idx // 2
                 #/ wire [`Qu_stage4_idx.DWT`-1:0 ] `high_name` = dmrs_uplink_d ? (c_init_high_stage3 + `_offset`) : c_init_high_stage3;
@@ -379,17 +236,7 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
             # Delay or assign output
             #/ wire [30:0] `output_name`_temp = {`high_name`[13:0], `f"c_init_low_{cdm_idx}"`};
             if N_CLK > 0:
-                ModuleDelay(
-                    DWT = 31,
-                    N_CLK = N_CLK,
-                    IF_RST_N = True, # force reset upon clk if N_CLK > 0
-                    PORTS={ # type:ignore
-                        'i_data': f"{output_name}_temp",
-                        'o_data': output_name,
-                        'i_clk': "clk",
-                        'i_rst_n': "rst_n"
-                    }
-                )
+                ModuleDelay(DWT=31, N_CLK=N_CLK, IF_RST_N=True, PORTS={'i_data': f'{output_name}_temp', 'o_data': output_name, 'i_clk': 'clk', 'i_rst_n': 'rst_n'})
             else:
                 #/ assign `output_name` = `output_name`_temp;
                 pass
@@ -401,17 +248,7 @@ def ModuleC_INIT_GENERATION(Qu_symbol_idx: QuType, Qu_slot_idx: QuType, N_CLK:in
         
         if N_CLK > 0:
             # Register output if clock is used
-            ModuleDelay(
-                DWT=31,
-                N_CLK=N_CLK,
-                IF_RST_N=True,
-                PORTS={ # type:ignore
-                    'i_data': "c_init_temp",
-                    'o_data': "c_init",
-                    'i_clk': "clk",
-                    'i_rst_n': "rst_n"
-                }
-            )
+            ModuleDelay(DWT=31, N_CLK=N_CLK, IF_RST_N=True, PORTS={'i_data': 'c_init_temp', 'o_data': 'c_init', 'i_clk': 'clk', 'i_rst_n': 'rst_n'})
         else:
             # Direct assignment if no clock
             #/ assign c_init = c_init_temp;

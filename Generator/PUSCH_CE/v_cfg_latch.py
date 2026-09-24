@@ -144,10 +144,7 @@ def ModuleCFG_LATCH(Qu_slot_idx: QuType,counter_width: int,N_CLK: int,IF_RST_N: 
     _delay_ports: dict = {'i_data': 'packed_d', 'o_data': 'packed_cfg', 'i_clk': 'clk'}
     if IF_RST_N:
         _delay_ports['i_rst_n'] = 'rst_n'
-    ModuleDelay(
-        DWT=TOTAL_W, N_CLK=N_CLK, IF_RST_N=IF_RST_N,
-        PORTS=_delay_ports,  # type: ignore
-    )
+    ModuleDelay(DWT=TOTAL_W, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS=_delay_ports)
     #/ 
 
     # ---- Unpack: assign each cfg_* from its slice of packed_cfg ----

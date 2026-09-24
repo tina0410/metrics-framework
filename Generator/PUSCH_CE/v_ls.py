@@ -252,16 +252,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
         ports_y_pre[f'Y_out_complex_{i}'] = f'Y_pre_complex_{i}'
         #/ wire [`2*QU_H_LS.DWT`-1:0] `f"Y_pre_complex_{i}"`;
     
-    ModuleY_PRE(
-        N_CLK=N_CLK_Y_PRE,
-        Y_parallelism=Y_PARALLELISM,
-        Qu_Y=Qu_Y,
-        Qu_OUT=QU_H_LS,
-        QU_MODE=QU_MODE_LS,
-        OF_MODE=OF_MODE_LS,
-        MAX_CDM_GROUPS=MAX_CDM_GROUPS,
-        PORTS=ports_y_pre  # type: ignore
-    )
+    ModuleY_PRE(N_CLK=N_CLK_Y_PRE, Y_parallelism=Y_PARALLELISM, Qu_Y=Qu_Y, Qu_OUT=QU_H_LS, QU_MODE=QU_MODE_LS, OF_MODE=OF_MODE_LS, MAX_CDM_GROUPS=MAX_CDM_GROUPS, PORTS=ports_y_pre)
     
     #/ // ========== DMRS Signal Data Path ==========
     
@@ -324,16 +315,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                     #/ wire [1:0] `f"dmrs_base_seq_cdm{cdm_idx}_{i}"`;
                     ports_dmrs_seq[f'dmrs_base_seq_{i}'] = f'dmrs_base_seq_cdm{cdm_idx}_{i}'
 
-                ModuleDMRS_SEQUENCE_GENERATION(
-                    RB_PARALLELISM=RB_PARALLELISM,
-                    PIPE_CYCLES=_pipe_cycles,
-                    IF_RST_N=True,
-                    dmrs_Type=dmrs_Type,
-                    HAS_ENABLE=HAS_LFSR_ENABLE,
-                    HAS_CTX=HAS_LFSR_CTX,
-                    N_CTX_SLOTS=N_LFSR_CTX_SLOTS,
-                    PORTS=ports_dmrs_seq  # type: ignore
-                )
+                ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM=RB_PARALLELISM, PIPE_CYCLES=_pipe_cycles, IF_RST_N=True, dmrs_Type=dmrs_Type, HAS_ENABLE=HAS_LFSR_ENABLE, HAS_CTX=HAS_LFSR_CTX, N_CTX_SLOTS=N_LFSR_CTX_SLOTS, PORTS=ports_dmrs_seq)
     else:
         # Single c_init for downlink
         ports_dmrs_seq = {
@@ -359,16 +341,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
             #/ wire [1:0] `f"dmrs_base_seq_{i}"`;
             ports_dmrs_seq[f'dmrs_base_seq_{i}'] = f'dmrs_base_seq_{i}'
 
-        ModuleDMRS_SEQUENCE_GENERATION(
-            RB_PARALLELISM=RB_PARALLELISM,
-            PIPE_CYCLES=_pipe_cycles,
-            IF_RST_N=True,
-            dmrs_Type=dmrs_Type,
-            HAS_ENABLE=HAS_LFSR_ENABLE,
-            HAS_CTX=HAS_LFSR_CTX,
-            N_CTX_SLOTS=N_LFSR_CTX_SLOTS,
-            PORTS=ports_dmrs_seq  # type: ignore
-        )
+        ModuleDMRS_SEQUENCE_GENERATION(RB_PARALLELISM=RB_PARALLELISM, PIPE_CYCLES=_pipe_cycles, IF_RST_N=True, dmrs_Type=dmrs_Type, HAS_ENABLE=HAS_LFSR_ENABLE, HAS_CTX=HAS_LFSR_CTX, N_CTX_SLOTS=N_LFSR_CTX_SLOTS, PORTS=ports_dmrs_seq)
     
     # =========================================================================
     # Step 5: Unified PCDMU Processing
@@ -427,16 +400,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
         # W_F_CALC feeds OCC combinationally; the OCC output register
         # provides the extra clock needed for LS_ROT alignment with Y_PRE.
         #/ wire `rb_idx_for_wf`;
-        ModuleDelay(
-            DWT=1,
-            N_CLK=N_CLK_DMRS_SEQ,
-            IF_RST_N=False,
-            PORTS={  # type:ignore
-                'i_clk': 'clk',
-                'i_data': 'current_RB_idx_lsb',
-                'o_data': rb_idx_for_wf,
-            }
-        )
+        ModuleDelay(DWT=1, N_CLK=N_CLK_DMRS_SEQ, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'current_RB_idx_lsb', 'o_data': rb_idx_for_wf})
 
     # Delay l_quote to align with DMRS sequence at OCC input.
     # The OCC uses l_quote combinationally alongside the DMRS_SEQ output,
@@ -447,16 +411,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
     if _need_occ_lquote:
         _occ_lquote_d = 'l_quote_occ_d'
         #/ wire `_occ_lquote_d`;
-        ModuleDelay(
-            DWT=1,
-            N_CLK=N_CLK_DMRS_SEQ,
-            IF_RST_N=False,
-            PORTS={  # type:ignore
-                'i_clk': 'clk',
-                'i_data': 'l_quote',
-                'o_data': _occ_lquote_d,
-            }
-        )
+        ModuleDelay(DWT=1, N_CLK=N_CLK_DMRS_SEQ, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'l_quote', 'o_data': _occ_lquote_d})
 
     for pcdmu in pcdmu_instances:
         #/ // ================================================================
@@ -491,15 +446,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                     ports_wf_t1[f'w_f_p{ant_port}_re{re_phy_idx}'] = sig
             ports_wf_t1['_unused_dummy'] = '1\'b0'
             
-            ModuleW_F_CALC(
-                dmrs_type=1,
-                cdm_group=pcdmu.group_idx,
-                is_enhanced=is_enhanced,
-                antenna_ports=pcdmu.type1_antenna_ports,
-                re_phy_indices=pcdmu.type1_re_phy_indices,
-                re_logic_indices=list(range(len(pcdmu.type1_re_phy_indices))),
-                PORTS=ports_wf_t1  # type: ignore
-            )
+            ModuleW_F_CALC(dmrs_type=1, cdm_group=pcdmu.group_idx, is_enhanced=is_enhanced, antenna_ports=pcdmu.type1_antenna_ports, re_phy_indices=pcdmu.type1_re_phy_indices, re_logic_indices=list(range(len(pcdmu.type1_re_phy_indices))), PORTS=ports_wf_t1)
             
             # --- Type2 W_F_CALC ---
             ports_wf_t2 = {}
@@ -514,15 +461,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                     ports_wf_t2[f'w_f_p{ant_port}_re{re_phy_idx}'] = sig
             ports_wf_t2['_unused_dummy'] = '1\'b0'
             
-            ModuleW_F_CALC(
-                dmrs_type=2,
-                cdm_group=pcdmu.group_idx,
-                is_enhanced=is_enhanced,
-                antenna_ports=pcdmu.type2_antenna_ports,
-                re_phy_indices=pcdmu.type2_re_phy_indices,
-                re_logic_indices=list(range(len(pcdmu.type2_re_phy_indices))),
-                PORTS=ports_wf_t2  # type: ignore
-            )
+            ModuleW_F_CALC(dmrs_type=2, cdm_group=pcdmu.group_idx, is_enhanced=is_enhanced, antenna_ports=pcdmu.type2_antenna_ports, re_phy_indices=pcdmu.type2_re_phy_indices, re_logic_indices=list(range(len(pcdmu.type2_re_phy_indices))), PORTS=ports_wf_t2)
         else:
             # Single-type PCDMU: one W_F_CALC instance
             # Type 3 must be selected explicitly. Falling through to Type 2
@@ -555,15 +494,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                     ports_wf[f'w_f_p{ant_port}_re{re_phy_idx}'] = sig
             ports_wf['_unused_dummy'] = '1\'b0'
 
-            ModuleW_F_CALC(
-                dmrs_type=active_type,
-                cdm_group=pcdmu.group_idx,
-                is_enhanced=is_enhanced,
-                antenna_ports=active_ports,
-                re_phy_indices=active_re_phy,
-                re_logic_indices=list(range(len(active_re_phy))),
-                PORTS=ports_wf  # type: ignore
-            )
+            ModuleW_F_CALC(dmrs_type=active_type, cdm_group=pcdmu.group_idx, is_enhanced=is_enhanced, antenna_ports=active_ports, re_phy_indices=active_re_phy, re_logic_indices=list(range(len(active_re_phy))), PORTS=ports_wf)
         
         # =================================================================
         # 5b. Per-RE OCC + LS_ROT Processing Loop
@@ -743,13 +674,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                 #/ wire [1:0] `whid_signal`;
                 ports_occ[f'out_p{ant_port}'] = whid_signal
             
-            ModuleOCC(
-                N_CLK=1,
-                dmrs_Type=occ_dmrs_type,
-                antenna_ports=pcdmu.unified_antenna_ports,
-                is_double_dmrs=is_double_dmrs,
-                PORTS=ports_occ  # type: ignore
-            )
+            ModuleOCC(N_CLK=1, dmrs_Type=occ_dmrs_type, antenna_ports=pcdmu.unified_antenna_ports, is_double_dmrs=is_double_dmrs, PORTS=ports_occ)
             
             # ---------------------------------------------------------
             # LS_ROT Instantiation
@@ -813,13 +738,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                     ports_ls_rot[f'in_complex_{ant_idx}'] = y_signal
                 ports_ls_rot[f'out_complex_{ant_idx}'] = h_ls_signal
             
-            ModuleLS_ROT(
-                parallelism=len(pcdmu.unified_antenna_ports),
-                Qu_IN=QU_H_LS,
-                Qu_OUT=QU_H_LS,
-                N_CLK=N_CLK_LS_ROT,
-                PORTS=ports_ls_rot  # type: ignore
-            )
+            ModuleLS_ROT(parallelism=len(pcdmu.unified_antenna_ports), Qu_IN=QU_H_LS, Qu_OUT=QU_H_LS, N_CLK=N_CLK_LS_ROT, PORTS=ports_ls_rot)
 
     # Emit exactly one assignment per physical H_LS wire in Hybrid mode.
     if dmrs_Type == "Hybrid":
@@ -966,18 +885,15 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
             # Y replay is prefetched one cycle before the Gold-sequence
             # advance in single-symbol mode.  Gate AVERAGING with the actual
             # Y-beat descriptor rather than the later LFSR enable.
-            ModuleDelay(DWT=1, N_CLK=_avg_lquote_delay, IF_RST_N=False,
-                        PORTS={'i_clk': 'clk', 'i_data': 'replay_data_valid', 'o_data': _avg_enable_d})  # type: ignore
+            ModuleDelay(DWT=1, N_CLK=_avg_lquote_delay, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'replay_data_valid', 'o_data': _avg_enable_d})  # type: ignore
         if _need_avg_strb:
             _avg_strb_d = f"avg_sym_switch_d_cdm{g}"
             #/ wire `_avg_strb_d`;
-            ModuleDelay(DWT=1, N_CLK=_avg_strb_delay, IF_RST_N=False,
-                        PORTS={'i_clk': 'clk', 'i_data': _avg_strb_signal, 'o_data': _avg_strb_d})  # type: ignore
+            ModuleDelay(DWT=1, N_CLK=_avg_strb_delay, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': _avg_strb_signal, 'o_data': _avg_strb_d})  # type: ignore
         if need_td_avg:
             _avg_lquote_d = f"avg_l_quote_d_cdm{g}"
             #/ wire `_avg_lquote_d`;
-            ModuleDelay(DWT=1, N_CLK=_avg_lquote_delay, IF_RST_N=False,
-                        PORTS={'i_clk': 'clk', 'i_data': 'l_quote', 'o_data': _avg_lquote_d})  # type: ignore
+            ModuleDelay(DWT=1, N_CLK=_avg_lquote_delay, IF_RST_N=False, PORTS={'i_clk': 'clk', 'i_data': 'l_quote', 'o_data': _avg_lquote_d})  # type: ignore
         
         for ant_port in pcdmu.unified_antenna_ports:
             for part in ('real', 'imag'):
@@ -1010,22 +926,7 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
                         #/ wire [`QU_H_LS.DWT`-1:0] `out_wire`;
                         ports_avg[f'h_avg_rb{rb}_pilot{k}'] = out_wire
                 
-                ModuleAVERAGING(
-                    Qu_IN=QU_H_LS,
-                    Qu_OUT=QU_H_LS,
-                    QU_MODE=QU_MODE_LS,
-                    OF_MODE=OF_MODE_LS,
-                    IF_RST_N=True,
-                    RB_PARALLELISM=RB_PARALLELISM,
-                    dmrs_Type=avg_dmrs_type,
-                    cdm_group=g,
-                    fdCDM=_fdCDM_g,
-                    tdCDM=_tdCDM_g,
-                    max_num_RBs=max_num_RBs,
-                    SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG,
-                    HAS_ENABLE=HAS_AVG_SYM_SWITCH,
-                    PORTS=ports_avg  # type: ignore
-                )
+                ModuleAVERAGING(Qu_IN=QU_H_LS, Qu_OUT=QU_H_LS, QU_MODE=QU_MODE_LS, OF_MODE=OF_MODE_LS, IF_RST_N=True, RB_PARALLELISM=RB_PARALLELISM, dmrs_Type=avg_dmrs_type, cdm_group=g, fdCDM=_fdCDM_g, tdCDM=_tdCDM_g, max_num_RBs=max_num_RBs, SRAM_MACRO_CONFIG=SRAM_MACRO_CONFIG, HAS_ENABLE=HAS_AVG_SYM_SWITCH, PORTS=ports_avg)
     
     # =========================================================================
     # Step 7: AVERAGING → Output Wire Packing
@@ -1089,28 +990,8 @@ def ModuleLS(Qu_Y: QuType, QU_H_LS: QuType, QU_MODE_LS: QuMode.TRN | QuMode.RND,
         # delay in LS makes publication timing follow the datapath contract
         # instead of a window-controller tap chosen for one protocol mode.
         _replay_token_delay = N_CLK_Y_PRE + N_CLK_LS_ROT + N_CLK_AVG
-        ModuleDelay(
-            DWT=1,
-            N_CLK=_replay_token_delay,
-            IF_RST_N=True,
-            PORTS={
-                'i_clk': 'clk',
-                'i_rst_n': 'rst_n',
-                'i_data': 'replay_token_valid_in',
-                'o_data': 'replay_token_valid_out',
-            },  # type: ignore
-        )
-        ModuleDelay(
-            DWT=REPLAY_TOKEN_DWT,
-            N_CLK=_replay_token_delay,
-            IF_RST_N=True,
-            PORTS={
-                'i_clk': 'clk',
-                'i_rst_n': 'rst_n',
-                'i_data': 'replay_token_in',
-                'o_data': 'replay_token_out',
-            },  # type: ignore
-        )
+        ModuleDelay(DWT=1, N_CLK=_replay_token_delay, IF_RST_N=True, PORTS={'i_clk': 'clk', 'i_rst_n': 'rst_n', 'i_data': 'replay_token_valid_in', 'o_data': 'replay_token_valid_out'})
+        ModuleDelay(DWT=REPLAY_TOKEN_DWT, N_CLK=_replay_token_delay, IF_RST_N=True, PORTS={'i_clk': 'clk', 'i_rst_n': 'rst_n', 'i_data': 'replay_token_in', 'o_data': 'replay_token_out'})
 
     #/ endmodule
     

@@ -63,11 +63,6 @@ def ModuleComplexPack(COMP_DWT: int, N_CLK: int, IF_RST_N: bool) -> None:
         }
         if IF_RST_N:
             ports_delay['i_rst_n'] = 'rst_n'
-        ModuleDelay(
-            DWT=CPLX_DWT,
-            N_CLK=N_CLK,
-            IF_RST_N=IF_RST_N,
-            PORTS=ports_delay,  # type: ignore
-        )
+        ModuleDelay(DWT=CPLX_DWT, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS=ports_delay)
 
     #/ endmodule

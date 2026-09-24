@@ -290,18 +290,8 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                         mul_ports_re['i_rst_n'] = 'rst_n'
                         mul_ports_im['i_rst_n'] = 'rst_n'
 
-                    ModuleMul(
-                        QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD,
-                        N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=True,
-                        PORTS=mul_ports_re  # type: ignore
-                    )
-                    ModuleMul(
-                        QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD,
-                        N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=True,
-                        PORTS=mul_ports_im  # type: ignore
-                    )
+                    ModuleMul(QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=True, PORTS=mul_ports_re)
+                    ModuleMul(QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF, QU_OUT=QU_PROD, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=True, PORTS=mul_ports_im)
 
                 # --- Adder tree stage ---
                 if max_occasions == 1:
@@ -333,20 +323,8 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                         tree_ports_re['i_rst_n'] = 'rst_n'
                         tree_ports_im['i_rst_n'] = 'rst_n'
 
-                    ModuleAdderTree(
-                        QU_IN=QU_PROD, QU_OUT=QU_ACC,
-                        N_PIPELINES=TREE_DEPTH,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A',
-                        PORTS=tree_ports_re  # type: ignore
-                    )
-                    ModuleAdderTree(
-                        QU_IN=QU_PROD, QU_OUT=QU_ACC,
-                        N_PIPELINES=TREE_DEPTH,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A',
-                        PORTS=tree_ports_im  # type: ignore
-                    )
+                    ModuleAdderTree(QU_IN=QU_PROD, QU_OUT=QU_ACC, N_PIPELINES=TREE_DEPTH, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A', PORTS=tree_ports_re)
+                    ModuleAdderTree(QU_IN=QU_PROD, QU_OUT=QU_ACC, N_PIPELINES=TREE_DEPTH, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A', PORTS=tree_ports_im)
                     QU_SUM = QU_ACC
 
                 # --- FxMatch + output register ---
@@ -355,18 +333,8 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                 #/ wire [`COMP_DWT`-1:0] `fxm_re_name`;
                 #/ wire [`COMP_DWT`-1:0] `fxm_im_name`;
 
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=QU_OUT_COMP,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': f"sum_re_s{sym}", 'o_data': fxm_re_name}  # type: ignore
-                )
-                ModuleFxMatch(
-                    QU_IN=QU_SUM, QU_OUT=QU_OUT_COMP,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': f"sum_im_s{sym}", 'o_data': fxm_im_name}  # type: ignore
-                )
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=QU_OUT_COMP, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'sum_re_s{sym}', 'o_data': fxm_re_name})
+                ModuleFxMatch(QU_IN=QU_SUM, QU_OUT=QU_OUT_COMP, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'sum_im_s{sym}', 'o_data': fxm_im_name})
 
                 # Output register (1 clk delay)
                 packed_name = f"packed_s{sym}"
@@ -378,10 +346,7 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                     'i_clk': 'clk',
                     'i_rst_n': 'rst_n',
                 }
-                ModuleDelay(
-                    DWT=H_DWT, N_CLK=1, IF_RST_N=True,
-                    PORTS=delay_ports_sym  # type: ignore
-                )
+                ModuleDelay(DWT=H_DWT, N_CLK=1, IF_RST_N=True, PORTS=delay_ports_sym)
                 #/ 
 
     else:
@@ -451,13 +416,7 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                     cmul_ports['i_clk'] = 'clk'
                     cmul_ports['i_rst_n'] = 'rst_n'
 
-                ModuleComplexMul(
-                    QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF,
-                    QU_OUT=QU_CMUL_OUT,
-                    N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    IF_RST_N=True, METHOD='4mul',
-                    PORTS=cmul_ports  # type: ignore
-                )
+                ModuleComplexMul(QU_IN_1=QU_PILOT_COMP, QU_IN_2=QU_COEFF, QU_OUT=QU_CMUL_OUT, N_CLK=MUL_LATENCY, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, IF_RST_N=True, METHOD='4mul', PORTS=cmul_ports)
 
             if max_occasions == 1:
                 #/ wire [`H_DWT`-1:0] `f"csum_s{sym}"` = `f"cprod_s{sym}_j0"`;
@@ -484,13 +443,7 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                         tree_ports['i_clk'] = 'clk'
                         tree_ports['i_rst_n'] = 'rst_n'
 
-                    ModuleAdderTree(
-                        QU_IN=QU_CMUL_OUT, QU_OUT=QU_ACC,
-                        N_PIPELINES=TREE_DEPTH,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL,
-                        IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A',
-                        PORTS=tree_ports  # type: ignore
-                    )
+                    ModuleAdderTree(QU_IN=QU_CMUL_OUT, QU_OUT=QU_ACC, N_PIPELINES=TREE_DEPTH, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=True, N_INPUTS=max_occasions, CONFIG_MODE='A', PORTS=tree_ports)
 
                 QU_SUM_C = QU_ACC
                 fxm_re_name = f"cfxm_re_s{sym}"
@@ -498,18 +451,8 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                 #/ wire [`COMP_DWT`-1:0] `fxm_re_name`;
                 #/ wire [`COMP_DWT`-1:0] `fxm_im_name`;
 
-                ModuleFxMatch(
-                    QU_IN=QU_SUM_C, QU_OUT=QU_OUT_COMP,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': f"csum_re_s{sym}", 'o_data': fxm_re_name}  # type: ignore
-                )
-                ModuleFxMatch(
-                    QU_IN=QU_SUM_C, QU_OUT=QU_OUT_COMP,
-                    QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                    N_CLK=0, IF_RST_N=False,
-                    PORTS={'i_data': f"csum_im_s{sym}", 'o_data': fxm_im_name}  # type: ignore
-                )
+                ModuleFxMatch(QU_IN=QU_SUM_C, QU_OUT=QU_OUT_COMP, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'csum_re_s{sym}', 'o_data': fxm_re_name})
+                ModuleFxMatch(QU_IN=QU_SUM_C, QU_OUT=QU_OUT_COMP, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': f'csum_im_s{sym}', 'o_data': fxm_im_name})
 
                 #/ wire [`H_DWT`-1:0] `f"csum_s{sym}"` = {`fxm_im_name`, `fxm_re_name`};
 
@@ -520,10 +463,7 @@ def ModuleCORE_TIME_LMMSE_INTERP(max_occasions: int, Qu_H: QuType, Qu_COEFF: QuT
                 'i_clk': 'clk',
                 'i_rst_n': 'rst_n',
             }
-            ModuleDelay(
-                DWT=H_DWT, N_CLK=1, IF_RST_N=True,
-                PORTS=delay_ports_sym  # type: ignore
-            )
+            ModuleDelay(DWT=H_DWT, N_CLK=1, IF_RST_N=True, PORTS=delay_ports_sym)
             #/ 
 
     #/ 

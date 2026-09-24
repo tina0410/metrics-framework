@@ -259,17 +259,7 @@ def ModuleOCC(N_CLK: int, dmrs_Type: int | Literal["Hybrid"], is_double_dmrs: bo
         
         # Output delay (optional pipeline stages)
         if N_CLK > 0:
-            ModuleDelay(
-                DWT=2, 
-                N_CLK=N_CLK, 
-                IF_RST_N=True,
-                PORTS={  # type:ignore
-                    "i_clk": "clk",
-                    "i_rst_n": "rst_n",
-                    "i_data": out_name_raw,
-                    "o_data": out_name
-                }
-            ) 
+            ModuleDelay(DWT=2, N_CLK=N_CLK, IF_RST_N=True, PORTS={'i_clk': 'clk', 'i_rst_n': 'rst_n', 'i_data': out_name_raw, 'o_data': out_name})
         else:
             #/ assign `out_name` = `out_name_raw`;
             pass

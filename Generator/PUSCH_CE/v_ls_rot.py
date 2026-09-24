@@ -181,32 +181,14 @@ def ModuleLS_ROT(parallelism: int, Qu_IN: QuType, Qu_OUT: QuType, N_CLK: int, QU
         #/ wire [`Qu_OUT.DWT`-1:0] `imag_out`;
 
         # real = a*x - b*y
-        ModuleSub(
-            QU_IN_1=Qu_EXT, QU_IN_2=Qu_EXT, QU_OUT=Qu_SUM,
-            N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,  # Sub is full-precision
-            PORTS={'i_data_1': x_s_real, 'i_data_2': y_s_real, 'o_data': real_calc}  # type: ignore
-        )
+        ModuleSub(QU_IN_1=Qu_EXT, QU_IN_2=Qu_EXT, QU_OUT=Qu_SUM, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': x_s_real, 'i_data_2': y_s_real, 'o_data': real_calc})
 
         # imag = b*x + a*y (using swapped sign versions)
-        ModuleAdd(
-            QU_IN_1=Qu_EXT, QU_IN_2=Qu_EXT, QU_OUT=Qu_SUM,
-            N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False,  # Add is full-precision
-            PORTS={'i_data_1': x_s_imag, 'i_data_2': y_s_imag, 'o_data': imag_calc}  # type: ignore
-        )
+        ModuleAdd(QU_IN_1=Qu_EXT, QU_IN_2=Qu_EXT, QU_OUT=Qu_SUM, N_CLK=0, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.WRP.TCPL, IF_RST_N=False, PORTS={'i_data_1': x_s_imag, 'i_data_2': y_s_imag, 'o_data': imag_calc})
 
-        ModuleFxMatch(
-            QU_IN=Qu_SUM, QU_OUT=Qu_OUT,
-            QU_MODE=QU_MODE, OF_MODE=OF_MODE,
-            N_CLK=0, IF_RST_N=False,
-            PORTS={'i_data': real_calc, 'o_data': real_out}  # type: ignore
-        )
+        ModuleFxMatch(QU_IN=Qu_SUM, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS={'i_data': real_calc, 'o_data': real_out})
 
-        ModuleFxMatch(
-            QU_IN=Qu_SUM, QU_OUT=Qu_OUT,
-            QU_MODE=QU_MODE, OF_MODE=OF_MODE,
-            N_CLK=0, IF_RST_N=False,
-            PORTS={'i_data': imag_calc, 'o_data': imag_out}  # type: ignore
-        )
+        ModuleFxMatch(QU_IN=Qu_SUM, QU_OUT=Qu_OUT, QU_MODE=QU_MODE, OF_MODE=OF_MODE, N_CLK=0, IF_RST_N=False, PORTS={'i_data': imag_calc, 'o_data': imag_out})
 
         #/ wire [`2*Qu_OUT.DWT`-1:0] `out_inst` = {`imag_out`, `real_out`};
 
@@ -214,12 +196,7 @@ def ModuleLS_ROT(parallelism: int, Qu_IN: QuType, Qu_OUT: QuType, N_CLK: int, QU
         if N_CLK > 0:
             ports_delay['i_clk'] = 'clk'
 
-        ModuleDelay(
-            DWT=2 * Qu_OUT.DWT,
-            N_CLK=N_CLK,
-            IF_RST_N=False,
-            PORTS=ports_delay  # type: ignore
-        )
+        ModuleDelay(DWT=2 * Qu_OUT.DWT, N_CLK=N_CLK, IF_RST_N=False, PORTS=ports_delay)
 
     _min_depth = ls_rot_pipeline_depth(Qu_IN)
     #/ // Timing budget: N_CLK=`N_CLK` (auto-min=`_min_depth`)

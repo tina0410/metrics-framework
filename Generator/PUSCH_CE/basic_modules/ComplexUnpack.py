@@ -66,12 +66,7 @@ def ModuleComplexUnpack(COMP_DWT: int, N_CLK: int, IF_RST_N: bool) -> None:
         }
         if IF_RST_N:
             ports_delay_re['i_rst_n'] = 'rst_n'
-        ModuleDelay(
-            DWT=COMP_DWT,
-            N_CLK=N_CLK,
-            IF_RST_N=IF_RST_N,
-            PORTS=ports_delay_re,  # type: ignore
-        )
+        ModuleDelay(DWT=COMP_DWT, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS=ports_delay_re)
 
         ports_delay_im = {
             'i_data': 'imag_comb',
@@ -80,11 +75,6 @@ def ModuleComplexUnpack(COMP_DWT: int, N_CLK: int, IF_RST_N: bool) -> None:
         }
         if IF_RST_N:
             ports_delay_im['i_rst_n'] = 'rst_n'
-        ModuleDelay(
-            DWT=COMP_DWT,
-            N_CLK=N_CLK,
-            IF_RST_N=IF_RST_N,
-            PORTS=ports_delay_im,  # type: ignore
-        )
+        ModuleDelay(DWT=COMP_DWT, N_CLK=N_CLK, IF_RST_N=IF_RST_N, PORTS=ports_delay_im)
 
     #/ endmodule

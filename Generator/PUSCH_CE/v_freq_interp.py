@@ -512,20 +512,7 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
             ports_nn['next_rb_lowest'] = 'next_l_prefetch'
             ports_nn['prev_rb_highest'] = _prev_h_wire
 
-        ModuleCORE_NN_INTERP(
-            IF_RST_N=IF_RST_N,
-            RB_PARALLELISM=RB_parallelism,
-            Qu_H=Qu_H_LS,
-            pilot_re=compact_re_sorted,
-            dmrs_Type=dmrs_Type,
-            pilot_re_t1=pilot_re_t1,
-            pilot_re_t2=pilot_re_t2,
-            compact_t2_slots=compact_t2_slots,
-            sample_positions=descriptor_centroids,
-            has_next_rb_lowest=has_pre_fi_buf,
-            has_prev_rb_highest=has_pre_fi_buf,
-            PORTS=ports_nn  # type: ignore
-        )
+        ModuleCORE_NN_INTERP(IF_RST_N=IF_RST_N, RB_PARALLELISM=RB_parallelism, Qu_H=Qu_H_LS, pilot_re=compact_re_sorted, dmrs_Type=dmrs_Type, pilot_re_t1=pilot_re_t1, pilot_re_t2=pilot_re_t2, compact_t2_slots=compact_t2_slots, sample_positions=descriptor_centroids, has_next_rb_lowest=has_pre_fi_buf, has_prev_rb_highest=has_pre_fi_buf, PORTS=ports_nn)
 
         # final FxMatch to output phase
         if need_fxmatch:
@@ -543,18 +530,8 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
                     #/ wire [`Qu_H_LS.DWT`-1:0] `core_i` = `core_out`[`2*Qu_H_LS.DWT`-1:`Qu_H_LS.DWT`];
                     #/ wire [`Qu_H.DWT`-1:0] `out_r`;
                     #/ wire [`Qu_H.DWT`-1:0] `out_i`;
-                    ModuleFxMatch(
-                        QU_IN=Qu_H_LS, QU_OUT=Qu_H,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                        N_CLK=0, IF_RST_N=False,
-                        PORTS={'i_data': core_r, 'o_data': out_r}  # type: ignore
-                    )
-                    ModuleFxMatch(
-                        QU_IN=Qu_H_LS, QU_OUT=Qu_H,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                        N_CLK=0, IF_RST_N=False,
-                        PORTS={'i_data': core_i, 'o_data': out_i}  # type: ignore
-                    )
+                    ModuleFxMatch(QU_IN=Qu_H_LS, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': core_r, 'o_data': out_r})
+                    ModuleFxMatch(QU_IN=Qu_H_LS, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': core_i, 'o_data': out_i})
                     #/ assign `final_out` = {`out_i`, `out_r`};
     
     elif method == "linear":
@@ -597,20 +574,7 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
             ports_lin['next_rb_lowest'] = 'next_l_prefetch'
             ports_lin['prev_rb_highest'] = _prev_h_wire
 
-        ModuleCORE_LIN_INTERP(
-            IF_RST_N=IF_RST_N,
-            RB_PARALLELISM=RB_parallelism,
-            Qu_H=Qu_H_LS,
-            pilot_re=compact_re_sorted,
-            dmrs_Type=dmrs_Type,
-            pilot_re_t1=pilot_re_t1,
-            pilot_re_t2=pilot_re_t2,
-            compact_t2_slots=compact_t2_slots,
-            sample_positions=descriptor_centroids,
-            has_next_rb_lowest=has_pre_fi_buf,
-            has_prev_rb_highest=has_pre_fi_buf,
-            PORTS=ports_lin  # type: ignore
-        )
+        ModuleCORE_LIN_INTERP(IF_RST_N=IF_RST_N, RB_PARALLELISM=RB_parallelism, Qu_H=Qu_H_LS, pilot_re=compact_re_sorted, dmrs_Type=dmrs_Type, pilot_re_t1=pilot_re_t1, pilot_re_t2=pilot_re_t2, compact_t2_slots=compact_t2_slots, sample_positions=descriptor_centroids, has_next_rb_lowest=has_pre_fi_buf, has_prev_rb_highest=has_pre_fi_buf, PORTS=ports_lin)
 
         if need_fxmatch:
             #/ // ========== FxMatch: Qu_H_LS → Qu_H per component (TRN::TCPL / SAT::TCPL) ==========
@@ -627,18 +591,8 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
                     #/ wire [`Qu_H_LS.DWT`-1:0] `core_i` = `core_out`[`2*Qu_H_LS.DWT`-1:`Qu_H_LS.DWT`];
                     #/ wire [`Qu_H.DWT`-1:0] `out_r`;
                     #/ wire [`Qu_H.DWT`-1:0] `out_i`;
-                    ModuleFxMatch(
-                        QU_IN=Qu_H_LS, QU_OUT=Qu_H,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                        N_CLK=0, IF_RST_N=False,
-                        PORTS={'i_data': core_r, 'o_data': out_r}  # type: ignore
-                    )
-                    ModuleFxMatch(
-                        QU_IN=Qu_H_LS, QU_OUT=Qu_H,
-                        QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL,
-                        N_CLK=0, IF_RST_N=False,
-                        PORTS={'i_data': core_i, 'o_data': out_i}  # type: ignore
-                    )
+                    ModuleFxMatch(QU_IN=Qu_H_LS, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': core_r, 'o_data': out_r})
+                    ModuleFxMatch(QU_IN=Qu_H_LS, QU_OUT=Qu_H, QU_MODE=QuMode.TRN.TCPL, OF_MODE=OfMode.SAT.TCPL, N_CLK=0, IF_RST_N=False, PORTS={'i_data': core_i, 'o_data': out_i})
                     #/ assign `final_out` = {`out_i`, `out_r`};
 
     elif method == "lmmse":
@@ -683,19 +637,7 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
                 #/ wire coeff_sram_rst_n = 1'b1;
                 sram_ports['rst_n'] = 'coeff_sram_rst_n'
 
-            ModuleCOEFF_SRAM(
-                N_OUTPUT=_N_OUTPUT,
-                N_PILOTS=_N_PILOTS,
-                Qu_COEFF=Qu_COEFF,
-                COEFF_STORAGE='SRAM',
-                is_hybrid=False,
-                rom_data_bank0=None,
-                rom_data_bank1=None,
-                BEAT_MODE=True,
-                N_PILOTS_PER_BEAT=_N_PILOTS_PER_BEAT,
-                FILL_BEATS=_FILL_BEATS,
-                PORTS=sram_ports,  # type: ignore
-            )
+            ModuleCOEFF_SRAM(N_OUTPUT=_N_OUTPUT, N_PILOTS=_N_PILOTS, Qu_COEFF=Qu_COEFF, COEFF_STORAGE='SRAM', is_hybrid=False, rom_data_bank0=None, rom_data_bank1=None, BEAT_MODE=True, N_PILOTS_PER_BEAT=_N_PILOTS_PER_BEAT, FILL_BEATS=_FILL_BEATS, PORTS=sram_ports)
         elif COEFF_SOURCE == 'SRAM' and COEFF_SRAM_SHARED:
             # Shared COEFF_SRAM mode: coeff_rd_idx/coeff_rd_data are external ports
             # supplied by the parent (v_top), which instantiates one COEFF_SRAM
@@ -779,32 +721,6 @@ def ModuleFREQ_INTERP(IF_RST_N: bool, RB_parallelism: int, Qu_H_LS: QuType, Qu_H
                 inter_stage_gain_policy="none",
             )
 
-        ModuleCORE_LMMSE_INTERP(
-            IF_RST_N=IF_RST_N,
-            LMMSE_P=LMMSE_P,
-            RB_PARALLELISM=RB_parallelism,
-            Qu_H_LS=Qu_H_LS,
-            Qu_H=Qu_H,
-            pilot_re=compact_re_sorted,
-            output_re=list(range(12)),
-            dmrs_Type=dmrs_Type,
-            Qu_COEFF=Qu_COEFF,
-            REAL_COEFF=REAL_COEFF,
-            W_matrix_override=descriptor_W,
-            tau_rms=tau_rms,
-            snr_linear=snr_linear,
-            COEFF_SOURCE=COEFF_SOURCE,
-            channel_model=channel_model,
-            delay_spread=delay_spread,
-            scs=scs,
-            pilot_re_t1=pilot_re_t1,
-            pilot_re_t2=pilot_re_t2,
-            compact_t2_slots=compact_t2_slots,
-            compact_zero_slots=compact_zero_slots,
-            FI_RE_PARALLELISM=FI_RE_PARALLELISM,
-            has_pre_fi_buf=has_pre_fi_buf,
-            fi_core_graph=fi_core_graph,
-            PORTS=ports_lmmse,  # type: ignore
-        )
+        ModuleCORE_LMMSE_INTERP(IF_RST_N=IF_RST_N, LMMSE_P=LMMSE_P, RB_PARALLELISM=RB_parallelism, Qu_H_LS=Qu_H_LS, Qu_H=Qu_H, pilot_re=compact_re_sorted, output_re=list(range(12)), dmrs_Type=dmrs_Type, Qu_COEFF=Qu_COEFF, REAL_COEFF=REAL_COEFF, W_matrix_override=descriptor_W, tau_rms=tau_rms, snr_linear=snr_linear, COEFF_SOURCE=COEFF_SOURCE, channel_model=channel_model, delay_spread=delay_spread, scs=scs, pilot_re_t1=pilot_re_t1, pilot_re_t2=pilot_re_t2, compact_t2_slots=compact_t2_slots, compact_zero_slots=compact_zero_slots, FI_RE_PARALLELISM=FI_RE_PARALLELISM, has_pre_fi_buf=has_pre_fi_buf, fi_core_graph=fi_core_graph, PORTS=ports_lmmse)
 
     #/ endmodule

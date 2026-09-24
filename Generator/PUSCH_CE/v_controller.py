@@ -212,13 +212,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
         ports_fsm['coeff_loading'] = 'coeff_loading'
         ports_fsm['coeff_reload_req'] = 'coeff_reload_req'
 
-    ModuleCE_FSM(
-        max_pusch_symbols=max_pusch_symbols,
-        is_double_dmrs=is_double_dmrs,
-        LS_DRAIN_CYCLES=LS_DRAIN_CYCLES,
-        HAS_COEFF_SRAM=HAS_COEFF_SRAM,
-        PORTS=ports_fsm  # type: ignore
-    )
+    ModuleCE_FSM(max_pusch_symbols=max_pusch_symbols, is_double_dmrs=is_double_dmrs, LS_DRAIN_CYCLES=LS_DRAIN_CYCLES, HAS_COEFF_SRAM=HAS_COEFF_SRAM, PORTS=ports_fsm)
 
     # ---- 2. RB_COUNTER ----
     #/ // ========== RB_COUNTER ==========
@@ -235,12 +229,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
         ports_rb['ctrl_sym_overflow'] = 'ctrl_sym_overflow'
         ports_rb['ctrl_rb_remainder'] = 'ctrl_rb_remainder'
 
-    ModuleRB_COUNTER(
-        min_RBs=min_num_RBs,
-        max_RBs=max_num_RBs,
-        RB_PARALLELISM=RB_PARALLELISM,
-        PORTS=ports_rb  # type: ignore
-    )
+    ModuleRB_COUNTER(min_RBs=min_num_RBs, max_RBs=max_num_RBs, RB_PARALLELISM=RB_PARALLELISM, PORTS=ports_rb)
 
     # ---- 3. SYMBOL_COUNTER ----
     #/ // ========== SYMBOL_COUNTER ==========
@@ -255,10 +244,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
         'ctrl_slot_boundary': 'ctrl_slot_boundary_int',
     }
 
-    ModuleSYMBOL_COUNTER(
-        max_pusch_symbols=max_pusch_symbols,
-        PORTS=ports_sym  # type: ignore
-    )
+    ModuleSYMBOL_COUNTER(max_pusch_symbols=max_pusch_symbols, PORTS=ports_sym)
 
     # ---- 4. PILOT_SYMBOL_DETECTION ----
     #/ // ========== PILOT_SYMBOL_DETECTION ==========
@@ -278,14 +264,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
     if is_double_dmrs == "Hybrid":
         ports_pilot['is_double_dmrs'] = 'cfg_is_double_dmrs'
 
-    ModulePILOT_SYMBOL_DETECTION(
-        max_pusch_symbols=max_pusch_symbols,
-        dmrs_typeA_pos=dmrs_typeA_pos,
-        is_double_dmrs=is_double_dmrs,
-        additional_DMRS_range=additional_DMRS_range,
-        num_symbols_range=num_symbols_range,
-        PORTS=ports_pilot  # type: ignore
-    )
+    ModulePILOT_SYMBOL_DETECTION(max_pusch_symbols=max_pusch_symbols, dmrs_typeA_pos=dmrs_typeA_pos, is_double_dmrs=is_double_dmrs, additional_DMRS_range=additional_DMRS_range, num_symbols_range=num_symbols_range, PORTS=ports_pilot)
 
     # ---- 5. TI_CTRL ----
     #/ // ========== TI_CTRL ==========
@@ -322,22 +301,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
             if RB_PARALLELISM > 1:
                 ports_ti['fi_lane_last'] = 'fi_lane_last'
 
-    ModuleTI_CTRL(
-        max_num_RBs=max_num_RBs,
-        RB_PARALLELISM=RB_PARALLELISM,
-        TI_RE_PARALLELISM=TI_RE_PARALLELISM,
-        TI_PIPELINE_DEPTH=TI_PIPELINE_DEPTH,
-        has_pre_fi_buf=has_pre_fi_buf,
-        max_occasions=max_occasions,
-        FI_WINDOW_SIZE=FI_WINDOW_SIZE,
-        FI_CYCLES_PER_OCC=FI_CYCLES_PER_OCC,
-        FI_CYCLES_PER_OCC_SINGLE=FI_CYCLES_PER_OCC_SINGLE,
-        FI_FILL_BEATS=FI_FILL_BEATS,
-        needs_rb_boundary=_needs_rb_boundary,
-        runtime_n_additional=(len(additional_DMRS_range) > 1),
-        runtime_double_dmrs=(is_double_dmrs == "Hybrid"),
-        PORTS=ports_ti  # type: ignore
-    )
+    ModuleTI_CTRL(max_num_RBs=max_num_RBs, RB_PARALLELISM=RB_PARALLELISM, TI_RE_PARALLELISM=TI_RE_PARALLELISM, TI_PIPELINE_DEPTH=TI_PIPELINE_DEPTH, has_pre_fi_buf=has_pre_fi_buf, max_occasions=max_occasions, FI_WINDOW_SIZE=FI_WINDOW_SIZE, FI_CYCLES_PER_OCC=FI_CYCLES_PER_OCC, FI_CYCLES_PER_OCC_SINGLE=FI_CYCLES_PER_OCC_SINGLE, FI_FILL_BEATS=FI_FILL_BEATS, needs_rb_boundary=_needs_rb_boundary, runtime_n_additional=len(additional_DMRS_range) > 1, runtime_double_dmrs=is_double_dmrs == 'Hybrid', PORTS=ports_ti)
 
     # ---- Boundary indicators ----
     # These exist only to feed the ctrl_first_rb_d / ctrl_last_rb_d delay chains.
@@ -445,8 +409,7 @@ def ModuleCONTROLLER(min_num_RBs: int, max_num_RBs: int, RB_PARALLELISM: int, ma
         if _dst not in _output_ports:
             #/ wire [`_dwt`-1:0] `_dst`;
             pass
-        ModuleDelay(DWT=_dwt, IF_RST_N=False, N_CLK=_n_clk,
-                    PORTS=_delay_ports(_src, _dst))  # type: ignore
+        ModuleDelay(DWT=_dwt, IF_RST_N=False, N_CLK=_n_clk, PORTS=_delay_ports(_src, _dst))  # type: ignore
 
     # Note: no tie-off is needed for ctrl_first_rb_d / ctrl_last_rb_d in pre-FI
     # mode any more. The ports are only declared when the LS control graph
