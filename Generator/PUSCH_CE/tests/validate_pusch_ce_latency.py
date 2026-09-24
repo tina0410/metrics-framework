@@ -128,26 +128,44 @@ def _find_top(sources: list[Path]) -> str:
     return candidates[0]
 
 
-def simulate(config_path: Path, *, simulator: str, build_root: Path) -> dict:
-    from cocotb_tools.runner import get_runner
+def _reset_generated_directory(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def simulate(
+    config_path: Path,
+    *,
+    simulator: str,
+    build_root: Path,
+    build_jobs: int = 1,
+) -> dict:
+    import cocotb_tools.runner as cocotb_runner
     from latency_interface import load_case_config
 
+    if build_jobs < 1:
+        raise ValueError("build_jobs must be positive")
+    cocotb_runner.MAX_PARALLEL_BUILD_JOBS = build_jobs
     config = load_case_config(config_path)
     case_root = build_root / config_path.stem
     rtl_root = case_root / "rtl"
-    if rtl_root.exists():
-        shutil.rmtree(rtl_root)
+    sim_build = case_root / "sim_build"
+    _reset_generated_directory(rtl_root)
+    # RTL is regenerated for every validation. Remove the complete simulator
+    # build as well so cocotb's harness object and Verilator's Vtop archive
+    # cannot come from different generations after an interrupted build.
+    _reset_generated_directory(sim_build)
     started = time.perf_counter()
     sources = _generate(config, rtl_root)
     top = _find_top(sources)
     result_path = case_root / "latency_result.json"
     results_xml = case_root / "results.xml"
-    runner = get_runner(simulator)
+    runner = cocotb_runner.get_runner(simulator)
     build_args = ["--timing", "-Wno-fatal"] if simulator == "verilator" else []
     runner.build(
         sources=sources,
         hdl_toplevel=top,
-        build_dir=case_root / "sim_build",
+        build_dir=sim_build,
         always=True,
         build_args=build_args,
     )
@@ -159,7 +177,7 @@ def simulate(config_path: Path, *, simulator: str, build_root: Path) -> dict:
         hdl_toplevel=top,
         test_module="testbench_latency",
         test_dir=TEST_ROOT,
-        build_dir=case_root / "sim_build",
+        build_dir=sim_build,
         results_xml=str(results_xml),
         extra_env=environment,
     )
@@ -198,12 +216,18 @@ def main() -> int:
     parser.add_argument("config", type=Path)
     parser.add_argument("--simulator", default=os.environ.get("SIM", "verilator"))
     parser.add_argument("--build-root", type=Path, default=TEST_ROOT / "sim")
+    parser.add_argument(
+        "--build-jobs",
+        type=int,
+        default=int(os.environ.get("PUSCH_CE_BUILD_JOBS", "1")),
+    )
     args = parser.parse_args()
     try:
         result = simulate(
             args.config.expanduser().resolve(),
             simulator=args.simulator,
             build_root=args.build_root.expanduser().resolve(),
+            build_jobs=args.build_jobs,
         )
         sys.stdout.write(json.dumps(result, ensure_ascii=False))
         return 0

@@ -16,6 +16,12 @@ conda create -n pytv python=3.13
 conda run -n pytv pip install -r requirements.txt
 ```
 
+RTL validation uses one compiler job by default because the generated Verilator
+model is large. Set `PUSCH_CE_BUILD_JOBS` to a larger positive integer only on
+hosts with sufficient memory. Every validation removes the case's previous
+`sim_build` tree so an interrupted build cannot leave incompatible objects for
+the next run.
+
 | Package | Purpose |
 | --- | --- |
 | numpy, scipy | numerical / coefficient generation |

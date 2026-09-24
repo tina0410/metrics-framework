@@ -152,3 +152,20 @@ def test_rtl_generator_import_hides_validator_cli_arguments(monkeypatch):
     assert module_top is fake_top
     assert observed_argv == [["validator.py"], ["validator.py"]]
     assert sys.argv == ["validator.py", "/tmp/config1.json"]
+
+
+def test_rtl_validation_removes_stale_generated_and_build_trees(tmp_path):
+    tests_root = PUSCH_ROOT / "tests"
+    sys.path.insert(0, str(tests_root))
+    try:
+        from validate_pusch_ce_latency import _reset_generated_directory
+    finally:
+        sys.path.remove(str(tests_root))
+
+    rtl_root = tmp_path / "rtl"
+    sim_build = tmp_path / "sim_build"
+    for path in (rtl_root, sim_build):
+        path.mkdir()
+        (path / "stale-object").write_text("stale", encoding="utf-8")
+        _reset_generated_directory(path)
+        assert not path.exists()
