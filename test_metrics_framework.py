@@ -28,6 +28,7 @@ from metrics_framework.adapters import fxmatch as fxmatch_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 from metrics_framework.adapters import mul as mul_adapter
+from metrics_framework.adapters import mux as mux_adapter
 
 
 ROOT = Path(__file__).resolve().parent
@@ -55,7 +56,6 @@ def test_registered_mul_uses_canonical_module_root():
     ("name", "directory", "source"),
     [
         ("neg", "Neg", "Neg.py"),
-        ("mux", "MUX", "MUX.py"),
         ("sub", "Sub", "Sub.py"),
     ],
 )
@@ -81,6 +81,35 @@ def test_registered_abs_uses_five_canonical_configs():
 def test_registered_only_basic_module_reports_metrics_unavailable():
     with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
         predict("neg")
+
+
+def test_registered_mux_uses_five_canonical_configs():
+    spec = Registry().get("mux")
+    expected = (ROOT / "Generator" / "BasicModules" / "MUX").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "MUX.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_mux_prediction_matches_abs_latency_only_schema():
+    result = predict("mux", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_mux_prediction_uses_combinational_formula():
+    module = mux_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = 0 (combinational path)"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 0, 0, 0, 0]
 
 
 def test_abs_prediction_matches_latency_only_output_schema():
@@ -342,6 +371,50 @@ def test_fxmatch_evaluation_view_reports_latency_error_without_throughput():
     result = _evaluation_view(prediction, validation)
     assert result["延迟"]["预测结果 (cycles)"] == 4
     assert result["延迟"]["仿真结果 (cycles)"] == 4
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_mux_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = mux_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": 0,
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = mux_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 0
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 0 cycles\n"
+    )
+
+
+def test_mux_evaluation_view_reports_zero_error_without_throughput():
+    module = mux_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = mux_adapter.predict(config_path, config)
+    prediction = {"module": "mux", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert result["延迟"]["仿真结果 (cycles)"] == 0
     assert result["延迟"]["误差 (%)"] == 0.0
     assert result["面积"]["真实结果 (μm²)"] is None
     assert "Throughput" not in result

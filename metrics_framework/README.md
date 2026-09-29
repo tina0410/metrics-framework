@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、MUX、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、MUX、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|addertree|comp|comptree|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|addertree|comp|comptree|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -106,7 +106,7 @@ python adapter.py validate CONFIG
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/Delay/FxMatch/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/FxMatch/MUX/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### Abs 延迟评估
@@ -146,6 +146,19 @@ FxMatch 提供五个默认配置，对应
 FxMatch 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
 和 `vvp`。
+
+### MUX 延迟评估
+
+MUX 提供五个默认配置，对应 `Generator/BasicModules/MUX/tests/test_MUX.py`
+的 `n1_m1`、`n2_m7`、`n3_m1`、`n4_m8` 和 `n5_m13` 用例。设计源仅包含
+`always @(*)` 组合选择逻辑，没有时钟、寄存器或流水级，因此预测公式为
+`latency_cycles = 0 (combinational path)`。
+
+`evaluate` 每次运行配置对应的 pytest 用例，重新生成 RTL，使用 Icarus Verilog
+编译并运行 testbench；用例对每个输入 lane、无效选择值以及 X/Z 选择值进行功能
+检查。测试完整通过后，以组合路径的 0-cycle 延迟作为仿真值并计算误差。
+MUX 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
 
 ### AdderTree 延迟评估
 
