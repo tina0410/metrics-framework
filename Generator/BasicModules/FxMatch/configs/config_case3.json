@@ -1,0 +1,11 @@
+{
+  "test_case": "case3",
+  "input": {"bitwidth": 5, "fractional_width": 9, "signed": true},
+  "output": {"bitwidth": 5, "fractional_width": 4, "signed": true},
+  "n_pipeline": 4,
+  "if_rst_n": [false, false, true, false],
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "n_frames": 100,
+  "clock": {"period_ns": 10.0}
+}

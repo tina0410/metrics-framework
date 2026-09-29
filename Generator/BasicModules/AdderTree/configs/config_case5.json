@@ -1,0 +1,12 @@
+{
+  "test_case": "n7_p4",
+  "input": {"bitwidth": 8, "fractional_width": 0, "signed": false},
+  "output": {"bitwidth": 12, "fractional_width": 0, "signed": false},
+  "n_inputs": 7,
+  "n_pipeline": 4,
+  "if_rst_n": true,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "config_mode": "A",
+  "clock": {"period_ns": 10.0}
+}

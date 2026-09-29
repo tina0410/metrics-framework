@@ -47,16 +47,30 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "fxmatch": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/FxMatch/FxMatch.py",
       "root": "Generator/BasicModules/FxMatch",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/fxmatch.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "FXMATCH_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "delay": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Delay/Delay.py",
       "root": "Generator/BasicModules/Delay",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/delay.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "DELAY_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "neg": {
       "status": "registered",
@@ -65,16 +79,30 @@
       "capabilities": ["rtl_verification"]
     },
     "abs": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Abs/Abs.py",
+      "adapter": "metrics_framework/adapters/abs.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/Abs",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "ABS_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "mux": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/MUX/MUX.py",
       "root": "Generator/BasicModules/MUX",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/mux.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "MUX_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "add": {
       "status": "active",
@@ -109,22 +137,43 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "comp": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Comp/Comp.py",
       "root": "Generator/BasicModules/Comp",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/comp.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "COMP_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "comptree": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CompTree/CompTree.py",
       "root": "Generator/BasicModules/CompTree",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/comptree.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "COMPTREE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "addertree": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/AdderTree/AdderTree.py",
+      "adapter": "metrics_framework/adapters/addertree.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/AdderTree",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "ADDERTREE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     }
   }
 }

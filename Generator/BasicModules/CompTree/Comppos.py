@@ -73,7 +73,9 @@ def ModuleComppos(QU_IN_1: QuType, QU_IN_2: QuType, QU_GPOS_IN: QuType, QU_OUT: 
     if IF_GIDX:
         GPOS_OUT_DWT = QU_GPOS_IN.DWT + 1
         #/ wire [`GPOS_OUT_DWT`-1:0] greater_position;
-        #/ assign greater_position = choose_first ? {{1{1'b0}}, i_data_gpos_1} : {{1{1'b0}}, i_data_gpos_2};
+        # The first operand represents the upper half of this subtree, so its
+        # winning index needs a leading one; the lower half keeps a leading zero.
+        #/ assign greater_position = choose_first ? {1'b1, i_data_gpos_1} : {1'b0, i_data_gpos_2};
         index_ports = {"i_data": "greater_position", "o_data": "o_gidx"}
         if N_PIPELINES > 0:
             index_ports["i_clk"] = "i_clk"

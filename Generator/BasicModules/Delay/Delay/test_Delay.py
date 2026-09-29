@@ -36,6 +36,8 @@ def generate_testcases():
         Testcase(1, 0, False),
         Testcase(8, 1, True),
         Testcase(13, 3, [True, False, True]),
+        Testcase(4, 2, [False, True]),
+        Testcase(16, 4, False),
     ]
 
 
@@ -45,7 +47,7 @@ TESTCASES = generate_testcases()
 @pytest.mark.parametrize(
     "case",
     TESTCASES,
-    ids=lambda case: f"dwt{case.DWT}_n{case.N_CLK}",
+    ids=[f"case{index}" for index in range(1, len(TESTCASES) + 1)],
 )
 def test_delay(case: Testcase):
     assert delay_expected([1, 2, 3], 0) == [1, 2, 3]

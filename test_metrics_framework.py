@@ -12,15 +12,23 @@ from metrics_framework import cli
 from metrics_framework.core import (
     EvaluationUnavailable,
     Registry,
+    _evaluation_view,
     _interpreter,
     evaluate,
     predict,
 )
+from metrics_framework.adapters import abs as abs_adapter
+from metrics_framework.adapters import addertree as addertree_adapter
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
+from metrics_framework.adapters import comp as comp_adapter
+from metrics_framework.adapters import comptree as comptree_adapter
+from metrics_framework.adapters import delay as delay_adapter
+from metrics_framework.adapters import fxmatch as fxmatch_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 from metrics_framework.adapters import mul as mul_adapter
+from metrics_framework.adapters import mux as mux_adapter
 
 
 ROOT = Path(__file__).resolve().parent
@@ -47,15 +55,8 @@ def test_registered_mul_uses_canonical_module_root():
 @pytest.mark.parametrize(
     ("name", "directory", "source"),
     [
-        ("fxmatch", "FxMatch", "FxMatch.py"),
-        ("delay", "Delay", "Delay.py"),
         ("neg", "Neg", "Neg.py"),
-        ("abs", "Abs", "Abs.py"),
-        ("mux", "MUX", "MUX.py"),
         ("sub", "Sub", "Sub.py"),
-        ("comp", "Comp", "Comp.py"),
-        ("comptree", "CompTree", "CompTree.py"),
-        ("addertree", "AdderTree", "AdderTree.py"),
     ],
 )
 def test_basic_module_is_registered(name, directory, source):
@@ -67,9 +68,517 @@ def test_basic_module_is_registered(name, directory, source):
     assert spec.capabilities == frozenset({"rtl_verification"})
 
 
+def test_registered_abs_uses_five_canonical_configs():
+    spec = Registry().get("abs")
+    expected = (ROOT / "Generator" / "BasicModules" / "Abs").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "Abs.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+
+
 def test_registered_only_basic_module_reports_metrics_unavailable():
     with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
-        predict("fxmatch")
+        predict("neg")
+
+
+def test_registered_mux_uses_five_canonical_configs():
+    spec = Registry().get("mux")
+    expected = (ROOT / "Generator" / "BasicModules" / "MUX").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "MUX.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_mux_prediction_matches_abs_latency_only_schema():
+    result = predict("mux", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_mux_prediction_uses_combinational_formula():
+    module = mux_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = 0 (combinational path)"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 0, 0, 0, 0]
+
+
+def test_abs_prediction_matches_latency_only_output_schema():
+    result = predict("abs", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 2
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_registered_delay_uses_five_canonical_configs():
+    spec = Registry().get("delay")
+    expected = (ROOT / "Generator" / "BasicModules" / "Delay").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "Delay.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_delay_prediction_matches_abs_latency_only_schema():
+    result = predict("delay", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 1
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_delay_prediction_uses_generator_pipeline_formula():
+    module = delay_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_CLK = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 1, 3, 2, 4]
+
+
+def test_registered_fxmatch_uses_five_canonical_configs():
+    spec = Registry().get("fxmatch")
+    expected = (ROOT / "Generator" / "BasicModules" / "FxMatch").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "FxMatch.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_fxmatch_prediction_matches_abs_latency_only_schema():
+    result = predict("fxmatch", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_fxmatch_prediction_uses_generator_pipeline_formula():
+    module = fxmatch_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_CLK = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [4, 4, 4, 4, 4]
+
+
+def test_registered_addertree_uses_five_canonical_configs():
+    spec = Registry().get("addertree")
+    expected = (ROOT / "Generator" / "BasicModules" / "AdderTree").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "AdderTree.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_addertree_prediction_matches_abs_latency_only_schema():
+    result = predict("addertree", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 3
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_addertree_prediction_uses_generator_pipeline_formula():
+    module = addertree_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_PIPELINES = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 3, 2, 1, 4]
+
+
+def test_registered_comp_uses_five_canonical_configs():
+    spec = Registry().get("comp")
+    expected = (ROOT / "Generator" / "BasicModules" / "Comp").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "Comp.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_comp_prediction_matches_abs_latency_only_schema():
+    result = predict("comp", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_comp_prediction_uses_generator_pipeline_formula():
+    module = comp_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_PIPELINES = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [4, 4, 4, 4, 4]
+
+
+def test_registered_comptree_uses_five_canonical_configs():
+    spec = Registry().get("comptree")
+    expected = (ROOT / "Generator" / "BasicModules" / "CompTree").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "CompTree.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_comptree_prediction_matches_abs_latency_only_schema():
+    result = predict("comptree", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 10
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_comptree_prediction_uses_generator_pipeline_formula():
+    module = comptree_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_PIPELINES = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [10, 10, 10, 10, 10]
+
+
+def test_abs_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = abs_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = ROOT / "Generator" / "BasicModules" / "Abs" / "configs" / "config_case3.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = abs_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 1
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case3 is 1 cycles\n"
+    )
+
+
+def test_delay_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = delay_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[1],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = delay_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 2
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 2 cycles\n"
+    )
+
+
+def test_delay_evaluation_view_accepts_zero_latency_without_throughput():
+    module = delay_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = delay_adapter.predict(config_path, config)
+    prediction = {"module": "delay", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert result["延迟"]["仿真结果 (cycles)"] == 0
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_fxmatch_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = fxmatch_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = fxmatch_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 4
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 4 cycles\n"
+    )
+
+
+def test_fxmatch_evaluation_view_reports_latency_error_without_throughput():
+    module = fxmatch_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = fxmatch_adapter.predict(config_path, config)
+    prediction = {"module": "fxmatch", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 4, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert result["延迟"]["仿真结果 (cycles)"] == 4
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_mux_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = mux_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": 0,
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = mux_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 0
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 0 cycles\n"
+    )
+
+
+def test_mux_evaluation_view_reports_zero_error_without_throughput():
+    module = mux_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = mux_adapter.predict(config_path, config)
+    prediction = {"module": "mux", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert result["延迟"]["仿真结果 (cycles)"] == 0
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_addertree_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = addertree_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[1],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = addertree_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 1
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 1 cycles\n"
+    )
+
+
+def test_comp_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = comp_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = comp_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 4
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 4 cycles\n"
+    )
+
+
+def test_comp_evaluation_view_reports_latency_error_without_throughput():
+    module = comp_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = comp_adapter.predict(config_path, config)
+    prediction = {"module": "comp", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 4, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert result["延迟"]["仿真结果 (cycles)"] == 4
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_comptree_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = comptree_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[1],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = comptree_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 10
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 10 cycles\n"
+    )
+
+
+def test_comptree_evaluation_view_reports_latency_error_without_throughput():
+    module = comptree_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = comptree_adapter.predict(config_path, config)
+    prediction = {"module": "comptree", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 10, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 10
+    assert result["延迟"]["仿真结果 (cycles)"] == 10
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_evaluation_view_accepts_zero_latency_and_unavailable_area():
+    metrics = abs_adapter.predict(
+        ROOT / "config.json",
+        {
+            "test_case": "signed_same",
+            "input": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+            "output": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+            "n_pipeline": 0,
+            "if_rst_n": False,
+            "quantization_mode": "TRN.TCPL",
+            "overflow_mode": "WRP.TCPL",
+            "clock": {"period_ns": 10.0},
+        },
+    )
+    prediction = {"module": "abs", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_addertree_evaluation_view_accepts_zero_latency_and_null_area():
+    module = addertree_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = addertree_adapter.predict(config_path, config)
+    prediction = {"module": "addertree", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
 
 
 def test_registered_ls_uses_canonical_module_root():

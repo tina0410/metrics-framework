@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE、ADD 和 MUL 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
+该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、MUX、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、MUX、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|ce|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|ce|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|addertree|comp|comptree|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -106,8 +106,102 @@ python adapter.py validate CONFIG
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/FxMatch/MUX/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
+
+### Abs 延迟评估
+
+Abs 提供五个默认配置，对应 `Generator/BasicModules/Abs/tests/test_Abs.py`
+中的规范测试用例。延迟预测公式为
+`latency_cycles = N_CLK = n_pipeline`；`evaluate` 会运行对应测试用例的 C++ 黄金模型、RTL 生成、Icarus
+仿真和逐帧输出比较，并将测试所验证的流水深度作为仿真值。组合逻辑的 0-cycle
+延迟是合法结果，预测值与仿真值均为 0 时误差为 0%。
+
+Abs 当前仅接入延迟指标；面积和硬件复杂度相关字段保留为 `null`，Throughput
+不在 Abs 输出中展示。这些未接入指标不会阻止 `predict`
+或 `evaluate` 输出延迟结果。Ubuntu 环境需提供
+`clang++`、`iverilog` 和 `vvp`。
+
+### Delay 延迟评估
+
+Delay 提供五个默认配置，对应
+`Generator/BasicModules/Delay/Delay/test_Delay.py` 的 `case1` 至 `case5`。
+生成器在 `N_CLK=0` 时直接连线，在 `N_CLK>0` 时生成对应数量的寄存器级，
+因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 每次运行配置
+对应的 pytest 用例，重新生成 RTL，并调用 Icarus Verilog 编译、仿真和功能检查。
+
+Delay 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。组合直通的 0-cycle 延迟是合法结果。
+Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
+
+### FxMatch 延迟评估
+
+FxMatch 提供五个默认配置，对应
+`Generator/BasicModules/FxMatch/tests/test_FxMatch.py` 的 `case1` 至 `case5`。
+定点量化和溢出处理完成后，生成器通过 `ModuleDelay(..., N_CLK=N_CLK)` 输出，
+因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 会运行配置对应
+的确定性 pytest 用例，生成 C++ 黄金输出和 RTL，调用 Icarus Verilog 仿真并逐帧
+比较结果。
+
+FxMatch 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
+和 `vvp`。
+
+### MUX 延迟评估
+
+MUX 提供五个默认配置，对应 `Generator/BasicModules/MUX/tests/test_MUX.py`
+的 `n1_m1`、`n2_m7`、`n3_m1`、`n4_m8` 和 `n5_m13` 用例。设计源仅包含
+`always @(*)` 组合选择逻辑，没有时钟、寄存器或流水级，因此预测公式为
+`latency_cycles = 0 (combinational path)`。
+
+`evaluate` 每次运行配置对应的 pytest 用例，重新生成 RTL，使用 Icarus Verilog
+编译并运行 testbench；用例对每个输入 lane、无效选择值以及 X/Z 选择值进行功能
+检查。测试完整通过后，以组合路径的 0-cycle 延迟作为仿真值并计算误差。
+MUX 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
+
+### AdderTree 延迟评估
+
+AdderTree 提供五个默认配置，对应
+`Generator/BasicModules/AdderTree/tests/test_AdderTree.py` 中的五个规范 RTL
+测试用例。Mode A 将总流水级分配到加法树各层，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。`evaluate` 每次运行配置对应的
+pytest 用例，生成 RTL，调用 Icarus Verilog 编译并运行 `vvp`；测试通过后以该
+规范用例验证的流水深度作为仿真值，并输出预测值、仿真值和误差。0-cycle
+组合延迟是合法结果。
+
+AdderTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段
+显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和
+`vvp`。
+
+### Comp 延迟评估
+
+Comp 提供五个默认配置，依次对应
+`Generator/BasicModules/Comp/tests/test_Comp.py` 的 `case1` 至 `case5`。
+生成器对所有启用的比较索引和值输出调用
+`ModuleDelay(..., N_CLK=N_PIPELINES)`，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定四级流水，五个
+case 的预测延迟和测试验证延迟均为 4 cycles。
+
+`evaluate` 会运行配置对应的 pytest 用例，依次生成 C++ 黄金输出和 RTL，调用
+Icarus Verilog 仿真并逐项比较五类输出；测试完整通过后才返回仿真延迟和误差。
+Comp 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
+和 `vvp`。
+
+### CompTree 延迟评估
+
+CompTree 提供五个默认配置，对应
+`Generator/BasicModules/CompTree/tests/test_CompTree.py` 的 `case1` 至 `case5`。
+Mode A 将总流水级分配到平衡比较树各层，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定 10 级流水，五个
+case 的预测延迟和测试验证延迟均为 10 cycles。
+
+`evaluate` 会运行配置对应的 pytest 用例，生成 C++ 黄金结果和 RTL，调用
+Icarus Verilog 仿真并比较最大值索引输出；测试完整通过后才返回仿真延迟和
+误差。CompTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
+显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
+`iverilog` 和 `vvp`。
 
 新增模块步骤：
 

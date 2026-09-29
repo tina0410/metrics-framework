@@ -1,0 +1,10 @@
+{
+  "test_case": "signed_narrow_sat",
+  "input": {"bitwidth": 8, "fractional_width": 4, "signed": true},
+  "output": {"bitwidth": 5, "fractional_width": 2, "signed": true},
+  "n_pipeline": 1,
+  "if_rst_n": false,
+  "quantization_mode": "RND.POS_INF",
+  "overflow_mode": "SAT.TCPL",
+  "clock": {"period_ns": 10.0}
+}

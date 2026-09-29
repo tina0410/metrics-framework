@@ -1,0 +1,10 @@
+{
+  "test_case": "nonnegative_passthrough",
+  "input": {"bitwidth": 8, "fractional_width": 3, "signed": false},
+  "output": {"bitwidth": 8, "fractional_width": 3, "signed": false},
+  "n_pipeline": 0,
+  "if_rst_n": false,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "clock": {"period_ns": 10.0}
+}
