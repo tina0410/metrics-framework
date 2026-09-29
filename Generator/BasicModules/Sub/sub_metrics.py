@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,7 +32,7 @@ CANONICAL_CASES: dict[str, dict[str, str]] = {
     "case2": {"quantization_mode": "TRN.TCPL", "overflow_mode": "SAT.ZERO"},
     "case3": {"quantization_mode": "TRN.TCPL", "overflow_mode": "SAT.TCPL"},
     "case4": {"quantization_mode": "TRN.TCPL", "overflow_mode": "SAT.SMGN"},
-    "case5": {"quantization_mode": "TRN.SMGN", "overflow_mode": "WRP.TCPL"},
+    "case5": {"quantization_mode": "RND.POS_INF", "overflow_mode": "WRP.TCPL"},
 }
 
 _TEST_IDS = {f"case{index}": index for index in range(1, 6)}
@@ -95,6 +96,14 @@ def simulate_latency(params: tuple[int, float, str]) -> dict[str, Any]:
 
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="sub-metrics-") as temp_dir:
+        # The legacy test uses paths relative to cwd and compiles with -Iinclude.
+        # Seed its isolated cwd with the checked-in QuBLAS dependency.
+        include_dir = Path(temp_dir) / "sim" / "CppModules" / "include"
+        include_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(
+            ROOT / "tests" / "sim" / "CppModules" / "include" / "QuBLAS.h",
+            include_dir / "QuBLAS.h",
+        )
         process = subprocess.run(
             [
                 sys.executable,
