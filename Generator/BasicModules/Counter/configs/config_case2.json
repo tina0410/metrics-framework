@@ -1,0 +1,9 @@
+{
+  "test_case": "case2",
+  "DWT": 3,
+  "STEP": 1,
+  "IF_RST_N": true,
+  "HAS_CLEAR": true,
+  "HAS_WRAP": true,
+  "clock": {"period_ns": 10.0}
+}

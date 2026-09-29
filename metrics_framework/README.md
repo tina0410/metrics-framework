@@ -104,7 +104,7 @@ python adapter.py validate CONFIG
 `CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Counter/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### SxMatch 延迟评估
@@ -120,6 +120,18 @@ SxMatch 的五个配置对应 `Generator/BasicModules/SxMatch/tests/test_SxMatch
 一致，并包含预测公式、仿真值和延迟误差。运行原 tests 需要 Python `pytest`、
 PyTV，以及 `iverilog`、`vvp`；测试所需的临时 `modules` 包由框架从模块目录构造，
 不依赖外部 ZIP。
+
+### Counter 延迟评估
+
+Counter 的五个配置分别对应 `Generator/BasicModules/Counter/tests/test_Counter.py`
+的已覆盖位宽、步进、复位、同步清零和 wrap 组合。计数值及可选 wrap 标志都在
+时钟上升沿寄存，预测公式为
+`latency_cycles = 1 (posedge-registered count/wrap output)`。`evaluate` 对应运行
+一个原生 pytest 测试，由 RTL scoreboard 连续验证 80 个计数周期；测试通过后，
+将寄存器更新延迟作为仿真值并计算误差。
+
+面积及硬件复杂度为 `null`，不显示 Throughput；输出格式与 Abs 相同。`evaluate`
+需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
 
 ### Abs 延迟评估
 

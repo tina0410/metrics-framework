@@ -17,6 +17,7 @@ from metrics_framework.core import (
     predict,
 )
 from metrics_framework.adapters import abs as abs_adapter
+from metrics_framework.adapters import counter as counter_adapter
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
@@ -57,7 +58,6 @@ def test_registered_mul_uses_canonical_module_root():
         ("comp", "Comp", "Comp.py"),
         ("comptree", "CompTree", "CompTree.py"),
         ("addertree", "AdderTree", "AdderTree.py"),
-        ("counter", "Counter", "Counter.py"),
         ("cadd", "CAdd", "CAdd.py"),
         ("csub", "CSub", "CSub.py"),
         ("cmul", "CMul", "CMul.py"),
@@ -123,6 +123,32 @@ def test_sxmatch_validation_uses_matching_original_test(monkeypatch):
     assert result["latency"]["actual_cycles"] == 3
     assert result["latency"]["source"] == "tests_rtl"
     assert result["area"]["actual_um2"] is None
+
+
+def test_counter_prediction_reports_formula_and_null_area():
+    result = predict("counter", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 1
+    assert result["延迟"]["预测公式"] == counter_adapter._module().LATENCY_FORMULA
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_counter_validation_returns_test_rtl_latency(monkeypatch):
+    module = counter_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": 1,
+            "rtl_simulation_time_ms": 6.0,
+            "functional_match": True,
+        },
+    )
+    config_path = ROOT / "Generator" / "BasicModules" / "Counter" / "configs" / "config_case2.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = counter_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 1
+    assert result["latency"]["source"] == "tests_rtl"
 
 
 def test_abs_validation_uses_canonical_test_result(monkeypatch):
