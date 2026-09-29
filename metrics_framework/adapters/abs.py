@@ -63,6 +63,10 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     if simulation.get("functional_match") is not True:
         raise RuntimeError("Abs RTL functional comparison failed")
     actual_cycles = int(simulation["sim_latency_cycles"])
+    print(
+        f"Success. The RTL latency of {config_path.stem} is {actual_cycles} cycles",
+        file=sys.stderr,
+    )
     return {
         "latency": {
             "actual_cycles": actual_cycles,

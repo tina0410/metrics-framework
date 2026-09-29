@@ -121,7 +121,7 @@ def test_addertree_prediction_uses_generator_pipeline_formula():
     ] == [0, 3, 2, 1, 4]
 
 
-def test_abs_validation_uses_canonical_test_result(monkeypatch):
+def test_abs_validation_uses_canonical_test_result(monkeypatch, capsys):
     module = abs_adapter._module()
     monkeypatch.setattr(
         module,
@@ -138,9 +138,12 @@ def test_abs_validation_uses_canonical_test_result(monkeypatch):
     assert result["latency"]["actual_cycles"] == 1
     assert result["latency"]["source"] == "tests_rtl"
     assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case3 is 1 cycles\n"
+    )
 
 
-def test_addertree_validation_uses_canonical_test_result(monkeypatch):
+def test_addertree_validation_uses_canonical_test_result(monkeypatch, capsys):
     module = addertree_adapter._module()
     monkeypatch.setattr(
         module,
@@ -157,6 +160,9 @@ def test_addertree_validation_uses_canonical_test_result(monkeypatch):
     assert result["latency"]["actual_cycles"] == 1
     assert result["latency"]["source"] == "tests_rtl"
     assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 1 cycles\n"
+    )
 
 
 def test_evaluation_view_accepts_zero_latency_and_unavailable_area():
