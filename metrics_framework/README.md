@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、MUX、Neg、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、MUX、Neg、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|addertree|comp|comptree|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|sub|addertree|comp|comptree|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|sub|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -106,7 +106,7 @@ python adapter.py validate CONFIG
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/Delay/FxMatch/MUX/Neg/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/FxMatch/MUX/Neg/Sub/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### Abs 延迟评估
@@ -173,6 +173,20 @@ Icarus Verilog 仿真并逐帧比较结果；测试完整通过后才返回测�
 并计算误差。Neg 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
 字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
 `iverilog` 和 `vvp`。
+
+### Sub 延迟评估
+
+Sub 提供五个默认配置，对应 `Generator/BasicModules/Sub/tests/test_Sub.py`
+原参数矩阵中的 `case1` 至 `case5`。减法与输入/输出定点格式转换均为组合逻辑，
+最终输出由 `ModuleDelay(..., N_CLK=N_PIPELINES)` 产生，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前五个规范配置均使用四级流水，
+预测延迟为 4 cycles。
+
+`evaluate` 每次只运行指定配置对应的原生 pytest 用例，在临时工作目录内生成 C++
+黄金文件和 RTL，使用 Icarus Verilog 仿真并比较 100 帧结果；测试完整通过后才
+返回对应流水级数并计算误差。Sub 当前不评估面积、Throughput 和硬件复杂度：
+面积与硬件复杂度字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要
+提供 Python `pytest`、`PyVerilog`、`PyTV`，以及 `clang++`、`iverilog` 和 `vvp`。
 
 ### AdderTree 延迟评估
 

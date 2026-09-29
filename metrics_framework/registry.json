@@ -125,10 +125,17 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "sub": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Sub/Sub.py",
       "root": "Generator/BasicModules/Sub",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/sub.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "SUB_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "mul": {
       "status": "active",
