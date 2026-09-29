@@ -12,10 +12,12 @@ from metrics_framework import cli
 from metrics_framework.core import (
     EvaluationUnavailable,
     Registry,
+    _evaluation_view,
     _interpreter,
     evaluate,
     predict,
 )
+from metrics_framework.adapters import abs as abs_adapter
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
@@ -50,7 +52,6 @@ def test_registered_mul_uses_canonical_module_root():
         ("fxmatch", "FxMatch", "FxMatch.py"),
         ("delay", "Delay", "Delay.py"),
         ("neg", "Neg", "Neg.py"),
-        ("abs", "Abs", "Abs.py"),
         ("mux", "MUX", "MUX.py"),
         ("sub", "Sub", "Sub.py"),
         ("comp", "Comp", "Comp.py"),
@@ -67,9 +68,76 @@ def test_basic_module_is_registered(name, directory, source):
     assert spec.capabilities == frozenset({"rtl_verification"})
 
 
+def test_registered_abs_uses_five_canonical_configs():
+    spec = Registry().get("abs")
+    expected = (ROOT / "Generator" / "BasicModules" / "Abs").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "Abs.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+
+
 def test_registered_only_basic_module_reports_metrics_unavailable():
     with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
         predict("fxmatch")
+
+
+def test_abs_prediction_matches_latency_only_output_schema():
+    result = predict("abs", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 2
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_abs_validation_uses_canonical_test_result(monkeypatch):
+    module = abs_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = ROOT / "Generator" / "BasicModules" / "Abs" / "configs" / "config_case3.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = abs_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 1
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+
+
+def test_evaluation_view_accepts_zero_latency_and_unavailable_area():
+    metrics = abs_adapter.predict(
+        ROOT / "config.json",
+        {
+            "test_case": "signed_same",
+            "input": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+            "output": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+            "n_pipeline": 0,
+            "if_rst_n": False,
+            "quantization_mode": "TRN.TCPL",
+            "overflow_mode": "WRP.TCPL",
+            "clock": {"period_ns": 10.0},
+        },
+    )
+    prediction = {"module": "abs", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["真实结果 (μm²)"] is None
 
 
 def test_registered_ls_uses_canonical_module_root():

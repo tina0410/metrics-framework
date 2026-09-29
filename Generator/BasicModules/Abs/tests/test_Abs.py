@@ -228,6 +228,7 @@ def test_abs(case: Testcase):
     )
     moduleloader.reset()
 
+    executable_name = "fxp2.exe" if os.name == "nt" else "fxp2.out"
     run_subprocess(
         [
             "clang++",
@@ -235,11 +236,11 @@ def test_abs(case: Testcase):
             "-std=c++23",
             "-Iinclude",
             "-o",
-            "fxp2.out",
+            executable_name,
         ],
         cwd=cpp_dir,
     )
-    run_subprocess(["./fxp2.out"], cwd=cpp_dir)
+    run_subprocess([str(cpp_dir / executable_name)], cwd=cpp_dir)
 
     verilog_files = sorted(str(path.name) for path in rtl_dir.glob("*.v"))
     assert verilog_files, f"No Verilog files were generated in {rtl_dir}"
