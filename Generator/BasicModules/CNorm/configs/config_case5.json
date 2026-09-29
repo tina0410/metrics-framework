@@ -1,0 +1,10 @@
+{
+  "test_case": "case5",
+  "input": {"bitwidth": 4, "fractional_width": 2, "signed": true},
+  "output": {"bitwidth": 3, "fractional_width": 0, "signed": true},
+  "n_pipeline": 0,
+  "if_rst_n": false,
+  "quantization_mode": "TRN.SMGN",
+  "overflow_mode": "SAT.TCPL",
+  "clock": {"period_ns": 10.0}
+}

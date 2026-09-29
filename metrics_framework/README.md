@@ -1,6 +1,6 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE，以及 Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、SxMatch、Counter、CAdd、CSub、CMul、CNorm、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。基础模块当前先接入延迟指标。
 
 ## 命令
 
@@ -103,10 +103,11 @@ python adapter.py validate CONFIG
 `dc_reference`、`rtl` 或 `derived` 来源。日志写 stderr。验证数据或工具不可用
 返回 2；未预期程序错误返回 1。
 
-基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
-`Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
+基础模块 `FxMatch`、`Delay`、`Neg`、`Abs`、`MUX`、`SxMatch`、`Counter`、
+`CAdd`、`CSub`、`CMul`、`CNorm`、`Add`、`Sub`、`Mul`、`Comp`、`CompTree` 和
+`AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/Delay/FxMatch/MUX/Neg/Sub/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/FxMatch/MUX/Neg/Sub/AdderTree/Comp/CompTree/SxMatch/Counter/CAdd/CSub/CMul/CNorm/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### Abs 延迟评估
@@ -264,3 +265,11 @@ MUL 使用与 ADD 相同的定点配置字段。5 个标准配置统一使用 `1
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
 
 MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。
+
+### 复数基础模块延迟评估
+
+SxMatch、Counter、CAdd、CSub、CMul 和 CNorm 均提供五个规范配置，并在
+`evaluate` 时运行对应目录下原有的 pytest RTL 测试。延迟预测直接依据测试中的
+流水级数，公式为 `latency_cycles = N_CLK = n_pipeline`（Counter 按其寄存器行为
+使用对应的一周期公式）。这几类模块当前只评估延迟，面积和硬件复杂度为 `null`，
+不输出 Throughput；预测、仿真延迟和误差格式与 Abs 一致。

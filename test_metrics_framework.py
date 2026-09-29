@@ -31,6 +31,12 @@ from metrics_framework.adapters import mul as mul_adapter
 from metrics_framework.adapters import mux as mux_adapter
 from metrics_framework.adapters import neg as neg_adapter
 from metrics_framework.adapters import sub as sub_adapter
+from metrics_framework.adapters import sxmatch as sxmatch_adapter
+from metrics_framework.adapters import counter as counter_adapter
+from metrics_framework.adapters import cadd as cadd_adapter
+from metrics_framework.adapters import csub as csub_adapter
+from metrics_framework.adapters import cmul as cmul_adapter
+from metrics_framework.adapters import cnorm as cnorm_adapter
 
 
 ROOT = Path(__file__).resolve().parent
@@ -120,6 +126,36 @@ def test_mux_prediction_uses_combinational_formula():
         module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
         for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
     ] == [0, 0, 0, 0, 0]
+
+
+@pytest.mark.parametrize(
+    ("name", "adapter", "directory"),
+    [
+        ("sxmatch", sxmatch_adapter, "SxMatch"),
+        ("counter", counter_adapter, "Counter"),
+        ("cadd", cadd_adapter, "CAdd"),
+        ("csub", csub_adapter, "CSub"),
+        ("cmul", cmul_adapter, "CMul"),
+        ("cnorm", cnorm_adapter, "CNorm"),
+    ],
+)
+def test_complex_basic_metrics_modules_are_active_latency_only(name, adapter, directory):
+    spec = Registry().get(name)
+    expected_root = (Path(__file__).resolve().parent / "Generator" / "BasicModules" / directory).resolve()
+    assert spec.status == "active"
+    assert spec.root == expected_root
+    assert spec.capabilities == frozenset({"latency"})
+    assert sorted(path.name for path in spec.config_dir.glob("config_case*.json")) == [
+        f"config_case{index}.json" for index in range(1, 6)
+    ]
+
+
+@pytest.mark.parametrize("name", ["sxmatch", "counter", "cadd", "csub", "cmul", "cnorm"])
+def test_complex_basic_metrics_predict_without_throughput(name):
+    result = predict(name, "1")
+    assert "延迟" in result
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert "Throughput" not in result
 
 
 def test_abs_prediction_matches_latency_only_output_schema():
@@ -1140,7 +1176,7 @@ import builtins
 import sys
 from pathlib import Path
 
-root = Path.cwd() / "Generator" / "Mul" / "V0.2.1"
+root = Path.cwd() / "Generator" / "BasicModules" / "Mul"
 sys.path.insert(0, str(root))
 real_import = builtins.__import__
 
