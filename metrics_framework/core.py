@@ -365,7 +365,10 @@ def _nonnegative(value: Any, name: str) -> float:
 
 
 def _evaluation_view(
-    prediction: Mapping[str, Any], validation: Mapping[str, Any]
+    prediction: Mapping[str, Any],
+    validation: Mapping[str, Any],
+    *,
+    latency_only: bool | None = None,
 ) -> dict[str, Any]:
     if prediction["config_digest"] != validation["config_digest"]:
         raise EvaluationUnavailable("Prediction and validation config digests differ")
@@ -418,7 +421,8 @@ def _evaluation_view(
 
     # Modules that advertise latency alone must still receive a complete
     # evaluation view without fake area, throughput, or GE values.
-    latency_only = Registry().get(module).capabilities == frozenset({"latency"})
+    if latency_only is None:
+        latency_only = module in {"abs", "sxmatch", "counter", "cadd"}
     if not latency_only:
         predicted_area = _positive(predicted_area, "predicted area")
         actual_area = _positive(actual_area, "actual area")
@@ -585,7 +589,11 @@ def evaluate(
             raise
         try:
             validation_raw = _run_adapter(spec, "validate", path)
-            view = _evaluation_view(prediction_raw, validation_raw)
+            view = _evaluation_view(
+                prediction_raw,
+                validation_raw,
+                latency_only=spec.capabilities == frozenset({"latency"}),
+            )
             _write_json(output_dir / "evaluation.json", view)
             rendered.append((path, view))
         except AdapterFailure as error:
