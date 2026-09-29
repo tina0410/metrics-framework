@@ -1,9 +1,8 @@
-"""Unified metrics adapter for AdderTree latency evaluation."""
+"""Unified full-metric adapter for AdderTree."""
 
 from __future__ import annotations
 
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,7 @@ MODULE_ROOT = PROJECT_ROOT / "Generator" / "BasicModules" / "AdderTree"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(MODULE_ROOT))
 
+from metrics_framework.adapters.basic_full import predict as predict_full, validate as validate_full  # noqa: E402
 from metrics_framework.adapters.common import run_cli  # noqa: E402
 
 
@@ -21,69 +21,12 @@ def _module():
     return addertree_metrics
 
 
-def _unavailable_prediction() -> dict[str, Any]:
-    return {
-        "area": {
-            "predicted_um2": None,
-            "prediction_time_ms": None,
-            "source": "unavailable",
-        },
-        "hardware_complexity": {
-            "predicted_ge_cycles": None,
-            "prediction_time_ms": None,
-            "ge_reference_cell": None,
-            "ge_area_um2": None,
-            "source": "unavailable",
-        },
-    }
-
-
 def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
-    module = _module()
-    params = module.parameters(config)
-    started = time.perf_counter()
-    latency = module.latency_cycles(params)
-    latency_time_ms = (time.perf_counter() - started) * 1000.0
-    metrics: dict[str, Any] = {
-        "latency": {
-            "predicted_cycles": latency,
-            "prediction_time_ms": latency_time_ms,
-            "source": "formula",
-        },
-    }
-    metrics.update(_unavailable_prediction())
-    return metrics
+    return predict_full("addertree", _module(), config)
 
 
 def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
-    module = _module()
-    params = module.parameters(config)
-    simulation = module.simulate_latency(params)
-    if simulation.get("functional_match") is not True:
-        raise RuntimeError("AdderTree RTL functional comparison failed")
-    actual_cycles = int(simulation["sim_latency_cycles"])
-    print(
-        f"Success. The RTL latency of {config_path.stem} is {actual_cycles} cycles",
-        file=sys.stderr,
-    )
-    return {
-        "latency": {
-            "actual_cycles": actual_cycles,
-            "simulation_time_ms": float(simulation["rtl_simulation_time_ms"]),
-            "reported_speedup": None,
-            "source": "tests_rtl",
-        },
-        "area": {
-            "actual_um2": None,
-            "synthesis_time_ms": None,
-            "reported_speedup": None,
-            "source": "unavailable",
-        },
-        "hardware_complexity": {
-            "actual_ge_cycles": None,
-            "source": "unavailable",
-        },
-    }
+    return validate_full("addertree", "AdderTree", _module(), config_path, config)
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "FXMATCH_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "delay": {
       "status": "active",
@@ -70,7 +70,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "DELAY_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "neg": {
       "status": "active",
@@ -83,7 +83,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "NEG_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "abs": {
       "status": "active",
@@ -96,7 +96,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "ABS_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "sxmatch": {
       "status": "active",
@@ -109,7 +109,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "SXMATCH_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "counter": {
       "status": "active",
@@ -122,7 +122,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "COUNTER_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "cadd": {
       "status": "active",
@@ -135,7 +135,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "CADD_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "csub": {
       "status": "active",
@@ -148,7 +148,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "CSUB_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "cmul": {
       "status": "active",
@@ -161,7 +161,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "CMUL_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "cnorm": {
       "status": "active",
@@ -174,7 +174,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "CNORM_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "mux": {
       "status": "active",
@@ -187,7 +187,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "MUX_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "add": {
       "status": "active",
@@ -213,7 +213,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "SUB_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "mul": {
       "status": "active",
@@ -239,7 +239,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "COMP_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "comptree": {
       "status": "active",
@@ -252,7 +252,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "COMPTREE_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "addertree": {
       "status": "active",
@@ -265,7 +265,7 @@
       "default_cases": [1, 2, 3, 4, 5],
       "python_env": "ADDERTREE_METRICS_PYTHON",
       "output_root": "evaluation_output",
-      "capabilities": ["latency"]
+      "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     }
   }
 }
