@@ -24,6 +24,7 @@ from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import comp as comp_adapter
 from metrics_framework.adapters import comptree as comptree_adapter
 from metrics_framework.adapters import delay as delay_adapter
+from metrics_framework.adapters import fxmatch as fxmatch_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 from metrics_framework.adapters import mul as mul_adapter
@@ -53,7 +54,6 @@ def test_registered_mul_uses_canonical_module_root():
 @pytest.mark.parametrize(
     ("name", "directory", "source"),
     [
-        ("fxmatch", "FxMatch", "FxMatch.py"),
         ("neg", "Neg", "Neg.py"),
         ("mux", "MUX", "MUX.py"),
         ("sub", "Sub", "Sub.py"),
@@ -80,7 +80,7 @@ def test_registered_abs_uses_five_canonical_configs():
 
 def test_registered_only_basic_module_reports_metrics_unavailable():
     with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
-        predict("fxmatch")
+        predict("neg")
 
 
 def test_abs_prediction_matches_latency_only_output_schema():
@@ -119,6 +119,35 @@ def test_delay_prediction_uses_generator_pipeline_formula():
         module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
         for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
     ] == [0, 1, 3, 2, 4]
+
+
+def test_registered_fxmatch_uses_five_canonical_configs():
+    spec = Registry().get("fxmatch")
+    expected = (ROOT / "Generator" / "BasicModules" / "FxMatch").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "FxMatch.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_fxmatch_prediction_matches_abs_latency_only_schema():
+    result = predict("fxmatch", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_fxmatch_prediction_uses_generator_pipeline_formula():
+    module = fxmatch_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_CLK = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [4, 4, 4, 4, 4]
 
 
 def test_registered_addertree_uses_five_canonical_configs():
@@ -269,6 +298,50 @@ def test_delay_evaluation_view_accepts_zero_latency_without_throughput():
     result = _evaluation_view(prediction, validation)
     assert result["延迟"]["预测结果 (cycles)"] == 0
     assert result["延迟"]["仿真结果 (cycles)"] == 0
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_fxmatch_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = fxmatch_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = fxmatch_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 4
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 4 cycles\n"
+    )
+
+
+def test_fxmatch_evaluation_view_reports_latency_error_without_throughput():
+    module = fxmatch_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = fxmatch_adapter.predict(config_path, config)
+    prediction = {"module": "fxmatch", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 4, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 4
+    assert result["延迟"]["仿真结果 (cycles)"] == 4
     assert result["延迟"]["误差 (%)"] == 0.0
     assert result["面积"]["真实结果 (μm²)"] is None
     assert "Throughput" not in result

@@ -13,7 +13,7 @@ from pytv.Converter import convert
 from pytv.ModuleLoader import moduleloader
 
 
-import os
+import posixpath
 import PyTB
 
 from Generator.BasicModules.FxMatch.FxMatch import ModuleFxMatch
@@ -55,8 +55,9 @@ def ModuleTbFxMatch(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_di
     #/
 
     # The root directory is ./RTL/Testcases
-    input_files_dir = os.path.join(io_file_dir,"Input_Files")
-    output_files_dir = os.path.join(io_file_dir,"Output_Files")
+    # These paths are emitted into Verilog, so always use Verilog/POSIX separators.
+    input_files_dir = posixpath.join(io_file_dir, "Input_Files")
+    output_files_dir = posixpath.join(io_file_dir, "Output_Files")
 
     #/ // Drive input signal with `N_FRAMES` inputs using mode A2
 
