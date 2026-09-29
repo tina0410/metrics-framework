@@ -104,7 +104,7 @@ python adapter.py validate CONFIG
 `CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Counter/CAdd/CSub/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Counter/CAdd/CSub/CMul/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### SxMatch 延迟评估
@@ -156,6 +156,18 @@ scoreboard，检查复数打包输出后报告仿真延迟和误差。0-cycle �
 
 CSub 暂不计算面积和硬件复杂度（显示 `null`），也不输出 Throughput；输出格式与
 Abs 一致。需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
+
+### CMul 延迟评估
+
+CMul 前四个配置对应原 tests 的四种定点格式/流水组合，`METHOD="4mul"`；第五个
+配置使用同一合法参数组合，但选用 tests 覆盖的 `METHOD="3mul"`，并启用另一组
+量化/溢出策略。两种结构都保持精确中间乘积，仅在输出转换处按
+`N_CLK` 延迟，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。每次
+`evaluate` 都单独运行 `test_CMul.py` 中与配置匹配的 RTL scoreboard；组合延迟
+0-cycle 是合法值。
+
+面积和硬件复杂度目前为 `null`，不输出 Throughput；预测/评估终端格式与 Abs
+一致。运行 tests 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
 
 ### Abs 延迟评估
 

@@ -131,10 +131,17 @@
       "capabilities": ["latency"]
     },
     "cmul": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CMul/CMul.py",
+      "adapter": "metrics_framework/adapters/cmul.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/CMul",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "CMUL_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "cnorm": {
       "status": "registered",
