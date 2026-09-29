@@ -422,7 +422,7 @@ def _evaluation_view(
     # Modules that advertise latency alone must still receive a complete
     # evaluation view without fake area, throughput, or GE values.
     if latency_only is None:
-        latency_only = module in {"abs", "sxmatch", "counter", "cadd", "csub", "cmul"}
+        latency_only = module in {"abs", "sxmatch", "counter", "cadd", "csub", "cmul", "cnorm"}
     if not latency_only:
         predicted_area = _positive(predicted_area, "predicted area")
         actual_area = _positive(actual_area, "actual area")

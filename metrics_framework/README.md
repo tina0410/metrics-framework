@@ -104,7 +104,7 @@ python adapter.py validate CONFIG
 `CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Counter/CAdd/CSub/CMul/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Counter/CAdd/CSub/CMul/CNorm/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### SxMatch 延迟评估
@@ -216,3 +216,9 @@ MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
 
 MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。
+
+### CNorm 延迟评估
+
+CNorm 五个配置覆盖原 `tests/test_CNorm.py` 中的四种输入/输出格式、复位与流水深度组合；第五组复用第一组格式并选择测试覆盖的 `TRN.SMGN`、`SAT.TCPL` 策略。CNorm 将复数输入拆分为实部和虚部，分别取绝对值后求和，输出流水由 `N_CLK` 控制，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。每个配置单独运行对应 pytest RTL scoreboard，报告仿真延迟和误差，0-cycle 组合延迟合法。
+
+面积和硬件复杂度为 `null`，不输出 Throughput，终端结构与 Abs 一致。运行 CNorm 原测试还需要 `Generator/jigger-basic-library(1).zip` 中的 `modules` 包，以及 Python `pytest`、PyTV、`iverilog` 和 `vvp`；评估时通过 zipimport 加载原测试依赖，不会将生成或仿真产物提交到仓库。
