@@ -22,6 +22,7 @@ from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 from metrics_framework.adapters import mul as mul_adapter
+from metrics_framework.adapters import sxmatch as sxmatch_adapter
 
 
 ROOT = Path(__file__).resolve().parent
@@ -56,6 +57,11 @@ def test_registered_mul_uses_canonical_module_root():
         ("comp", "Comp", "Comp.py"),
         ("comptree", "CompTree", "CompTree.py"),
         ("addertree", "AdderTree", "AdderTree.py"),
+        ("counter", "Counter", "Counter.py"),
+        ("cadd", "CAdd", "CAdd.py"),
+        ("csub", "CSub", "CSub.py"),
+        ("cmul", "CMul", "CMul.py"),
+        ("cnorm", "CNorm", "CNorm.py"),
     ],
 )
 def test_basic_module_is_registered(name, directory, source):
@@ -89,6 +95,34 @@ def test_abs_prediction_reports_formula_and_null_area():
     assert result["面积"]["预测结果 (μm²)"] is None
     assert result["面积"]["预测时间 (ms)"] is None
     assert "Throughput" not in result
+
+
+def test_sxmatch_prediction_reports_formula_and_null_area():
+    result = predict("sxmatch", "3")
+    assert result["延迟"]["预测结果 (cycles)"] == 3
+    assert result["延迟"]["预测公式"] == "latency_cycles = N_CLK = n_pipeline"
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["硬件复杂度"]["预测结果 (GE·cycles)"] is None
+    assert "Throughput" not in result
+
+
+def test_sxmatch_validation_uses_matching_original_test(monkeypatch):
+    module = sxmatch_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[0],
+            "rtl_simulation_time_ms": 8.5,
+            "functional_match": True,
+        },
+    )
+    config_path = ROOT / "Generator" / "BasicModules" / "SxMatch" / "configs" / "config_case3.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = sxmatch_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
 
 
 def test_abs_validation_uses_canonical_test_result(monkeypatch):

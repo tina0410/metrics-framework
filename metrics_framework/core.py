@@ -122,7 +122,7 @@ class Registry:
             )
             required = (
                 {"latency"}
-                if name == "abs"
+                if spec.capabilities == frozenset({"latency"})
                 else {"area", "latency", "throughput", "hardware_complexity"}
             )
             if spec.status == "active":
@@ -416,9 +416,10 @@ def _evaluation_view(
     actual_complexity = actual["hardware_complexity"].get("actual_ge_cycles")
     complexity_prediction_time = predicted["hardware_complexity"].get("prediction_time_ms")
 
-    # Abs is being introduced as a latency-only module. All previously active
-    # modules keep the framework's strict four-metric evaluation contract.
-    if module != "abs":
+    # Modules that advertise latency alone must still receive a complete
+    # evaluation view without fake area, throughput, or GE values.
+    latency_only = Registry().get(module).capabilities == frozenset({"latency"})
+    if not latency_only:
         predicted_area = _positive(predicted_area, "predicted area")
         actual_area = _positive(actual_area, "actual area")
         area_prediction_time = _positive(area_prediction_time, "area prediction time")

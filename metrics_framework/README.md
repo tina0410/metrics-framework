@@ -100,11 +100,26 @@ python adapter.py validate CONFIG
 `dc_reference`、`rtl` 或 `derived` 来源。日志写 stderr。验证数据或工具不可用
 返回 2；未预期程序错误返回 1。
 
-基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
+基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`SxMatch`、`Counter`、`CAdd`、
+`CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
+
+### SxMatch 延迟评估
+
+SxMatch 的五个配置对应 `Generator/BasicModules/SxMatch/tests/test_SxMatch.py`
+中的五个参数组合；量化与溢出策略采用测试已有的 `TRN.TCPL` 和 `WRP.TCPL`。
+模块的 FxMatch 转换为组合逻辑，之后由 `ModuleDelay(..., N_CLK=n_pipeline)`
+输出，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。配置允许 0-cycle
+组合延迟；`evaluate` 对每个 case 单独调用匹配的 pytest RTL scoreboard 测试，
+并以配置中的流水深度作为该测试验证的 RTL 延迟。
+
+面积和硬件复杂度暂显示为 `null`，Throughput 不输出。预测与评估输出均与 Abs
+一致，并包含预测公式、仿真值和延迟误差。运行原 tests 需要 Python `pytest`、
+PyTV，以及 `iverilog`、`vvp`；测试所需的临时 `modules` 包由框架从模块目录构造，
+不依赖外部 ZIP。
 
 ### Abs 延迟评估
 

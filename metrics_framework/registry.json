@@ -78,6 +78,49 @@
       "output_root": "evaluation_output",
       "capabilities": ["latency"]
     },
+    "sxmatch": {
+      "status": "active",
+      "source": "Generator/BasicModules/SxMatch/SxMatch.py",
+      "root": "Generator/BasicModules/SxMatch",
+      "adapter": "metrics_framework/adapters/sxmatch.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "SXMATCH_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
+    },
+    "counter": {
+      "status": "registered",
+      "source": "Generator/BasicModules/Counter/Counter.py",
+      "root": "Generator/BasicModules/Counter",
+      "capabilities": ["rtl_verification"]
+    },
+    "cadd": {
+      "status": "registered",
+      "source": "Generator/BasicModules/CAdd/CAdd.py",
+      "root": "Generator/BasicModules/CAdd",
+      "capabilities": ["rtl_verification"]
+    },
+    "csub": {
+      "status": "registered",
+      "source": "Generator/BasicModules/CSub/CSub.py",
+      "root": "Generator/BasicModules/CSub",
+      "capabilities": ["rtl_verification"]
+    },
+    "cmul": {
+      "status": "registered",
+      "source": "Generator/BasicModules/CMul/CMul.py",
+      "root": "Generator/BasicModules/CMul",
+      "capabilities": ["rtl_verification"]
+    },
+    "cnorm": {
+      "status": "registered",
+      "source": "Generator/BasicModules/CNorm/CNorm.py",
+      "root": "Generator/BasicModules/CNorm",
+      "capabilities": ["rtl_verification"]
+    },
     "mux": {
       "status": "registered",
       "source": "Generator/BasicModules/MUX/MUX.py",
