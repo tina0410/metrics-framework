@@ -18,6 +18,7 @@ from latency_interface import (  # noqa: E402
     evaluate_latency,
     load_case_config,
     predict_from_terms,
+    predict_latency,
     runtime_from_config,
     timing_from_config,
 )
@@ -109,6 +110,10 @@ def test_runtime_cases_are_kept_outside_area_configs(case):
 
     assert "latency" not in raw
     assert runtime_from_config(combined).num_rbs > 0
+    assert combined["latency"]["build_id"] == raw["area"]["source_build_id"]
+    assert combined["latency"]["runtime_case_id"].startswith(
+        raw["area"]["source_build_id"] + "."
+    )
 
 
 @pytest.mark.parametrize("case", range(1, 6))
@@ -119,6 +124,24 @@ def test_structural_timing_does_not_require_rtl_top(case):
     assert timing.rb_parallelism > 0
     assert timing.ti_re_parallelism > 0
     assert timing.early_ls_drain > 0
+
+
+@pytest.mark.parametrize(
+    ("case", "cycles", "formula_case"),
+    [
+        (1, 388, "post_fi"),
+        (2, 388, "post_fi"),
+        (3, 762, "pre_fi_hybrid_single"),
+        (4, 390, "post_fi"),
+        (5, 664, "pre_fi"),
+    ],
+)
+def test_selected_reference_case_latency_predictions(case, cycles, formula_case):
+    path = PUSCH_ROOT / "cases" / f"config{case}.json"
+    result = predict_latency(load_case_config(path))
+
+    assert result["predicted_cycles"] == cycles
+    assert result["formula_case"] == formula_case
 
 
 def test_rtl_generator_import_hides_validator_cli_arguments(monkeypatch):

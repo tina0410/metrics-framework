@@ -4,18 +4,19 @@ These five inputs are the area-estimation baseline for the unified metrics
 framework.  Each JSON contains only the TOP generation parameters consumed by
 `Est_Top()` plus the same optional actual-area/time overrides used by MIMO.
 
-| Metrics case | Area design | FI | TI | Actual TOP area (um^2) |
-| --- | ---: | --- | --- | ---: |
-| config1 | 1 | linear | nn | 2459651.869512 |
-| config2 | 3 | nn | nn | 3039317.125335 |
-| config3 | 12 | linear | lmmse | 9029318.125515 |
-| config4 | 27 | linear | linear | 735939.116292 |
-| config5 | 48 | nn | linear | 15405761.41958 |
+| Metrics case | Reference build ID | FI | TI | Runtime RBs | Predicted latency | Actual TOP area |
+| --- | --- | --- | --- | ---: | ---: | --- |
+| config1 | `127987b564a4` | nn | nn | 24 | 388 cycles | pending |
+| config2 | `2106b2c89b5e` | linear | linear | 24 | 388 cycles | pending |
+| config3 | `e1ba44dfdb4c` | lmmse | lmmse | 24 | 762 cycles | pending |
+| config4 | `c5ee8f1109c4` | nn | lmmse | 24 | 390 cycles | pending |
+| config5 | `a630789da489` | lmmse | linear | 24 | 664 cycles | pending |
 
-When `area.use_config_actual_area` is false, the interface matches all TOP
-generation parameters against `param.xlsx` and reads the matched row's `area`
-value.  If `area.use_config_actual_area` is true, `area.actual_area_um2` is used
-instead.  This is the same precedence as the MIMO area interface.
+`area.source_build_id` and `area.source_case_id` preserve the source selection
+from `explore_20260809_large.json`. Actual areas remain unset until the updated
+build-ID-to-area results are supplied. Once populated,
+`area.use_config_actual_area` is set to true and `area.actual_area_um2` becomes
+the validation reference.
 
 The area case JSON files remain limited to generator/area inputs. Runtime
 points for latency and throughput live in `tests/latency_cases.json`.
@@ -27,11 +28,12 @@ adjacent `slot_ce_done` pulses:
 ```bash
 python latency_interface.py cases/config1.json
 python throughput_interface.py cases/config1.json
-python tests/validate_pusch_ce_latency.py cases/config1.json
+python tests/validate_pusch_ce_latency.py cases/config1.json --simulator verilator
 ```
 
-Run both commands in the PUSCH_CE Python 3.13 environment. RTL validation also
-requires Verilator, or select Icarus with `--simulator icarus`.
+Run both commands in the PUSCH_CE Python 3.13 environment on Ubuntu. RTL
+validation uses Verilator; the unified `ce evaluate` adapter explicitly selects
+it and does not use Icarus/iverilog.
 
 Implementation order after review:
 

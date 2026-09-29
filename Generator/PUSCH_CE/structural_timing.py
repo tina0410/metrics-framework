@@ -19,6 +19,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 AREA_MODEL_ROOT = PROJECT_ROOT / "Area_TP_Estimator" / "PUSCH_Est_pack"
 sys.path.insert(0, str(AREA_MODEL_ROOT))
 
+try:
+    import pytv  # noqa: F401
+except ModuleNotFoundError:
+    pytv_fallback = PROJECT_ROOT / "Generator" / "LSCE" / "BehaviorialVerification"
+    if pytv_fallback.is_dir():
+        sys.path.insert(0, str(pytv_fallback))
+
 from PyTU import QuType  # noqa: E402
 from analyze_timing import analyze_interp_timing, analyze_ls_timing  # noqa: E402
 from dmrs_config import DmrsArchConfig, compute_required_re_indices  # noqa: E402

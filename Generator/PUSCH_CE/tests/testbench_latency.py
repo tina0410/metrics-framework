@@ -33,9 +33,9 @@ async def measure_pusch_ce_latency(dut):
     cocotb.start_soon(Clock(dut.clk, period_ns, unit="ns").start())
     dut.rst_n.value = 0
     dut.start.value = 0
-    dut.N_ID.value = 0
-    dut.n_scid.value = 0
-    dut.current_slot_idx.value = 0
+    dut.N_ID.value = int(runtime.get("N_ID", 0))
+    dut.n_scid.value = int(runtime.get("n_scid", 0))
+    dut.current_slot_idx.value = int(runtime.get("slot_idx", 0))
     dut.pusch_symbol_length.value = num_symbols
     dut.num_RBs.value = num_rbs
     _set_if_present(dut, "protocol_switch", 0)
@@ -50,11 +50,14 @@ async def measure_pusch_ce_latency(dut):
     _set_if_present(
         dut, "dmrs_typeA_pos_sel", 1 if runtime["dmrs_typeA_pos"] == "pos3" else 0
     )
-    _set_if_present(dut, "is_ECP", 1 if protocol["is_ECP"] else 0)
-    _set_if_present(dut, "is_enhanced", 1 if protocol["is_enhanced"] else 0)
+    _set_if_present(dut, "is_ECP", 1 if runtime.get("is_ECP", False) else 0)
+    _set_if_present(
+        dut, "is_enhanced", 1 if runtime.get("is_enhanced", False) else 0
+    )
     _set_if_present(dut, "coeff_load_done", 1)
+    enabled_ports = set(runtime.get("enabled_ports", protocol["antenna_ports"]))
     for port in protocol["antenna_ports"]:
-        _set_if_present(dut, f"port_enable_p{port}", 1)
+        _set_if_present(dut, f"port_enable_p{port}", int(port in enabled_ports))
 
     input_mode = architecture["input_mode"]
     if input_mode == "A":
@@ -80,12 +83,12 @@ async def measure_pusch_ce_latency(dut):
     bits_per_valid_pulse = (
         ti_re_parallelism
         * num_symbols
-        * len(protocol["antenna_ports"])
+        * len(enabled_ports)
         * 2
         * int(component_width_match.group(1))
     )
     expected_output_bits = (
-        num_rbs * 12 * num_symbols * len(protocol["antenna_ports"])
+        num_rbs * 12 * num_symbols * len(enabled_ports)
         * 2 * int(component_width_match.group(1))
     )
     measured: dict[str, list[int]] = {"done_cycles": [], "output_bits": []}

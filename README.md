@@ -155,8 +155,12 @@ python -m metrics_framework ce evaluate 1
 ```bash
 "$PUSCH_CE_METRICS_PYTHON" \
   Generator/PUSCH_CE/tests/validate_pusch_ce_latency.py \
-  Generator/PUSCH_CE/cases/config1.json
+  Generator/PUSCH_CE/cases/config1.json \
+  --simulator verilator
 ```
+
+PUSCH_CE RTL 延迟验证在 Ubuntu 上固定使用 Verilator；统一 `ce evaluate`
+也会显式选择 Verilator，不使用 Icarus/iverilog。
 
 面积预测：
 
