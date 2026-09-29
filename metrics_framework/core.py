@@ -123,7 +123,7 @@ class Registry:
             )
             required = (
                 {"latency"}
-                if name == "abs"
+                if spec.capabilities == frozenset({"latency"})
                 else {"area", "latency", "throughput", "hardware_complexity"}
             )
             if spec.status == "active":
@@ -406,11 +406,16 @@ def _evaluation_view(
     )
     predicted_complexity = predicted["hardware_complexity"].get("predicted_ge_cycles")
     actual_complexity = actual["hardware_complexity"].get("actual_ge_cycles")
-    complexity_prediction_time = predicted["hardware_complexity"].get("prediction_time_ms")
+    complexity_prediction_time = predicted["hardware_complexity"].get(
+        "prediction_time_ms"
+    )
 
-    # Abs is being introduced as a latency-only module. All previously active
-    # modules keep the framework's strict four-metric evaluation contract.
-    if module != "abs":
+    latency_only = (
+        throughput is None
+        and predicted_area is None
+        and predicted_complexity is None
+    )
+    if not latency_only:
         predicted_area = _positive(predicted_area, "predicted area")
         actual_area = _positive(actual_area, "actual area")
         area_prediction_time = _positive(area_prediction_time, "area prediction time")
@@ -420,8 +425,7 @@ def _evaluation_view(
             area_speedup = None
         elif synthesis_time is None:
             speedup = _positive(area_reported_speedup, "area speedup")
-            synthesis_time = speedup * area_prediction_time
-            synthesis_time = _positive(synthesis_time, "synthesis time")
+            synthesis_time = _positive(speedup * area_prediction_time, "synthesis time")
             area_speedup = synthesis_time / area_prediction_time
         else:
             synthesis_time = _positive(synthesis_time, "synthesis time")
@@ -434,9 +438,7 @@ def _evaluation_view(
         predicted_complexity = _positive(
             predicted_complexity, "predicted hardware complexity"
         )
-        actual_complexity = _positive(
-            actual_complexity, "actual hardware complexity"
-        )
+        actual_complexity = _positive(actual_complexity, "actual hardware complexity")
         complexity_prediction_time = _positive(
             complexity_prediction_time, "hardware complexity prediction time"
         )
@@ -496,18 +498,28 @@ def _evaluation_view(
                 "速度提升倍数 (×)": round(area_speedup, 2),
             }
         )
-    elif module == "abs":
+    elif latency_only:
         area_view.update({"综合时间 (ms)": None, "速度提升倍数 (×)": None})
     view.update(
         {
             "面积": area_view,
             "硬件复杂度": {
-                "预测结果 (GE·cycles)": round(predicted_complexity, 2) if predicted_complexity is not None else None,
+                "预测结果 (GE·cycles)": (
+                    round(predicted_complexity, 2)
+                    if predicted_complexity is not None
+                    else None
+                ),
                 ("仿真结果 (GE·cycles)" if module == "bp" else "真实结果 (GE·cycles)"): round(
                     actual_complexity, 2
                 ) if actual_complexity is not None else None,
-                "误差 (%)": round(complexity_error, 2) if complexity_error is not None else None,
-                "预测时间 (ms)": round(complexity_prediction_time, 6) if complexity_prediction_time is not None else None,
+                "误差 (%)": (
+                    round(complexity_error, 2) if complexity_error is not None else None
+                ),
+                "预测时间 (ms)": (
+                    round(complexity_prediction_time, 6)
+                    if complexity_prediction_time is not None
+                    else None
+                ),
                 "GE基准单元": predicted["hardware_complexity"].get("ge_reference_cell"),
                 "1 GE面积 (μm²)": predicted["hardware_complexity"].get("ge_area_um2"),
             },

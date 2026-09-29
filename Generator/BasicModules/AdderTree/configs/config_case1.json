@@ -1,0 +1,12 @@
+{
+  "test_case": "n3_p0",
+  "input": {"bitwidth": 8, "fractional_width": 0, "signed": false},
+  "output": {"bitwidth": 12, "fractional_width": 0, "signed": false},
+  "n_inputs": 3,
+  "n_pipeline": 0,
+  "if_rst_n": false,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "config_mode": "A",
+  "clock": {"period_ns": 10.0}
+}

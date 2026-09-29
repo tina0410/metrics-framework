@@ -44,6 +44,8 @@ def generate_testcases():
         Testcase(3, 0, False),
         Testcase(5, 3, True),
         Testcase(8, 2, False),
+        Testcase(4, 1, False),
+        Testcase(7, 4, True),
     ]
 
 
