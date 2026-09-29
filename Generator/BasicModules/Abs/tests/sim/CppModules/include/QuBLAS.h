@@ -25,8 +25,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <sys/resource.h>
-#include <sys/types.h>
 #include <tuple>
 #include <type_traits>
 #include <utility>
