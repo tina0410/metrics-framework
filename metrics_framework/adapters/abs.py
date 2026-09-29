@@ -44,13 +44,13 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     started = time.perf_counter()
     latency = module.latency_cycles(params)
     latency_time_ms = (time.perf_counter() - started) * 1000.0
+
     metrics: dict[str, Any] = {
         "latency": {
             "predicted_cycles": latency,
             "prediction_time_ms": latency_time_ms,
-            "formula": module.LATENCY_FORMULA,
             "source": "formula",
-        }
+        },
     }
     metrics.update(_unavailable_prediction())
     return metrics

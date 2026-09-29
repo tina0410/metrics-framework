@@ -83,10 +83,10 @@ def test_registered_only_basic_module_reports_metrics_unavailable():
         predict("fxmatch")
 
 
-def test_abs_prediction_reports_formula_and_null_area():
+def test_abs_prediction_matches_latency_only_output_schema():
     result = predict("abs", "2")
     assert result["延迟"]["预测结果 (cycles)"] == 2
-    assert result["延迟"]["预测公式"] == "latency_cycles = N_CLK = n_pipeline"
+    assert "预测公式" not in result["延迟"]
     assert result["面积"]["预测结果 (μm²)"] is None
     assert result["面积"]["预测时间 (ms)"] is None
     assert "Throughput" not in result
