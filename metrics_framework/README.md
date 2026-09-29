@@ -104,7 +104,7 @@ python adapter.py validate CONFIG
 `CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Counter/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Counter/CAdd/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### SxMatch 延迟评估
@@ -132,6 +132,18 @@ Counter 的五个配置分别对应 `Generator/BasicModules/Counter/tests/test_C
 
 面积及硬件复杂度为 `null`，不显示 Throughput；输出格式与 Abs 相同。`evaluate`
 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
+
+### CAdd 延迟评估
+
+CAdd 使用五个配置，前四项逐一对应
+`Generator/BasicModules/CAdd/tests/test_CAdd.py` 中的四种定点格式与流水深度；
+第五项重复 case1 的合法参数组合，保持默认五配置接口。实部、虚部分别调用
+ModuleAdd，二者共用 `N_CLK` 流水延迟，预测公式为
+`latency_cycles = N_CLK = n_pipeline`。`evaluate` 运行选定 pytest RTL scoreboard，
+逐帧检查打包的复数输出；0-cycle 组合延迟有效，误差按仿真与预测 cycles 计算。
+
+面积和硬件复杂度显示为 `null`，不输出 Throughput，终端结构与 Abs 一致。运行
+tests 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
 
 ### Abs 延迟评估
 

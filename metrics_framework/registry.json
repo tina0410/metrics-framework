@@ -105,10 +105,17 @@
       "capabilities": ["latency"]
     },
     "cadd": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CAdd/CAdd.py",
+      "adapter": "metrics_framework/adapters/cadd.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/CAdd",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "CADD_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "csub": {
       "status": "registered",
