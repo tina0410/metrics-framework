@@ -13,7 +13,12 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#if !defined(QUBLAS_DISABLE_STD_FORMAT) && defined(__has_include)
+#if __has_include(<format>)
 #include <format>
+#define QUBLAS_HAS_STD_FORMAT 1
+#endif
+#endif
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -5340,8 +5345,10 @@ inline constexpr axis<'y'> _y; inline constexpr axis<'z'> _z;
 
 } // namespace QuBLAS
 
+#if defined(QUBLAS_HAS_STD_FORMAT)
 // Keep formatting at the language boundary: the scalar itself only knows its
-// bits and value, while std::format supplies the surface syntax.
+// bits and value, while std::format supplies the surface syntax. Formatting is
+// optional because some C++23 toolchains do not ship <format> yet.
 namespace std {
 
 template <int IntBits, int FracBits, bool Signed, typename Quantization,
@@ -5410,3 +5417,5 @@ struct formatter<
 };
 
 } // namespace std
+#undef QUBLAS_HAS_STD_FORMAT
+#endif

@@ -73,10 +73,17 @@
       "capabilities": ["latency"]
     },
     "neg": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Neg/Neg.py",
       "root": "Generator/BasicModules/Neg",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/neg.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "NEG_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "abs": {
       "status": "active",
