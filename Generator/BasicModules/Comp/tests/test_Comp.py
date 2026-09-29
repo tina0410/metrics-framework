@@ -90,7 +90,9 @@ def generate_testcases():
 TESTCASES = generate_testcases()
 
 
-@pytest.mark.parametrize("case", TESTCASES)
+@pytest.mark.parametrize(
+    "case", TESTCASES, ids=[f"case{index}" for index in range(1, len(TESTCASES) + 1)]
+)
 def test_comp(case: Testcase):
     input_dir = SIM_DIR / "Input_Files"
     comparison_dir = SIM_DIR / "Comparison_Files"
@@ -150,11 +152,12 @@ def test_comp(case: Testcase):
     os.replace(cpp_dir / generated_runner, cpp_dir / case.CPP_RUN_FILE_NAME_DEST)
     moduleloader.reset()
 
+    executable_name = "fxp2.exe" if os.name == "nt" else "fxp2.out"
     run_subprocess(
-        ["clang++", case.CPP_RUN_FILE_NAME_DEST, "-std=c++23", "-Iinclude", "-o", "fxp2.out"],
+        ["clang++", case.CPP_RUN_FILE_NAME_DEST, "-std=c++23", "-Iinclude", "-o", executable_name],
         cwd=cpp_dir,
     )
-    run_subprocess(["./fxp2.out"], cwd=cpp_dir)
+    run_subprocess([str(cpp_dir / executable_name)], cwd=cpp_dir)
 
     verilog_files = sorted(p.name for p in rtl_dir.glob("*.v"))
     assert verilog_files, f"No Verilog files generated in {rtl_dir}"
