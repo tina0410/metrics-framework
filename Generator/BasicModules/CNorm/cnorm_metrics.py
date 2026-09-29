@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import math
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
-
+from metrics_framework.adapters.basic_module_test_env import isolated_test_environment
 
 ROOT = Path(__file__).resolve().parent
 BASIC_ROOT = ROOT.parent
-LIBRARY_ARCHIVE = BASIC_ROOT.parent / "jigger-basic-library(1).zip"
 TEST_FILE = ROOT / "tests" / "test_CNorm.py"
 LATENCY_FORMULA = "latency_cycles = N_CLK = n_pipeline"
 _FORMATS = (
@@ -67,29 +65,20 @@ def latency_cycles(params: tuple[int, float, str, str]) -> int:
 
 def simulate_latency(params: tuple[int, float, str, str]) -> dict[str, Any]:
     cycles, period, case, test_id = params
-    if not LIBRARY_ARCHIVE.is_file():
-        raise RuntimeError(f"CNorm tests require the Basic Library archive: {LIBRARY_ARCHIVE}")
-    environment = os.environ.copy()
-    library_paths = [
-        f"{LIBRARY_ARCHIVE.as_posix()}/jigger-basic-library",
-        f"{LIBRARY_ARCHIVE.as_posix()}/jigger-basic-library/tests",
-    ]
-    environment["PYTHONPATH"] = os.pathsep.join(
-        [*library_paths, environment.get("PYTHONPATH", "")]
-    ).rstrip(os.pathsep)
-    started = time.perf_counter()
-    process = subprocess.run(
-        [sys.executable, "-m", "pytest", f"tests/test_CNorm.py::test_cnorm[{test_id}]", "-q"],
-        cwd=ROOT,
-        env=environment,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=240,
-    )
-    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    with isolated_test_environment(ROOT) as environment:
+        started = time.perf_counter()
+        process = subprocess.run(
+            [sys.executable, "-m", "pytest", f"tests/test_CNorm.py::test_cnorm[{test_id}]", "-q"],
+            cwd=ROOT,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=240,
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
     if process.returncode != 0 or "1 passed" not in process.stdout:
         raise RuntimeError(f"CNorm RTL test {case} failed: {process.stdout.strip()}")
     return {

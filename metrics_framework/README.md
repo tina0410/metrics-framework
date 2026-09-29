@@ -221,4 +221,4 @@ MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`�
 
 CNorm 五个配置覆盖原 `tests/test_CNorm.py` 中的四种输入/输出格式、复位与流水深度组合；第五组复用第一组格式并选择测试覆盖的 `TRN.SMGN`、`SAT.TCPL` 策略。CNorm 将复数输入拆分为实部和虚部，分别取绝对值后求和，输出流水由 `N_CLK` 控制，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。每个配置单独运行对应 pytest RTL scoreboard，报告仿真延迟和误差，0-cycle 组合延迟合法。
 
-面积和硬件复杂度为 `null`，不输出 Throughput，终端结构与 Abs 一致。运行 CNorm 原测试还需要 `Generator/jigger-basic-library(1).zip` 中的 `modules` 包，以及 Python `pytest`、PyTV、`iverilog` 和 `vvp`；评估时通过 zipimport 加载原测试依赖，不会将生成或仿真产物提交到仓库。
+面积和硬件复杂度为 `null`，不输出 Throughput，终端结构与 Abs 一致。CNorm 测试依赖由框架从 `Generator/BasicModules/CNorm` 中的本地源码临时构造，不依赖外部 ZIP；运行需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`，生成物保留在系统临时目录。
