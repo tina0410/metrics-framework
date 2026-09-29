@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、ADD 和 MUL 的面积、延迟、吞吐率与硬件复杂度评估，同时让各模块保留独立 Python 和 RTL 工具环境。
+该框架统一 LS、MIMO、BP、Abs、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs 当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|abs|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|abs|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -103,8 +103,21 @@ python adapter.py validate CONFIG
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
+
+### Abs 延迟评估
+
+Abs 提供五个默认配置，对应 `Generator/BasicModules/Abs/tests/test_Abs.py`
+中的规范测试用例。延迟预测公式为
+`latency_cycles = N_CLK = n_pipeline`；`evaluate` 会运行对应测试用例的 C++ 黄金模型、RTL 生成、Icarus
+仿真和逐帧输出比较，并将测试所验证的流水深度作为仿真值。组合逻辑的 0-cycle
+延迟是合法结果，预测值与仿真值均为 0 时误差为 0%。
+
+Abs 当前仅接入延迟指标；面积和硬件复杂度相关字段保留为 `null`，Throughput
+不在 Abs 输出中展示。这些未接入指标不会阻止 `predict`
+或 `evaluate` 输出延迟结果。Ubuntu 环境需提供
+`clang++`、`iverilog` 和 `vvp`。
 
 新增模块步骤：
 

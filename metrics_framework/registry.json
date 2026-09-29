@@ -66,10 +66,17 @@
       "capabilities": ["rtl_verification"]
     },
     "abs": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Abs/Abs.py",
+      "adapter": "metrics_framework/adapters/abs.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/Abs",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "ABS_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "mux": {
       "status": "registered",
