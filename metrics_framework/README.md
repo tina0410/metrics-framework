@@ -1,12 +1,12 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE、Abs、Delay、AdderTree、Comp、CompTree、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs、Delay、AdderTree、Comp 和 CompTree 当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|ce|abs|addertree|comp|comptree|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|ce|abs|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|addertree|comp|comptree|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
@@ -106,7 +106,7 @@ python adapter.py validate CONFIG
 基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/AdderTree/Comp/CompTree/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### Abs 延迟评估
@@ -121,6 +121,18 @@ Abs 当前仅接入延迟指标；面积和硬件复杂度相关字段保留为 
 不在 Abs 输出中展示。这些未接入指标不会阻止 `predict`
 或 `evaluate` 输出延迟结果。Ubuntu 环境需提供
 `clang++`、`iverilog` 和 `vvp`。
+
+### Delay 延迟评估
+
+Delay 提供五个默认配置，对应
+`Generator/BasicModules/Delay/Delay/test_Delay.py` 的 `case1` 至 `case5`。
+生成器在 `N_CLK=0` 时直接连线，在 `N_CLK>0` 时生成对应数量的寄存器级，
+因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 每次运行配置
+对应的 pytest 用例，重新生成 RTL，并调用 Icarus Verilog 编译、仿真和功能检查。
+
+Delay 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。组合直通的 0-cycle 延迟是合法结果。
+Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
 
 ### AdderTree 延迟评估
 

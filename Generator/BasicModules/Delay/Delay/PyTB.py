@@ -21,8 +21,6 @@ sys.path.append(dirname(__file__))
 import pytest
 import itertools
 import PyTU
-import pyverilog
-from pyverilog.vparser.parser import parse
 import os
 import shutil
 from datetime import datetime

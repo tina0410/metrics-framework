@@ -23,6 +23,7 @@ from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import comp as comp_adapter
 from metrics_framework.adapters import comptree as comptree_adapter
+from metrics_framework.adapters import delay as delay_adapter
 from metrics_framework.adapters import ls as ls_adapter
 from metrics_framework.adapters import mimo as mimo_adapter
 from metrics_framework.adapters import mul as mul_adapter
@@ -53,7 +54,6 @@ def test_registered_mul_uses_canonical_module_root():
     ("name", "directory", "source"),
     [
         ("fxmatch", "FxMatch", "FxMatch.py"),
-        ("delay", "Delay", "Delay.py"),
         ("neg", "Neg", "Neg.py"),
         ("mux", "MUX", "MUX.py"),
         ("sub", "Sub", "Sub.py"),
@@ -90,6 +90,35 @@ def test_abs_prediction_matches_latency_only_output_schema():
     assert result["面积"]["预测结果 (μm²)"] is None
     assert result["面积"]["预测时间 (ms)"] is None
     assert "Throughput" not in result
+
+
+def test_registered_delay_uses_five_canonical_configs():
+    spec = Registry().get("delay")
+    expected = (ROOT / "Generator" / "BasicModules" / "Delay").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "Delay.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_delay_prediction_matches_abs_latency_only_schema():
+    result = predict("delay", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 1
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_delay_prediction_uses_generator_pipeline_formula():
+    module = delay_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_CLK = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 1, 3, 2, 4]
 
 
 def test_registered_addertree_uses_five_canonical_configs():
@@ -199,6 +228,50 @@ def test_abs_validation_uses_canonical_test_result(monkeypatch, capsys):
     assert capsys.readouterr().err == (
         "Success. The RTL latency of config_case3 is 1 cycles\n"
     )
+
+
+def test_delay_validation_uses_canonical_test_result(monkeypatch, capsys):
+    module = delay_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[1],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = delay_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 2
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+    assert capsys.readouterr().err == (
+        "Success. The RTL latency of config_case4 is 2 cycles\n"
+    )
+
+
+def test_delay_evaluation_view_accepts_zero_latency_without_throughput():
+    module = delay_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = delay_adapter.predict(config_path, config)
+    prediction = {"module": "delay", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["预测结果 (cycles)"] == 0
+    assert result["延迟"]["仿真结果 (cycles)"] == 0
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
 
 
 def test_addertree_validation_uses_canonical_test_result(monkeypatch, capsys):

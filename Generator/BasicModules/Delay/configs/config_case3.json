@@ -1,0 +1,7 @@
+{
+  "test_case": "case3",
+  "data_width": 13,
+  "n_pipeline": 3,
+  "if_rst_n": [true, false, true],
+  "clock": {"period_ns": 10.0}
+}
