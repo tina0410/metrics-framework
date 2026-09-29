@@ -11,7 +11,7 @@ from pytv.Converter import convert
 from pytv.ModuleLoader import moduleloader
 
 # Modify version at here
-import os
+import posixpath
 import PyTB
 import math
 from Generator.BasicModules.CompTree.CompTree import ModuleCompTree
@@ -75,8 +75,9 @@ def ModuleTbCompTree(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_d
     # Note: Input data is generated in CppRun module.
 
     # The root directory is ./RTL/Testcases
-    input_files_dir = os.path.join(io_file_dir,"Input_Files")
-    output_files_dir = os.path.join(io_file_dir,"Output_Files")
+    # These paths are emitted into Verilog, so always use Verilog/POSIX separators.
+    input_files_dir = posixpath.join(io_file_dir, "Input_Files")
+    output_files_dir = posixpath.join(io_file_dir, "Output_Files")
     # Note: Input data is generated in CppRun module.
 
     #/ // Drive input signal

@@ -129,10 +129,17 @@
       "capabilities": ["latency"]
     },
     "comptree": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CompTree/CompTree.py",
       "root": "Generator/BasicModules/CompTree",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/comptree.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "COMPTREE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "addertree": {
       "status": "active",
