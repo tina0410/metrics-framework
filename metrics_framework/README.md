@@ -110,128 +110,31 @@ python adapter.py validate CONFIG
 目前 Abs/Delay/FxMatch/MUX/Neg/Sub/AdderTree/Comp/CompTree/SxMatch/Counter/CAdd/CSub/CMul/CNorm/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
-### Abs 延迟评估
+### 基础模块完整指标评估
 
-Abs 提供五个默认配置，对应 `Generator/BasicModules/Abs/tests/test_Abs.py`
-中的规范测试用例。延迟预测公式为
-`latency_cycles = N_CLK = n_pipeline`；`evaluate` 会运行对应测试用例的 C++ 黄金模型、RTL 生成、Icarus
-仿真和逐帧输出比较，并将测试所验证的流水深度作为仿真值。组合逻辑的 0-cycle
-延迟是合法结果，预测值与仿真值均为 0 时误差为 0%。
+除 ADD、MUL 外，Abs、AdderTree、CAdd、CMul、CNorm、CSub、Comp、CompTree、
+Counter、Delay、FxMatch、MUX、Neg、Sub 和 SxMatch 也已接入统一完整指标。每个模块
+在 `Area_TP_Estimator/<Module>/` 下保留独立的 `est` 与 `report` 文件夹，不共享或
+覆盖其他模块的模型、评估函数和 DC 报告。
 
-Abs 当前仅接入延迟指标；面积和硬件复杂度相关字段保留为 `null`，Throughput
-不在 Abs 输出中展示。这些未接入指标不会阻止 `predict`
-或 `evaluate` 输出延迟结果。Ubuntu 环境需提供
-`clang++`、`iverilog` 和 `vvp`。
+- 面积预测直接调用 `est/Est_<Module>.py`；模型文件从同一模块的 `est/model`
+  加载。运行环境需要 `joblib`、`numpy` 和 `scikit-learn`。
+- 真实面积与综合时间按完整结构参数从 `report/test.xlsx` 或 `report/basic.xlsx`
+  精确匹配，综合时间由秒转换为毫秒。找不到唯一 DC 行时不会选择近邻或复用其他
+  配置，调用方必须通过 `validation.area.actual_um2` 以及
+  `synthesis_time_ms`/`reported_speedup` 提供验证数据。
+- 吞吐率与 ADD/MUL 使用相同口径：
+  `effective_Gbps = output_bits / (clock.period_ns × output_interval_cycles)`；预测间隔
+  为 1 cycle，验证使用 RTL 返回的输出间隔（旧测试结果未记录时按 1 cycle）。
+- 定点硬件复杂度为 `area / GE_area × max(1, latency_cycles)`，GE 基准为
+  `LVT_NAND2HDV0 = 1.12 μm²`。`max(1, ...)` 使组合模块按一个观察周期计量；
+  MUX 或单输入树等纯直通结构允许面积与复杂度为 0。
+- `evaluate` 的终端字段与 ADD/MUL 一致，包含延迟、面积、Throughput、硬件复杂度、
+  预测/验证时间、误差及可计算的速度提升倍数。延迟验证仍运行各模块原有 pytest、
+  C++ 黄金模型与 RTL/Icarus 链；组合逻辑的 0-cycle 延迟是合法结果。
 
-### Delay 延迟评估
-
-Delay 提供五个默认配置，对应
-`Generator/BasicModules/Delay/Delay/test_Delay.py` 的 `case1` 至 `case5`。
-生成器在 `N_CLK=0` 时直接连线，在 `N_CLK>0` 时生成对应数量的寄存器级，
-因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 每次运行配置
-对应的 pytest 用例，重新生成 RTL，并调用 Icarus Verilog 编译、仿真和功能检查。
-
-Delay 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
-`null`，输出中不包含 Throughput。组合直通的 0-cycle 延迟是合法结果。
-Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
-
-### FxMatch 延迟评估
-
-FxMatch 提供五个默认配置，对应
-`Generator/BasicModules/FxMatch/tests/test_FxMatch.py` 的 `case1` 至 `case5`。
-定点量化和溢出处理完成后，生成器通过 `ModuleDelay(..., N_CLK=N_CLK)` 输出，
-因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 会运行配置对应
-的确定性 pytest 用例，生成 C++ 黄金输出和 RTL，调用 Icarus Verilog 仿真并逐帧
-比较结果。
-
-FxMatch 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
-`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
-和 `vvp`。
-
-### MUX 延迟评估
-
-MUX 提供五个默认配置，对应 `Generator/BasicModules/MUX/tests/test_MUX.py`
-的 `n1_m1`、`n2_m7`、`n3_m1`、`n4_m8` 和 `n5_m13` 用例。设计源仅包含
-`always @(*)` 组合选择逻辑，没有时钟、寄存器或流水级，因此预测公式为
-`latency_cycles = 0 (combinational path)`。
-
-`evaluate` 每次运行配置对应的 pytest 用例，重新生成 RTL，使用 Icarus Verilog
-编译并运行 testbench；用例对每个输入 lane、无效选择值以及 X/Z 选择值进行功能
-检查。测试完整通过后，以组合路径的 0-cycle 延迟作为仿真值并计算误差。
-MUX 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
-`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
-
-### Neg 延迟评估
-
-Neg 提供五个默认配置，对应 `Generator/BasicModules/Neg/tests/test_Neg.py`
-的前五个规范用例。输入取负和定点格式转换均为组合逻辑，最终输出仅通过
-`ModuleDelay(..., N_CLK=N_CLK)` 寄存，因此预测公式为
-`latency_cycles = N_CLK = n_pipeline`。五个默认 case 的延迟依次为
-0、2、1、1 和 0 cycles。
-
-`evaluate` 每次运行配置对应的 pytest 用例，重新生成 C++ 黄金输出和 RTL，调用
-Icarus Verilog 仿真并逐帧比较结果；测试完整通过后才返回测试所验证的流水深度
-并计算误差。Neg 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
-字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
-`iverilog` 和 `vvp`。
-
-### Sub 延迟评估
-
-Sub 提供五个默认配置，对应 `Generator/BasicModules/Sub/tests/test_Sub.py`
-原参数矩阵中的 `case1` 至 `case5`。减法与输入/输出定点格式转换均为组合逻辑，
-最终输出由 `ModuleDelay(..., N_CLK=N_PIPELINES)` 产生，因此预测公式为
-`latency_cycles = N_PIPELINES = n_pipeline`。当前五个规范配置均使用四级流水，
-预测延迟为 4 cycles。
-
-`evaluate` 每次只运行指定配置对应的原生 pytest 用例，在临时工作目录内生成 C++
-黄金文件和 RTL，使用 Icarus Verilog 仿真并比较 100 帧结果；测试完整通过后才
-返回对应流水级数并计算误差。Sub 当前不评估面积、Throughput 和硬件复杂度：
-面积与硬件复杂度字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要
-提供 Python `pytest`、`PyVerilog`、`PyTV`，以及 `clang++`、`iverilog` 和 `vvp`。
-
-### AdderTree 延迟评估
-
-AdderTree 提供五个默认配置，对应
-`Generator/BasicModules/AdderTree/tests/test_AdderTree.py` 中的五个规范 RTL
-测试用例。Mode A 将总流水级分配到加法树各层，因此预测公式为
-`latency_cycles = N_PIPELINES = n_pipeline`。`evaluate` 每次运行配置对应的
-pytest 用例，生成 RTL，调用 Icarus Verilog 编译并运行 `vvp`；测试通过后以该
-规范用例验证的流水深度作为仿真值，并输出预测值、仿真值和误差。0-cycle
-组合延迟是合法结果。
-
-AdderTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段
-显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和
-`vvp`。
-
-### Comp 延迟评估
-
-Comp 提供五个默认配置，依次对应
-`Generator/BasicModules/Comp/tests/test_Comp.py` 的 `case1` 至 `case5`。
-生成器对所有启用的比较索引和值输出调用
-`ModuleDelay(..., N_CLK=N_PIPELINES)`，因此预测公式为
-`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定四级流水，五个
-case 的预测延迟和测试验证延迟均为 4 cycles。
-
-`evaluate` 会运行配置对应的 pytest 用例，依次生成 C++ 黄金输出和 RTL，调用
-Icarus Verilog 仿真并逐项比较五类输出；测试完整通过后才返回仿真延迟和误差。
-Comp 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
-`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
-和 `vvp`。
-
-### CompTree 延迟评估
-
-CompTree 提供五个默认配置，对应
-`Generator/BasicModules/CompTree/tests/test_CompTree.py` 的 `case1` 至 `case5`。
-Mode A 将总流水级分配到平衡比较树各层，因此预测公式为
-`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定 10 级流水，五个
-case 的预测延迟和测试验证延迟均为 10 cycles。
-
-`evaluate` 会运行配置对应的 pytest 用例，生成 C++ 黄金结果和 RTL，调用
-Icarus Verilog 仿真并比较最大值索引输出；测试完整通过后才返回仿真延迟和
-误差。CompTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
-显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
-`iverilog` 和 `vvp`。
-
+完整 RTL 验证所需工具依模块而异，通常包括 Python `pytest`、PyVerilog、PyTV、
+`clang++` 或 `g++`、`iverilog` 和 `vvp`。
 新增模块步骤：
 
 1. 实现纯预测函数，禁止读取真实值或运行 RTL。
@@ -266,10 +169,9 @@ MUL 使用与 ADD 相同的定点配置字段。5 个标准配置统一使用 `1
 
 MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。
 
-### 复数基础模块延迟评估
+### 复数基础模块评估
 
 SxMatch、Counter、CAdd、CSub、CMul 和 CNorm 均提供五个规范配置，并在
-`evaluate` 时运行对应目录下原有的 pytest RTL 测试。延迟预测直接依据测试中的
-流水级数，公式为 `latency_cycles = N_CLK = n_pipeline`（Counter 按其寄存器行为
-使用对应的一周期公式）。这几类模块当前只评估延迟，面积和硬件复杂度为 `null`，
-不输出 Throughput；预测、仿真延迟和误差格式与 Abs 一致。
+`evaluate` 时运行对应目录下原有的 pytest RTL 测试。延迟预测依据流水级数
+（Counter 按寄存器行为使用一周期公式），面积、Throughput 和定点硬件复杂度
+使用上文统一口径，终端格式与 ADD/MUL 一致。

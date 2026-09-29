@@ -416,8 +416,8 @@ def _evaluation_view(
         and predicted_complexity is None
     )
     if not latency_only:
-        predicted_area = _positive(predicted_area, "predicted area")
-        actual_area = _positive(actual_area, "actual area")
+        predicted_area = _nonnegative(predicted_area, "predicted area")
+        actual_area = _nonnegative(actual_area, "actual area")
         area_prediction_time = _positive(area_prediction_time, "area prediction time")
         area_reported_speedup = actual["area"].get("reported_speedup")
         synthesis_time_available = actual["area"].get("synthesis_time_available", True)
@@ -435,10 +435,10 @@ def _evaluation_view(
             throughput_prediction_time, "throughput prediction time"
         )
         actual_throughput = _positive(actual_throughput, "actual throughput")
-        predicted_complexity = _positive(
+        predicted_complexity = _nonnegative(
             predicted_complexity, "predicted hardware complexity"
         )
-        actual_complexity = _positive(actual_complexity, "actual hardware complexity")
+        actual_complexity = _nonnegative(actual_complexity, "actual hardware complexity")
         complexity_prediction_time = _positive(
             complexity_prediction_time, "hardware complexity prediction time"
         )
@@ -451,14 +451,16 @@ def _evaluation_view(
     area_error = (
         abs(float(predicted_area) - float(actual_area)) / float(actual_area) * 100.0
         if predicted_area is not None and actual_area is not None
-        else None
+        and actual_area != 0
+        else (0.0 if predicted_area == actual_area == 0 else None)
     )
     complexity_error = (
         abs(float(predicted_complexity) - float(actual_complexity))
         / float(actual_complexity)
         * 100.0
         if predicted_complexity is not None and actual_complexity is not None
-        else None
+        and actual_complexity != 0
+        else (0.0 if predicted_complexity == actual_complexity == 0 else None)
     )
     view: dict[str, Any] = {
         "延迟": {
