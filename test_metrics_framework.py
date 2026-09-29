@@ -19,6 +19,7 @@ from metrics_framework.core import (
 from metrics_framework.adapters import abs as abs_adapter
 from metrics_framework.adapters import counter as counter_adapter
 from metrics_framework.adapters import cadd as cadd_adapter
+from metrics_framework.adapters import csub as csub_adapter
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
@@ -59,7 +60,6 @@ def test_registered_mul_uses_canonical_module_root():
         ("comp", "Comp", "Comp.py"),
         ("comptree", "CompTree", "CompTree.py"),
         ("addertree", "AdderTree", "AdderTree.py"),
-        ("csub", "CSub", "CSub.py"),
         ("cmul", "CMul", "CMul.py"),
         ("cnorm", "CNorm", "CNorm.py"),
     ],
@@ -173,6 +173,26 @@ def test_cadd_validation_returns_original_test_latency(monkeypatch):
     config_path = ROOT / "Generator" / "BasicModules" / "CAdd" / "configs" / "config_case3.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
     result = cadd_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["source"] == "tests_rtl"
+
+
+def test_csub_prediction_reports_formula_and_null_area():
+    result = predict("csub", "3")
+    assert result["延迟"]["预测结果 (cycles)"] == 3
+    assert result["延迟"]["预测公式"] == "latency_cycles = N_CLK = n_pipeline"
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert "Throughput" not in result
+
+
+def test_csub_validation_returns_original_test_latency(monkeypatch):
+    module = csub_adapter._module()
+    monkeypatch.setattr(module, "simulate_latency", lambda params: {
+        "sim_latency_cycles": params[0], "rtl_simulation_time_ms": 7.0, "functional_match": True,
+    })
+    config_path = ROOT / "Generator" / "BasicModules" / "CSub" / "configs" / "config_case3.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = csub_adapter.validate(config_path, config)
     assert result["latency"]["actual_cycles"] == 3
     assert result["latency"]["source"] == "tests_rtl"
 

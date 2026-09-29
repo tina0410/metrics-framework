@@ -118,10 +118,17 @@
       "capabilities": ["latency"]
     },
     "csub": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CSub/CSub.py",
+      "adapter": "metrics_framework/adapters/csub.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/CSub",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "CSUB_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "cmul": {
       "status": "registered",

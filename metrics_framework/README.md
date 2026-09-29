@@ -104,7 +104,7 @@ python adapter.py validate CONFIG
 `CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
 `Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Counter/CAdd/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/SxMatch/Counter/CAdd/CSub/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
 
 ### SxMatch 延迟评估
@@ -144,6 +144,18 @@ ModuleAdd，二者共用 `N_CLK` 流水延迟，预测公式为
 
 面积和硬件复杂度显示为 `null`，不输出 Throughput，终端结构与 Abs 一致。运行
 tests 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
+
+### CSub 延迟评估
+
+CSub 使用与 CAdd 对应的四种定点格式和流水级数，另有一个使用 `TRN.SMGN` 与
+`SAT.TCPL` 策略的第五配置；这五组参数均来自
+`Generator/BasicModules/CSub/tests/test_CSub.py` 的参数组合。模块对实部、虚部
+分别实例化 Sub，并共用 `N_CLK` 输出流水，因此预测公式为
+`latency_cycles = N_CLK = n_pipeline`。`evaluate` 对每个配置运行原 pytest RTL
+scoreboard，检查复数打包输出后报告仿真延迟和误差。0-cycle 配置有效。
+
+CSub 暂不计算面积和硬件复杂度（显示 `null`），也不输出 Throughput；输出格式与
+Abs 一致。需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
 
 ### Abs 延迟评估
 
