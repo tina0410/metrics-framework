@@ -5,7 +5,7 @@
   "output": {"bitwidth": 4, "fractional_width": 3, "signed": true},
   "n_pipeline": 4,
   "if_rst_n": [false, false, true, false],
-  "quantization_mode": "TRN.SMGN",
+  "quantization_mode": "RND.POS_INF",
   "overflow_mode": "WRP.TCPL",
   "n_frames": 100,
   "clock": {"period_ns": 10.0}
