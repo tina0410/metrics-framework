@@ -1,57 +1,97 @@
 {
   "config1": {
+    "build_id": "127987b564a4",
+    "runtime_case_id": "127987b564a4.00903e208f45",
     "clock_period_ns": 10.0,
     "runtime": {
-      "num_RBs": 143,
-      "num_symbols": 8,
-      "dmrs_type": 1,
-      "is_double_dmrs": true,
-      "dmrs_typeA_pos": "pos3",
-      "n_additional_dmrs": 0
-    }
-  },
-  "config2": {
-    "clock_period_ns": 10.0,
-    "runtime": {
-      "num_RBs": 160,
-      "num_symbols": 12,
-      "dmrs_type": 2,
-      "is_double_dmrs": false,
-      "dmrs_typeA_pos": "pos3",
-      "n_additional_dmrs": 1
-    }
-  },
-  "config3": {
-    "clock_period_ns": 10.0,
-    "runtime": {
-      "num_RBs": 128,
+      "num_RBs": 24,
       "num_symbols": 14,
       "dmrs_type": 1,
       "is_double_dmrs": false,
+      "is_enhanced": false,
+      "is_ECP": false,
       "dmrs_typeA_pos": "pos2",
-      "n_additional_dmrs": 1
+      "n_additional_dmrs": 1,
+      "N_ID": 0,
+      "n_scid": 0,
+      "slot_idx": 0,
+      "enabled_ports": [0]
+    }
+  },
+  "config2": {
+    "build_id": "2106b2c89b5e",
+    "runtime_case_id": "2106b2c89b5e.79a89ea8a70c",
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 24,
+      "num_symbols": 14,
+      "dmrs_type": 2,
+      "is_double_dmrs": false,
+      "is_enhanced": true,
+      "is_ECP": false,
+      "dmrs_typeA_pos": "pos2",
+      "n_additional_dmrs": 1,
+      "N_ID": 0,
+      "n_scid": 0,
+      "slot_idx": 0,
+      "enabled_ports": [0, 12]
+    }
+  },
+  "config3": {
+    "build_id": "e1ba44dfdb4c",
+    "runtime_case_id": "e1ba44dfdb4c.2c357fe3291f",
+    "clock_period_ns": 10.0,
+    "runtime": {
+      "num_RBs": 24,
+      "num_symbols": 14,
+      "dmrs_type": 1,
+      "is_double_dmrs": false,
+      "is_enhanced": false,
+      "is_ECP": false,
+      "dmrs_typeA_pos": "pos2",
+      "n_additional_dmrs": 1,
+      "N_ID": 0,
+      "n_scid": 0,
+      "slot_idx": 0,
+      "enabled_ports": [0]
     }
   },
   "config4": {
+    "build_id": "c5ee8f1109c4",
+    "runtime_case_id": "c5ee8f1109c4.40dae7a95081",
     "clock_period_ns": 10.0,
     "runtime": {
-      "num_RBs": 144,
-      "num_symbols": 5,
+      "num_RBs": 24,
+      "num_symbols": 14,
       "dmrs_type": 1,
-      "is_double_dmrs": true,
-      "dmrs_typeA_pos": "pos3",
-      "n_additional_dmrs": 0
+      "is_double_dmrs": false,
+      "is_enhanced": false,
+      "is_ECP": false,
+      "dmrs_typeA_pos": "pos2",
+      "n_additional_dmrs": 1,
+      "N_ID": 0,
+      "n_scid": 0,
+      "slot_idx": 0,
+      "enabled_ports": [0]
     }
   },
   "config5": {
+    "build_id": "a630789da489",
+    "runtime_case_id": "a630789da489.83a461ba272a",
     "clock_period_ns": 10.0,
     "runtime": {
-      "num_RBs": 256,
-      "num_symbols": 11,
+      "num_RBs": 24,
+      "num_symbols": 14,
       "dmrs_type": 2,
-      "is_double_dmrs": false,
+      "is_double_dmrs": true,
+      "is_enhanced": false,
+      "is_ECP": false,
       "dmrs_typeA_pos": "pos2",
-      "n_additional_dmrs": 3
+      "n_additional_dmrs": 1,
+      "N_ID": 0,
+      "n_scid": 0,
+      "slot_idx": 0,
+      "enabled_ports": [0, 6]
     }
   }
 }

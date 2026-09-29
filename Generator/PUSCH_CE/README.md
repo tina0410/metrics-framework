@@ -16,6 +16,14 @@ conda create -n pytv python=3.13
 conda run -n pytv pip install -r requirements.txt
 ```
 
+When using the repository-wide unified environment, reactivate it from the
+repository root in every new Linux/WSL terminal:
+
+```bash
+source .venv-framework313/bin/activate
+export PUSCH_CE_METRICS_PYTHON="$PWD/.venv-framework313/bin/python"
+```
+
 RTL validation uses one compiler job by default because the generated Verilator
 model is large. Set `PUSCH_CE_BUILD_JOBS` to a larger positive integer only on
 hosts with sufficient memory. Every validation removes the case's previous

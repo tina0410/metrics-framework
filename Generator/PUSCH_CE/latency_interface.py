@@ -33,6 +33,12 @@ class LatencyRuntime:
     dmrs_type_a_pos: str
     n_additional_dmrs: int
     clock_period_ns: float = 10.0
+    is_ecp: bool = False
+    is_enhanced: bool = False
+    enabled_ports: tuple[int, ...] = ()
+    n_id: int = 0
+    n_scid: int = 0
+    slot_idx: int = 0
 
 
 @dataclass(frozen=True)
@@ -206,6 +212,10 @@ def runtime_from_config(config: Mapping[str, Any]) -> LatencyRuntime:
     if not isinstance(runtime, Mapping):
         raise ValueError("latency.runtime must be an object")
     period = float(section.get("clock_period_ns", 10.0))
+    protocol = config.get("protocol", {})
+    enabled_ports = runtime.get("enabled_ports", protocol.get("antenna_ports", ()))
+    if not isinstance(enabled_ports, (list, tuple)):
+        raise ValueError("latency.runtime.enabled_ports must be an array")
     return LatencyRuntime(
         num_rbs=_positive_int(runtime.get("num_RBs"), "latency.runtime.num_RBs"),
         num_symbols=_positive_int(
@@ -221,6 +231,19 @@ def runtime_from_config(config: Mapping[str, Any]) -> LatencyRuntime:
             "latency.runtime.n_additional_dmrs",
         ),
         clock_period_ns=period,
+        is_ecp=bool(runtime.get("is_ECP", False)),
+        is_enhanced=bool(runtime.get("is_enhanced", False)),
+        enabled_ports=tuple(
+            _nonnegative_int(port, "latency.runtime.enabled_ports")
+            for port in enabled_ports
+        ),
+        n_id=_nonnegative_int(runtime.get("N_ID", 0), "latency.runtime.N_ID"),
+        n_scid=_nonnegative_int(
+            runtime.get("n_scid", 0), "latency.runtime.n_scid"
+        ),
+        slot_idx=_nonnegative_int(
+            runtime.get("slot_idx", 0), "latency.runtime.slot_idx"
+        ),
     )
 
 
@@ -242,6 +265,13 @@ def load_case_config(
         raise LookupError(f"no latency runtime is defined for {path.stem}") from error
     if not isinstance(latency, dict):
         raise ValueError(f"latency runtime for {path.stem} must be an object")
+    config_build_id = config.get("area", {}).get("source_build_id")
+    latency_build_id = latency.get("build_id")
+    if config_build_id and latency_build_id != config_build_id:
+        raise ValueError(
+            f"latency runtime build_id {latency_build_id!r} does not match "
+            f"configuration build_id {config_build_id!r}"
+        )
     combined = dict(config)
     combined["latency"] = latency
     return combined
@@ -270,8 +300,25 @@ def _validate_runtime_for_build(
         raise ValueError("latency runtime Type-A position differs from the static build")
     if runtime.n_additional_dmrs not in protocol["additional_DMRS_range"]:
         raise ValueError("latency runtime additional-DMRS value is not generated")
-    if protocol["is_ECP"] is True and runtime.num_symbols > 12:
+    if runtime.is_ecp and runtime.num_symbols > 12:
         raise ValueError("extended CP permits at most 12 PUSCH symbols")
+    if protocol["is_ECP"] != "Hybrid" and (
+        runtime.is_ecp is not bool(protocol["is_ECP"])
+    ):
+        raise ValueError("latency runtime ECP mode differs from the static build")
+    if protocol["is_enhanced"] != "Hybrid" and (
+        runtime.is_enhanced is not bool(protocol["is_enhanced"])
+    ):
+        raise ValueError("latency runtime enhanced mode differs from the static build")
+    generated_ports = tuple(int(port) for port in protocol["antenna_ports"])
+    if not runtime.enabled_ports:
+        raise ValueError("latency runtime enabled_ports must be non-empty")
+    if not set(runtime.enabled_ports).issubset(generated_ports):
+        raise ValueError("latency runtime enables a port outside the generated set")
+    if not architecture["switchable_ports"] and set(runtime.enabled_ports) != set(
+        generated_ports
+    ):
+        raise ValueError("a fixed-port build requires all generated ports enabled")
     if architecture["input_mode"] == "A" and (
         runtime.num_rbs % int(architecture["rb_parallelism"])
     ):

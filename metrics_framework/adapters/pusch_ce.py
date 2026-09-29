@@ -99,7 +99,13 @@ def _rtl(config_path: Path) -> dict[str, Any]:
         / "validate_pusch_ce_latency.py"
     )
     process = subprocess.run(
-        [sys.executable, str(script), str(config_path)],
+        [
+            sys.executable,
+            str(script),
+            str(config_path),
+            "--simulator",
+            "verilator",
+        ],
         cwd=script.parent,
         text=True,
         encoding="utf-8",

@@ -142,12 +142,27 @@ def test_pusch_ce_is_active_with_five_cases_and_ce_alias():
         config = json.loads(path.read_text(encoding="utf-8"))
         validate_scaffold_config(config)
         assert set(config) == EXPECTED_SECTIONS
-        assert config["area"] == {
-            "use_config_actual_area": False,
-            "actual_area_um2": None,
-            "use_config_actual_time": False,
-            "actual_time_ms": None,
-        }
+        assert config["area"]["source_build_id"]
+        assert config["area"]["source_case_id"].endswith(
+            config["area"]["source_build_id"]
+        )
+        assert config["area"]["use_config_actual_area"] is False
+        assert config["area"]["actual_area_um2"] is None
+        assert config["area"]["use_config_actual_time"] is False
+        assert config["area"]["actual_time_ms"] is None
+
+
+def test_pusch_ce_adapter_forces_verilator_for_rtl_validation(monkeypatch):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        return subprocess.CompletedProcess(command, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(pusch_ce.subprocess, "run", fake_run)
+    pusch_ce._rtl(ROOT / "Generator" / "PUSCH_CE" / "cases" / "config1.json")
+
+    assert captured["command"][-2:] == ["--simulator", "verilator"]
 
 
 def test_pusch_ce_adapter_combines_all_prediction_metrics(monkeypatch):
