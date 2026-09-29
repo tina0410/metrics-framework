@@ -12,10 +12,12 @@ from metrics_framework import cli
 from metrics_framework.core import (
     EvaluationUnavailable,
     Registry,
+    _evaluation_view,
     _interpreter,
     evaluate,
     predict,
 )
+from metrics_framework.adapters import addertree as addertree_adapter
 from metrics_framework.adapters import bp as bp_adapter
 from metrics_framework.adapters import add as add_adapter
 from metrics_framework.adapters import ls as ls_adapter
@@ -55,7 +57,6 @@ def test_registered_mul_uses_canonical_module_root():
         ("sub", "Sub", "Sub.py"),
         ("comp", "Comp", "Comp.py"),
         ("comptree", "CompTree", "CompTree.py"),
-        ("addertree", "AdderTree", "AdderTree.py"),
     ],
 )
 def test_basic_module_is_registered(name, directory, source):
@@ -70,6 +71,75 @@ def test_basic_module_is_registered(name, directory, source):
 def test_registered_only_basic_module_reports_metrics_unavailable():
     with pytest.raises(EvaluationUnavailable, match="metrics adapter"):
         predict("fxmatch")
+
+
+def test_registered_addertree_uses_five_canonical_configs():
+    spec = Registry().get("addertree")
+    expected = (ROOT / "Generator" / "BasicModules" / "AdderTree").resolve()
+    assert spec.status == "active"
+    assert spec.root == expected
+    assert spec.source == expected / "AdderTree.py"
+    assert spec.config_dir == expected / "configs"
+    assert spec.default_cases == (1, 2, 3, 4, 5)
+    assert spec.capabilities == frozenset({"latency"})
+
+
+def test_addertree_prediction_matches_abs_latency_only_schema():
+    result = predict("addertree", "2")
+    assert result["延迟"]["预测结果 (cycles)"] == 3
+    assert "预测公式" not in result["延迟"]
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["预测时间 (ms)"] is None
+    assert "Throughput" not in result
+
+
+def test_addertree_prediction_uses_generator_pipeline_formula():
+    module = addertree_adapter._module()
+    assert module.LATENCY_FORMULA == "latency_cycles = N_PIPELINES = n_pipeline"
+    assert [
+        module.latency_cycles(module.parameters(json.loads(path.read_text(encoding="utf-8"))))
+        for path in sorted((module.ROOT / "configs").glob("config_case*.json"))
+    ] == [0, 3, 2, 1, 4]
+
+
+def test_addertree_validation_uses_canonical_test_result(monkeypatch):
+    module = addertree_adapter._module()
+    monkeypatch.setattr(
+        module,
+        "simulate_latency",
+        lambda params: {
+            "sim_latency_cycles": params[1],
+            "rtl_simulation_time_ms": 12.5,
+            "functional_match": True,
+        },
+    )
+    config_path = module.ROOT / "configs" / "config_case4.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    result = addertree_adapter.validate(config_path, config)
+    assert result["latency"]["actual_cycles"] == 1
+    assert result["latency"]["source"] == "tests_rtl"
+    assert result["area"]["actual_um2"] is None
+
+
+def test_addertree_evaluation_view_accepts_zero_latency_and_null_area():
+    module = addertree_adapter._module()
+    config_path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    metrics = addertree_adapter.predict(config_path, config)
+    prediction = {"module": "addertree", "config_digest": "same", "metrics": metrics}
+    validation = {
+        "config_digest": "same",
+        "metrics": {
+            "latency": {"actual_cycles": 0, "simulation_time_ms": 10.0},
+            "area": {"actual_um2": None, "synthesis_time_ms": None},
+            "hardware_complexity": {"actual_ge_cycles": None},
+        },
+    }
+    result = _evaluation_view(prediction, validation)
+    assert result["延迟"]["误差 (%)"] == 0.0
+    assert result["面积"]["预测结果 (μm²)"] is None
+    assert result["面积"]["真实结果 (μm²)"] is None
+    assert "Throughput" not in result
 
 
 def test_registered_ls_uses_canonical_module_root():

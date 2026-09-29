@@ -1,0 +1,12 @@
+{
+  "test_case": "n8_p2",
+  "input": {"bitwidth": 8, "fractional_width": 0, "signed": false},
+  "output": {"bitwidth": 12, "fractional_width": 0, "signed": false},
+  "n_inputs": 8,
+  "n_pipeline": 2,
+  "if_rst_n": false,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "config_mode": "A",
+  "clock": {"period_ns": 10.0}
+}

@@ -121,7 +121,11 @@ class Registry:
                 output_root=(module_root / str(item.get("output_root", "evaluation_output"))).resolve(),
                 capabilities=frozenset(str(value) for value in item.get("capabilities", [])),
             )
-            required = {"area", "latency", "throughput", "hardware_complexity"}
+            required = (
+                {"latency"}
+                if spec.capabilities == frozenset({"latency"})
+                else {"area", "latency", "throughput", "hardware_complexity"}
+            )
             if spec.status == "active":
                 if spec.adapter is None:
                     raise ValueError(f"Registry module {name!r} has no adapter")
@@ -165,8 +169,10 @@ def _candidate_interpreters(spec: ModuleSpec) -> Iterable[Path]:
         yield Path(configured).expanduser()
     if os.name == "nt":
         yield spec.root / ".venv" / "Scripts" / "python.exe"
+        yield ROOT / ".venv" / "Scripts" / "python.exe"
     else:
         yield spec.root / ".venv" / "bin" / "python"
+        yield ROOT / ".venv" / "bin" / "python"
     yield Path(sys.executable)
 
 
@@ -273,7 +279,7 @@ def _prediction_view(result: Mapping[str, Any]) -> dict[str, Any]:
     metrics = result["metrics"]
     latency = metrics["latency"]
     area = metrics["area"]
-    throughput = metrics["throughput"]
+    throughput = metrics.get("throughput")
     complexity = metrics["hardware_complexity"]
     view: dict[str, Any] = {
         "延迟": {
@@ -288,27 +294,46 @@ def _prediction_view(result: Mapping[str, Any]) -> dict[str, Any]:
     view.update(
         {
             "面积": {
-                "预测结果 (μm²)": round(float(area["predicted_um2"]), 2),
-                "预测时间 (ms)": round(float(area["prediction_time_ms"]), 6),
-            },
-            "Throughput": {
-                f"预测结果 ({throughput['unit']})": round(
-                    float(throughput["predicted"]), int(throughput["precision"])
+                "预测结果 (μm²)": (
+                    round(float(area["predicted_um2"]), 2)
+                    if area.get("predicted_um2") is not None
+                    else None
                 ),
-                "预测时间 (ms)": round(float(throughput["prediction_time_ms"]), 6),
+                "预测时间 (ms)": (
+                    round(float(area["prediction_time_ms"]), 6)
+                    if area.get("prediction_time_ms") is not None
+                    else None
+                ),
             },
             "硬件复杂度": {
-                "预测结果 (GE·cycles)": round(float(complexity["predicted_ge_cycles"]), 2),
-                "预测时间 (ms)": round(float(complexity["prediction_time_ms"]), 6),
-                "GE基准单元": complexity["ge_reference_cell"],
-                "1 GE面积 (μm²)": complexity["ge_area_um2"],
+                "预测结果 (GE·cycles)": (
+                    round(float(complexity["predicted_ge_cycles"]), 2)
+                    if complexity.get("predicted_ge_cycles") is not None
+                    else None
+                ),
+                "预测时间 (ms)": (
+                    round(float(complexity["prediction_time_ms"]), 6)
+                    if complexity.get("prediction_time_ms") is not None
+                    else None
+                ),
+                "GE基准单元": complexity.get("ge_reference_cell"),
+                "1 GE面积 (μm²)": complexity.get("ge_area_um2"),
             },
         }
     )
+    if throughput is not None:
+        view["Throughput"] = {
+            f"预测结果 ({throughput['unit']})": round(
+                float(throughput["predicted"]), int(throughput["precision"])
+            ),
+            "预测时间 (ms)": round(float(throughput["prediction_time_ms"]), 6),
+        }
     view["自动评估总时间 (ms)"] = round(
         sum(
             float(metrics[name]["prediction_time_ms"])
             for name in ("latency", "area", "throughput", "hardware_complexity")
+            if name in metrics
+            if metrics[name].get("prediction_time_ms") is not None
         ),
         3,
     )
@@ -324,6 +349,15 @@ def _positive(value: Any, name: str) -> float:
     return number
 
 
+def _nonnegative(value: Any, name: str) -> float:
+    if value is None:
+        raise EvaluationUnavailable(f"Validation did not provide {name}")
+    number = float(value)
+    if number < 0:
+        raise EvaluationUnavailable(f"Validation provided invalid {name}: {value!r}")
+    return number
+
+
 def _evaluation_view(
     prediction: Mapping[str, Any], validation: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -333,8 +367,8 @@ def _evaluation_view(
     predicted = prediction["metrics"]
     actual = validation["metrics"]
 
-    predicted_latency = _positive(predicted["latency"]["predicted_cycles"], "predicted latency")
-    actual_latency = _positive(actual["latency"].get("actual_cycles"), "actual latency")
+    predicted_latency = _nonnegative(predicted["latency"]["predicted_cycles"], "predicted latency")
+    actual_latency = _nonnegative(actual["latency"].get("actual_cycles"), "actual latency")
     latency_prediction_time = _positive(
         predicted["latency"]["prediction_time_ms"], "latency prediction time"
     )
@@ -346,55 +380,83 @@ def _evaluation_view(
     latency_validation_time = _positive(latency_validation_time, "latency simulation time")
     latency_speedup = latency_validation_time / latency_prediction_time
 
-    predicted_area = _positive(predicted["area"]["predicted_um2"], "predicted area")
-    actual_area = _positive(actual["area"].get("actual_um2"), "actual area")
-    area_prediction_time = _positive(
-        predicted["area"]["prediction_time_ms"], "area prediction time"
-    )
+    predicted_area = predicted["area"].get("predicted_um2")
+    actual_area = actual["area"].get("actual_um2")
+    area_prediction_time = predicted["area"].get("prediction_time_ms")
     synthesis_time = actual["area"].get("synthesis_time_ms")
-    area_reported_speedup = actual["area"].get("reported_speedup")
-    synthesis_time_available = actual["area"].get("synthesis_time_available", True)
-    if synthesis_time is None and area_reported_speedup is None and not synthesis_time_available:
-        area_speedup = None
-    elif synthesis_time is None:
-        speedup = _positive(area_reported_speedup, "area speedup")
-        synthesis_time = speedup * area_prediction_time
-        synthesis_time = _positive(synthesis_time, "synthesis time")
-        area_speedup = synthesis_time / area_prediction_time
-    else:
-        synthesis_time = _positive(synthesis_time, "synthesis time")
-        area_speedup = synthesis_time / area_prediction_time
-
-    predicted_throughput = _positive(
-        predicted["throughput"]["predicted"], "predicted throughput"
+    area_speedup = None
+    throughput = predicted.get("throughput")
+    actual_throughput_metrics = actual.get("throughput")
+    predicted_throughput = throughput.get("predicted") if throughput is not None else None
+    throughput_prediction_time = (
+        throughput.get("prediction_time_ms") if throughput is not None else None
     )
-    throughput_prediction_time = _positive(
-        predicted["throughput"]["prediction_time_ms"],
-        "throughput prediction time",
+    actual_throughput = (
+        actual_throughput_metrics.get("actual")
+        if actual_throughput_metrics is not None
+        else None
     )
-    actual_throughput = _positive(actual["throughput"].get("actual"), "actual throughput")
-    predicted_complexity = _positive(
-        predicted["hardware_complexity"]["predicted_ge_cycles"],
-        "predicted hardware complexity",
-    )
-    actual_complexity = _positive(
-        actual["hardware_complexity"].get("actual_ge_cycles"),
-        "actual hardware complexity",
-    )
-    complexity_prediction_time = _positive(
-        predicted["hardware_complexity"]["prediction_time_ms"],
-        "hardware complexity prediction time",
+    predicted_complexity = predicted["hardware_complexity"].get("predicted_ge_cycles")
+    actual_complexity = actual["hardware_complexity"].get("actual_ge_cycles")
+    complexity_prediction_time = predicted["hardware_complexity"].get(
+        "prediction_time_ms"
     )
 
-    latency_error = (actual_latency - predicted_latency) / predicted_latency * 100.0
-    area_error = abs(predicted_area - actual_area) / actual_area * 100.0
-    complexity_error = abs(predicted_complexity - actual_complexity) / actual_complexity * 100.0
-    throughput = predicted["throughput"]
+    latency_only = (
+        throughput is None
+        and predicted_area is None
+        and predicted_complexity is None
+    )
+    if not latency_only:
+        predicted_area = _positive(predicted_area, "predicted area")
+        actual_area = _positive(actual_area, "actual area")
+        area_prediction_time = _positive(area_prediction_time, "area prediction time")
+        area_reported_speedup = actual["area"].get("reported_speedup")
+        synthesis_time_available = actual["area"].get("synthesis_time_available", True)
+        if synthesis_time is None and area_reported_speedup is None and not synthesis_time_available:
+            area_speedup = None
+        elif synthesis_time is None:
+            speedup = _positive(area_reported_speedup, "area speedup")
+            synthesis_time = _positive(speedup * area_prediction_time, "synthesis time")
+            area_speedup = synthesis_time / area_prediction_time
+        else:
+            synthesis_time = _positive(synthesis_time, "synthesis time")
+            area_speedup = synthesis_time / area_prediction_time
+        predicted_throughput = _positive(predicted_throughput, "predicted throughput")
+        throughput_prediction_time = _positive(
+            throughput_prediction_time, "throughput prediction time"
+        )
+        actual_throughput = _positive(actual_throughput, "actual throughput")
+        predicted_complexity = _positive(
+            predicted_complexity, "predicted hardware complexity"
+        )
+        actual_complexity = _positive(actual_complexity, "actual hardware complexity")
+        complexity_prediction_time = _positive(
+            complexity_prediction_time, "hardware complexity prediction time"
+        )
+
+    latency_error = (
+        (actual_latency - predicted_latency) / predicted_latency * 100.0
+        if predicted_latency != 0
+        else (0.0 if actual_latency == 0 else None)
+    )
+    area_error = (
+        abs(float(predicted_area) - float(actual_area)) / float(actual_area) * 100.0
+        if predicted_area is not None and actual_area is not None
+        else None
+    )
+    complexity_error = (
+        abs(float(predicted_complexity) - float(actual_complexity))
+        / float(actual_complexity)
+        * 100.0
+        if predicted_complexity is not None and actual_complexity is not None
+        else None
+    )
     view: dict[str, Any] = {
         "延迟": {
             "预测结果 (cycles)": int(predicted_latency),
             "仿真结果 (cycles)": int(actual_latency),
-            "误差 (%)": round(latency_error, 2),
+            "误差 (%)": round(latency_error, 2) if latency_error is not None else None,
             "预测时间 (ms)": round(latency_prediction_time, 6),
             "仿真时间 (ms)": round(latency_validation_time, 3),
             "速度提升倍数 (×)": round(latency_speedup, 2),
@@ -412,10 +474,12 @@ def _evaluation_view(
             ),
         }
     area_view = {
-        "预测结果 (μm²)": round(predicted_area, 2),
-        "真实结果 (μm²)": round(actual_area, 2),
-        "误差 (%)": round(area_error, 2),
-        "预测时间 (ms)": round(area_prediction_time, 6),
+        "预测结果 (μm²)": round(predicted_area, 2) if predicted_area is not None else None,
+        "真实结果 (μm²)": round(actual_area, 2) if actual_area is not None else None,
+        "误差 (%)": round(area_error, 2) if area_error is not None else None,
+        "预测时间 (ms)": (
+            round(area_prediction_time, 6) if area_prediction_time is not None else None
+        ),
     }
     if synthesis_time is not None and area_speedup is not None:
         area_view.update(
@@ -424,30 +488,43 @@ def _evaluation_view(
                 "速度提升倍数 (×)": round(area_speedup, 2),
             }
         )
+    elif latency_only:
+        area_view.update({"综合时间 (ms)": None, "速度提升倍数 (×)": None})
     view.update(
         {
             "面积": area_view,
-            "Throughput": {
-                f"预测结果 ({throughput['unit']})": round(
-                    predicted_throughput, int(throughput["precision"])
-                ),
-                f"仿真结果 ({throughput['unit']})": round(
-                    actual_throughput, int(throughput["precision"])
-                ),
-                "预测时间 (ms)": round(throughput_prediction_time, 6),
-            },
             "硬件复杂度": {
-                "预测结果 (GE·cycles)": round(predicted_complexity, 2),
+                "预测结果 (GE·cycles)": (
+                    round(predicted_complexity, 2)
+                    if predicted_complexity is not None
+                    else None
+                ),
                 ("仿真结果 (GE·cycles)" if module == "bp" else "真实结果 (GE·cycles)"): round(
                     actual_complexity, 2
+                ) if actual_complexity is not None else None,
+                "误差 (%)": (
+                    round(complexity_error, 2) if complexity_error is not None else None
                 ),
-                "误差 (%)": round(complexity_error, 2),
-                "预测时间 (ms)": round(complexity_prediction_time, 6),
-                "GE基准单元": predicted["hardware_complexity"]["ge_reference_cell"],
-                "1 GE面积 (μm²)": predicted["hardware_complexity"]["ge_area_um2"],
+                "预测时间 (ms)": (
+                    round(complexity_prediction_time, 6)
+                    if complexity_prediction_time is not None
+                    else None
+                ),
+                "GE基准单元": predicted["hardware_complexity"].get("ge_reference_cell"),
+                "1 GE面积 (μm²)": predicted["hardware_complexity"].get("ge_area_um2"),
             },
         }
     )
+    if throughput is not None:
+        view["Throughput"] = {
+            f"预测结果 ({throughput['unit']})": round(
+                predicted_throughput, int(throughput["precision"])
+            ),
+            f"仿真结果 ({throughput['unit']})": round(
+                actual_throughput, int(throughput["precision"])
+            ),
+            "预测时间 (ms)": round(throughput_prediction_time, 6),
+        }
     return view
 
 
