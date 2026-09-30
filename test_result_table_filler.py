@@ -145,11 +145,20 @@ def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeyp
     spec = next(spec for spec in MODULE.MODULES if spec.registry_key == "pusch_ce")
     MODULE.generate_evaluations(tmp_path, [spec], "python")
 
-    assert len(commands) == 5
+    assert len(commands) == 1
+    assert Path(commands[0][2]).name == "config1.json"
     assert all("validate_pusch_ce_latency.py" in command[1] for command in commands)
+    stale_case = tmp_path / "Generator" / "PUSCH_CE" / "evaluation_output" / "config2"
+    stale_case.mkdir(parents=True)
+    (stale_case / "latency_evaluation.json").write_text(json.dumps({"latency": {
+        "error_percent": 99.0,
+        "prediction_time_ms": 1.0,
+        "speedup": 1.0,
+    }}), encoding="utf-8")
     result = MODULE.aggregate_module(tmp_path, spec, "6.9", 5, False, 1e-6)
-    assert result.delay_case_count == 5
+    assert result.delay_case_count == 1
     assert result.delay_prediction_time_s == 0.011
     assert result.delay_error_percent == 0.0
-    assert result.delay_speedup == 1000.0 / 15
+    assert result.delay_speedup == 1000.0 / 11
+    assert all("config2" not in source for source in result.sources)
     assert result.area_speedup is None

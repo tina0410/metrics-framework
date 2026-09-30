@@ -35,6 +35,7 @@ class ModuleSpec:
     evaluation_roots: tuple[str, ...]
     workbook_candidates: tuple[str, ...] = ()
     standalone_latency_validation: bool = False
+    latency_cases: tuple[int, ...] | None = None
 
 
 MODULES = (
@@ -54,7 +55,7 @@ MODULES = (
     ModuleSpec("Mux", "mux", ("Generator/BasicModules/MUX/evaluation_output",), ("Area_TP_Estimator/MUX/report/test.xlsx", "Area_TP_Estimator/Mux/report/test.xlsx")),
     ModuleSpec("AdderTree", "addertree", ("Generator/BasicModules/AdderTree/evaluation_output",), ("Area_TP_Estimator/AdderTree/report/test.xlsx",)),
     ModuleSpec("CompTree", "comptree", ("Generator/BasicModules/CompTree/evaluation_output",), ("Area_TP_Estimator/CompTree/report/test.xlsx",)),
-    ModuleSpec("5G PUSCH Channel Estimator", "pusch_ce", ("Generator/PUSCH_CE/evaluation_output",), ("Area_TP_Estimator/PUSCH_Est_pack/param.xlsx",), True),
+    ModuleSpec("5G PUSCH Channel Estimator", "pusch_ce", ("Generator/PUSCH_CE/evaluation_output",), ("Area_TP_Estimator/PUSCH_Est_pack/param.xlsx",), True, (1,)),
     ModuleSpec("INSA -MMSE MIMO Detector", "mimo", ("Generator/MIMODetector/evaluation_output",), ("Area_TP_Estimator/Est_INSA_MMSE/INSA.xlsx",)),
     ModuleSpec("BP Polar-Decodere", "bp", ("BPPredIter/BP_Evaluation/evaluation_output",), ("Area_TP_Estimator/Est_Polar_BP_Decoder/area.xlsx",)),
 )
@@ -131,7 +132,7 @@ def _case_name(root: Path, path: Path) -> str:
     return relative.parts[0] if len(relative.parts) > 1 else path.stem
 
 
-def collect_json_metrics(root: Path) -> tuple[MetricSeries, MetricSeries, list[tuple[Path, float, float]], list[str]]:
+def collect_json_metrics(root: Path, only_cases: set[str] | None = None) -> tuple[MetricSeries, MetricSeries, list[tuple[Path, float, float]], list[str]]:
     """Return area, delay, complexity comparisons, and source paths by case."""
     area = MetricSeries()
     delay = MetricSeries()
@@ -160,6 +161,8 @@ def collect_json_metrics(root: Path) -> tuple[MetricSeries, MetricSeries, list[t
         candidates.setdefault(_case_name(root, path), []).append((priority, path, payload))
 
     for case in sorted(candidates, key=natural_key):
+        if only_cases is not None and case not in only_cases:
+            continue
         # A case may split area and latency into different JSON files. Consume
         # each metric once, preferring the standard evaluation snapshot.
         got_area = got_delay = False
@@ -483,9 +486,10 @@ def aggregate_module(repo_root: Path, spec: ModuleSpec, area_error_text: str, ex
     json_area = MetricSeries()
     json_delay = MetricSeries()
     comparisons: list[tuple[Path, float, float]] = []
+    only_cases = {f"config{case}" for case in spec.latency_cases} if spec.latency_cases is not None else None
     for relative in spec.evaluation_roots:
         root = repo_root / relative
-        area, delay, checks, sources = collect_json_metrics(root)
+        area, delay, checks, sources = collect_json_metrics(root, only_cases)
         json_area.errors.extend(area.errors)
         json_area.prediction_times_s.extend(area.prediction_times_s)
         json_area.speedups.extend(area.speedups)
@@ -496,8 +500,9 @@ def aggregate_module(repo_root: Path, spec: ModuleSpec, area_error_text: str, ex
         result.sources.extend(str(Path(source).relative_to(repo_root)) if Path(source).is_relative_to(repo_root) else source for source in sources)
 
     result.delay_case_count = len(json_delay.errors)
-    if result.delay_case_count != expected_cases:
-        message = f"延迟评估有效 case 数为 {result.delay_case_count}，期望 {expected_cases}"
+    module_expected_cases = len(spec.latency_cases) if spec.latency_cases is not None else expected_cases
+    if result.delay_case_count != module_expected_cases:
+        message = f"延迟评估有效 case 数为 {result.delay_case_count}，期望 {module_expected_cases}"
         if not allow_partial:
             raise ResultError(f"{spec.row_name}: {message}")
         result.warnings.append(message)
@@ -553,7 +558,7 @@ def generate_evaluations(repo_root: Path, specs: Iterable[ModuleSpec], python: s
             entry = registry_modules[spec.registry_key]
             module_root = repo_root / entry["root"]
             script = module_root / "tests" / "validate_pusch_ce_latency.py"
-            for case in entry["default_cases"]:
+            for case in spec.latency_cases if spec.latency_cases is not None else entry["default_cases"]:
                 case_name = entry["config_pattern"].format(case=case)
                 config_path = module_root / entry["config_dir"] / case_name
                 output = module_root / entry["output_root"] / f"config{case}" / "latency_evaluation.json"
@@ -696,7 +701,7 @@ def _select_modules(names: list[str] | None) -> tuple[ModuleSpec, ...]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="生成五个 case 的评估数据并逐模块填写 Result.docx")
+    parser = argparse.ArgumentParser(description="生成评估数据并逐模块填写 Result.docx 或 Result.md")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="统一指标仓库根目录")
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--input-docx", type=Path, help="待填写的 Result.docx")
@@ -707,7 +712,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--generate", action="store_true", help="填表前调用统一指标框架，为表中全部模块重新运行 evaluate")
     parser.add_argument("--python", default=sys.executable, help="--generate 使用的远端 Python 解释器")
     parser.add_argument("--modules", nargs="+", help="仅用于 --generate；按表中名称或 registry key 选择模块")
-    parser.add_argument("--expected-cases", type=int, default=5, help="延迟平均值要求的有效 case 数，默认 5")
+    parser.add_argument("--expected-cases", type=int, default=5, help="普通模块延迟平均值要求的有效 case 数，默认 5；PUSCH_CE 仅使用 config1")
     parser.add_argument("--allow-partial", action="store_true", help="允许 case 不足时按现有数据填表，并在报告中告警")
     parser.add_argument("--complexity-tolerance", type=float, default=1e-6, help="逐 case 面积与复杂度误差核对容差")
     return parser
