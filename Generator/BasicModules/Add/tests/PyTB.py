@@ -4,7 +4,7 @@
 # Author: Yifang Dai
 # *Original Version by Jiayan Xu
 '''
-Here defines basic elements of a testbench, where you can use them in editing a testbench function. 
+Here defines basic elements of a testbench, where you can use them in editing a testbench function.
 
 In general cases, no modifications should be applied to this module.
 '''
@@ -12,7 +12,7 @@ from pytv.Converter import convert
 from pytv.ModuleLoader import moduleloader
 
 import sys
-import os 
+import os
 # from tests.parameters import Parameters
 from os.path import dirname, abspath
 # sys.path.append('/home/xjy-ubuntu/docs/AutoGen/VeriTests')
@@ -38,7 +38,7 @@ RESET = "\033[0m"
 
 
 # Declare the required ports
-@ convert 
+@ convert
 def ModuleDecl(input_ports, output_ports):
 
     #/ // IO ports declaration
@@ -70,7 +70,7 @@ def ModuleDecl(input_ports, output_ports):
     #/ reg INPUT_RDY;
     #/ reg OUTPUT_RDY;
 
-    
+
 
 
 
@@ -120,7 +120,7 @@ def Moduledrive_arst(port="arst_n", clk="clk", start=1, last=10):
     #/ end
     pass
 
-@ convert 
+@ convert
 def Moduledrive_enable(port ='en', start = 2, clk = "clk"):
     '''
     Describes an enable signal drive.
@@ -132,7 +132,7 @@ def Moduledrive_enable(port ='en', start = 2, clk = "clk"):
     #/ `port` <= 1;
     #/ end
     pass
-    
+
 
 # generate input_rdy signal and output_rdy signal
 # output rdy is set to 1 after input rdy is set to 1 and latency later
@@ -140,8 +140,8 @@ def Moduledrive_enable(port ='en', start = 2, clk = "clk"):
 def Moduledrive_rdy(port_in= "Input_rdy", port_out = "Output_rdy", port_en= "en" ,clk_period = 10, clk = "clk", start=1, latency = 4, N_excitations = 100):
     '''
     Describes Input/Output Ready Drive.
-    
-    Loop `N_excitations` times after `port_en` enable signal is switched ON. The freqency of ready signals is equivilent to clock signals.  
+
+    Loop `N_excitations` times after `port_en` enable signal is switched ON. The freqency of ready signals is equivilent to clock signals.
     '''
 
     # drive input_rdy signal
@@ -176,14 +176,14 @@ def Moduledrive_rdy(port_in= "Input_rdy", port_out = "Output_rdy", port_en= "en"
     #/ $finish;
     #/ end
 
-    pass 
+    pass
 
 @ convert
 def Moduledrive_input(port, file_name, wait_cycles, fistream_port ,input_rdy_port = "Input_rdy", output_rdy_port = "Output_rdy", clk = "clk"):
     '''
-   Reads input data from a file specified by `file_name` and feeds it into the port one line at a time. 
+   Reads input data from a file specified by `file_name` and feeds it into the port one line at a time.
 
-   It waits for the system to be ready (indicated by `input_rdy_port`) before transferring each piece of data. 
+   It waits for the system to be ready (indicated by `input_rdy_port`) before transferring each piece of data.
    The module reads binary values from the file and provides them to `port`. It continues this process until the end of the file is reached.
     '''
     file_handle = port + "_dat"
@@ -294,7 +294,7 @@ def parse_verilog_port(verilog_file):
                             port.width = port_width
                         break
 
-                      
+
     # print ports information
     module_name = module.name
     # for port in ports_info:
@@ -306,7 +306,7 @@ def ModuleMyTb(verilog_code, configures):
     input_ports = configures["input_ports"]
     output_ports = configures["output_ports"]
     module_name = configures["module_name"]
-    
+
     #/ module MyTb;
     #/ // Ports declaration
     ModuleDecl(input_ports = input_ports, output_ports = output_ports, OUTMODE = "PRINT")
@@ -387,7 +387,7 @@ def calc_qublas_dwt(QU_VAR):
 
 
 def int_to_hex_with_length(num):
-    hex_value = hex(num)[2:]  
+    hex_value = hex(num)[2:]
     hex_value = hex_value.zfill(10)
     return str(hex_value)
 
@@ -397,7 +397,7 @@ def delete_file(directory,file_name):
         if file_name in files:
             file_path = os.path.join(root, file_name)
             try:
-                os.remove(file_path)  
+                os.remove(file_path)
                 print(f"Deleted: {file_path}")
             except Exception as e:
                 print(f"Error deleting file {file_path} : {e}")
@@ -418,7 +418,7 @@ def move_and_rename_file(source_dir, target_dir, old_filename, new_filename):
 
 def get_current_time_as_string():
     current_time = datetime.now()
-    time_string = current_time.strftime("%Y-%m-%d %H:%M:%S")  
+    time_string = current_time.strftime("%Y-%m-%d %H:%M:%S")
     return time_string
 
 
@@ -429,7 +429,7 @@ def binary_complement_to_decimal(binary_str, is_signed=False):
         return None, "Empty string"
 
     length = len(binary_str)
-    
+
     if is_signed:
         if binary_str[0] == '1':
             inverted = ''.join('1' if bit == '0' else '0' for bit in binary_str)
@@ -459,8 +459,8 @@ class Log:
         '''
         Write the parameters you want to display in error_info.txt
         In most cases, only `info` requires modification.
-        ''' 
-        QuMode_dict = {PyTU.QuMode.TRN.TCPL: "TRN::TCPL", PyTU.QuMode.TRN.SMGN: "TRN::SMGN", PyTU.QuMode.RND.POS_INF: "RND::POS_INF", PyTU.QuMode.RND.NEG_INF: "RND::NEG_INF", 
+        '''
+        QuMode_dict = {PyTU.QuMode.TRN.TCPL: "TRN::TCPL", PyTU.QuMode.TRN.SMGN: "TRN::SMGN", PyTU.QuMode.RND.POS_INF: "RND::POS_INF", PyTU.QuMode.RND.NEG_INF: "RND::NEG_INF",
                    PyTU.QuMode.RND.INF: "RND::INF", PyTU.QuMode.RND.ZERO: "RND::ZERO",PyTU.QuMode.RND.CONV: "RND::CONV"}
         OfMode_dict = {PyTU.OfMode.WRP.TCPL: "WRP::TCPL", PyTU.OfMode.SAT.TCPL: "SAT::TCPL", PyTU.OfMode.SAT.ZERO: "SAT::ZERO", PyTU.OfMode.SAT.SMGN: "SAT::SMGN"}
         QuMode_str = QuMode_dict[self.QU_MODE]
@@ -471,7 +471,7 @@ class Log:
         signed_out = signed_str[self.QU_OUT.IF_SIGNED]
         info = f"QU_IN_1({self.QU_IN_1.DWT}, {self.QU_IN_1.FRAC}, {signed_in_1})\n" + f"QU_IN_2({self.QU_IN_2.DWT}, {self.QU_IN_2.FRAC}, {signed_in_2})\n" + f"QU_OUT({self.QU_OUT.DWT}, {self.QU_OUT.FRAC}, {signed_out})\n" + f"QU_MODE: {QuMode_str}    OF_MODE: {OfMode_str}\n" + f"IF_RST_N: {self.IF_RST_N}    N_CLK: {self.N_CLK}\n"
         return info
-    
+
     def write_error_info(self, log_dir, error_record):
         '''
         This function should not be modified by user.
@@ -486,7 +486,7 @@ class Log:
             f.write(f"Recorded Errors:\n" )
             for line in error_record:
                 f.write(line)
-    
+
     def clear_error_info(self, log_dir):
         '''
         This function should not be modified by user.
@@ -532,4 +532,3 @@ class TestcaseGenerator:
             )
         ]
         return testcases
-

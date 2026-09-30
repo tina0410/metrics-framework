@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from pathlib import Path
@@ -35,7 +36,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
     area_time_ms = (time.perf_counter() - started) * 1000.0
 
     started = time.perf_counter()
-    throughput = module.throughput_gframes_s(params)
+    throughput = module.throughput_gbps(params)
     throughput_time_ms = (time.perf_counter() - started) * 1000.0
 
     ge_area = module.read_ge_area()
@@ -55,7 +56,7 @@ def predict(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         },
         "throughput": {
             "predicted": throughput,
-            "unit": "Gframes/s",
+            "unit": "Gbps",
             "precision": 3,
             "prediction_time_ms": throughput_time_ms,
             "source": "formula",
@@ -95,33 +96,35 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "validation.latency.output_interval_cycles must equal 1 for pipelined ADD"
         )
-    latency_had_config = configured_cycles is not None or interval is not None or validation_time is not None
-    latency_source = "config"
-    if (
-        configured_cycles is None
-        or interval is None
-        or (validation_time is None and latency_speedup is None)
-    ):
-        simulation = module.simulate_latency(config_path, config, params)
-        if simulation.get("functional_match") is not True:
-            raise RuntimeError("ADD RTL functional comparison failed")
-        measured_cycles = int(simulation["sim_latency_cycles"])
-        measured_interval = int(simulation["sim_output_interval_cycles"])
-        if measured_cycles != predicted_cycles:
-            raise RuntimeError(
-                f"ADD RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
-            )
-        configured_cycles = configured_cycles or measured_cycles
-        interval = interval or measured_interval
-        validation_time = validation_time or float(simulation["rtl_simulation_time_ms"])
-        latency_source = "config+rtl" if latency_had_config else "rtl"
-        print(
-            f"Success. The RTL latency of {config_path.stem} is {measured_cycles} cycles",
-            file=sys.stderr,
+    started = time.perf_counter()
+    simulation = module.simulate_latency(config_path, config, params)
+    measured_time_ms = (time.perf_counter() - started) * 1000.0
+    if simulation.get("functional_match") is not True:
+        raise RuntimeError("ADD RTL functional comparison failed")
+    measured_cycles = int(simulation["sim_latency_cycles"])
+    measured_interval = int(simulation["sim_output_interval_cycles"])
+    throughput = float(simulation["simulated_throughput_gbps"])
+    if not math.isfinite(throughput) or throughput <= 0:
+        raise RuntimeError("ADD RTL measured effective-bit throughput must be finite and positive")
+    if measured_cycles != predicted_cycles:
+        raise RuntimeError(
+            f"ADD RTL latency {measured_cycles} does not equal n_pipeline {params[8]}"
         )
-    actual_cycles = configured_cycles
+    if configured_cycles is not None and configured_cycles != measured_cycles:
+        raise ValueError("validation.latency.actual_cycles does not match fresh ADD RTL simulation")
+    if interval is not None and interval != measured_interval:
+        raise ValueError(
+            "validation.latency.output_interval_cycles does not match fresh ADD RTL simulation"
+        )
+    actual_cycles = measured_cycles
+    interval = measured_interval
+    validation_time = measured_time_ms
+    latency_source = "rtl"
+    print(
+        f"Success. The RTL latency of {config_path.stem} is {measured_cycles} cycles",
+        file=sys.stderr,
+    )
 
-    throughput = 1.0 / (params[10] * int(interval))
     ge_area = module.read_ge_area()
     complexity = float(actual_area) / ge_area * actual_cycles
     return {
@@ -138,7 +141,7 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
             "reported_speedup": area_speedup,
             "source": area_source,
         },
-        "throughput": {"actual": throughput, "source": "rtl_derived"},
+        "throughput": {"actual": throughput, "source": "rtl_measured"},
         "hardware_complexity": {
             "actual_ge_cycles": complexity,
             "source": "derived",

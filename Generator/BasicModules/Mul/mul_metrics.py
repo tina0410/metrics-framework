@@ -19,7 +19,7 @@ from xml.etree import ElementTree
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parents[2]
 ESTIMATOR_ROOT = PROJECT_ROOT / "Area_TP_Estimator" / "Est"
-AREA_WORKBOOK = ESTIMATOR_ROOT / "MUL.xlsx"
+AREA_WORKBOOK = ESTIMATOR_ROOT / "MUL0912.xlsx"
 PURE_MUL_MODEL = ESTIMATOR_ROOT / "model" / "pure_MUL_area.pkl"
 OUTPUT_MODEL = ESTIMATOR_ROOT / "model" / "SU_out_FxP_area.pkl"
 SIGNED_INPUT_WORKBOOK = ESTIMATOR_ROOT / "model" / "SU_in.xlsx"
@@ -300,12 +300,13 @@ def predict_area(models: Any, params: tuple[int, ...]) -> float:
     except KeyError as error:
         raise LookupError(f"SU_in.xlsx has no row for input width {error.args[0]}") from error
     area += _linear(pure_model, _mul_features(dwt1, dwt2, dwt_mul))
-    # This transformed coordinate system exactly reproduces the estimator used
-    # to populate MUL.xlsx's automatic-area column.
+    # This transformed coordinate system reproduces the output conversion term
+    # used by the current Est.py Est_MUL implementation.
     area += _linear(
         output_model,
         _output_features(dwt_mul, 0, dwt_out, frac_out - frac1 - frac2, sign1, sign2),
     )
+    area += 5.88 * dwt_mul
     if not math.isfinite(area) or area <= 0:
         raise ValueError(f"MUL area model returned invalid area: {area!r}")
     return area
@@ -316,17 +317,19 @@ def latency_cycles(params: tuple[int, ...]) -> int:
     return params[8]
 
 
-def throughput_gframes_s(params: tuple[int, ...], *, interval_cycles: int = 1) -> float:
-    """Convert the simulator's one-frame-per-interval behavior to Gframes/s."""
+def throughput_gbps(params: tuple[int, ...], *, interval_cycles: int = 1) -> float:
+    """Convert one output word per interval to effective-bit throughput in Gbps."""
     if isinstance(interval_cycles, bool) or int(interval_cycles) != interval_cycles or interval_cycles < 1:
         raise ValueError("interval_cycles must be a positive integer")
-    return 1.0 / (params[10] * int(interval_cycles))
+    return params[6] / (params[10] * int(interval_cycles))
 
 
 
 
 def simulate_latency(config_path: Path, config: dict[str, Any], params: tuple[int, ...]) -> dict[str, Any]:
     """Run the module's canonical PyTB + QuBLAS C++/RTL validation program."""
+    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
+    result_path.unlink(missing_ok=True)
     environment = os.environ.copy()
     environment["MUL_SIM_ROOT"] = str(SIMULATION_ROOT)
     process = subprocess.run(
@@ -343,7 +346,6 @@ def simulate_latency(config_path: Path, config: dict[str, Any], params: tuple[in
     if process.returncode != 0:
         details = process.stderr.strip() or process.stdout.strip()
         raise RuntimeError("MUL canonical simulation failed: " + details)
-    result_path = SIMULATION_ROOT / config_path.stem / "simulation_result.json"
     if not result_path.is_file():
         raise FileNotFoundError(f"MUL simulation result was not generated: {result_path}")
     result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -363,20 +365,20 @@ def read_area_reference(params: tuple[int, ...]) -> dict[str, float]:
         )
     expected = (dwt1, dwt2, n_pipeline, sign1, frac1, frac2, dwt_out, frac_out)
     matches = [
-        row for row in _numeric_rows(AREA_WORKBOOK, 15)
+        row for row in _numeric_rows(AREA_WORKBOOK, 16)
         if all(row[index] is not None for index in range(8))
         and tuple(int(row[index]) for index in range(8)) == expected
     ]
     if len(matches) != 1:
         raise LookupError(
-            f"MUL.xlsx expected one DC row for parameters {expected}, found {len(matches)}"
+            f"MUL0912.xlsx expected one DC row for parameters {expected}, found {len(matches)}"
         )
     row = matches[0]
-    # MUL.xlsx: DC area is column J (um^2), synthesis wall time is column M (s).
+    # MUL0912.xlsx: "dc综合结果" is column J (um^2), "time" is column N (s).
     actual_area = float(row[9])
-    synthesis_time_ms = float(row[12]) * 1000.0
+    synthesis_time_ms = float(row[13]) * 1000.0
     if actual_area <= 0 or synthesis_time_ms <= 0:
-        raise ValueError("MUL.xlsx contains a non-positive DC area or synthesis time")
+        raise ValueError("MUL0912.xlsx contains a non-positive DC area or synthesis time")
     return {"actual_area_um2": actual_area, "synthesis_time_ms": synthesis_time_ms}
 
 

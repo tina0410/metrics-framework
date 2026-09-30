@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import builtins
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,7 +18,9 @@ from latency_interface import (  # noqa: E402
     evaluate_latency,
     load_case_config,
     predict_from_terms,
+    predict_latency,
     runtime_from_config,
+    timing_from_config,
 )
 
 
@@ -106,3 +110,85 @@ def test_runtime_cases_are_kept_outside_area_configs(case):
 
     assert "latency" not in raw
     assert runtime_from_config(combined).num_rbs > 0
+    assert combined["latency"]["build_id"] == raw["area"]["source_build_id"]
+    assert combined["latency"]["runtime_case_id"].startswith(
+        raw["area"]["source_build_id"] + "."
+    )
+
+
+@pytest.mark.parametrize("case", range(1, 6))
+def test_structural_timing_does_not_require_rtl_top(case):
+    path = PUSCH_ROOT / "cases" / f"config{case}.json"
+    timing = timing_from_config(load_case_config(path))
+
+    assert timing.rb_parallelism > 0
+    assert timing.ti_re_parallelism > 0
+    assert timing.early_ls_drain > 0
+
+
+@pytest.mark.parametrize(
+    ("case", "cycles", "formula_case"),
+    [
+        (1, 388, "post_fi"),
+        (2, 388, "post_fi"),
+        (3, 762, "pre_fi_hybrid_single"),
+        (4, 390, "post_fi"),
+        (5, 664, "pre_fi"),
+    ],
+)
+def test_selected_reference_case_latency_predictions(case, cycles, formula_case):
+    path = PUSCH_ROOT / "cases" / f"config{case}.json"
+    result = predict_latency(load_case_config(path))
+
+    assert result["predicted_cycles"] == cycles
+    assert result["formula_case"] == formula_case
+
+
+def test_rtl_generator_import_hides_validator_cli_arguments(monkeypatch):
+    tests_root = PUSCH_ROOT / "tests"
+    sys.path.insert(0, str(tests_root))
+    try:
+        from validate_pusch_ce_latency import _load_generators
+    finally:
+        sys.path.remove(str(tests_root))
+
+    original_import = builtins.__import__
+    observed_argv = []
+    fake_loader = object()
+    fake_top = object()
+
+    def controlled_import(name, *args, **kwargs):
+        if name == "pytv.ModuleLoader":
+            observed_argv.append(sys.argv[:])
+            return SimpleNamespace(moduleloader=fake_loader)
+        if name == "top_api":
+            observed_argv.append(sys.argv[:])
+            return SimpleNamespace(ModuleTOP=fake_top)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", controlled_import)
+    monkeypatch.setattr(sys, "argv", ["validator.py", "/tmp/config1.json"])
+
+    moduleloader, module_top = _load_generators()
+
+    assert moduleloader is fake_loader
+    assert module_top is fake_top
+    assert observed_argv == [["validator.py"], ["validator.py"]]
+    assert sys.argv == ["validator.py", "/tmp/config1.json"]
+
+
+def test_rtl_validation_removes_stale_generated_and_build_trees(tmp_path):
+    tests_root = PUSCH_ROOT / "tests"
+    sys.path.insert(0, str(tests_root))
+    try:
+        from validate_pusch_ce_latency import _reset_generated_directory
+    finally:
+        sys.path.remove(str(tests_root))
+
+    rtl_root = tmp_path / "rtl"
+    sim_build = tmp_path / "sim_build"
+    for path in (rtl_root, sim_build):
+        path.mkdir()
+        (path / "stale-object").write_text("stale", encoding="utf-8")
+        _reset_generated_directory(path)
+        assert not path.exists()

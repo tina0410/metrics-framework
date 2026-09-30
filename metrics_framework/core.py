@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REGISTRY = Path(__file__).with_name("registry.json")
 PROTOCOL_VERSION = 1
+MODULE_ALIASES = {"ce": "pusch_ce"}
 
 
 class MetricsFrameworkError(RuntimeError):
@@ -141,10 +142,11 @@ class Registry:
             self._specs[name] = spec
 
     def get(self, name: str) -> ModuleSpec:
+        canonical = MODULE_ALIASES.get(name.lower(), name.lower())
         try:
-            spec = self._specs[name.lower()]
+            spec = self._specs[canonical]
         except KeyError as error:
-            supported = ", ".join(sorted(self._specs))
+            supported = ", ".join(sorted(set(self._specs) | set(MODULE_ALIASES)))
             raise ValueError(f"Unknown module {name!r}; supported modules: {supported}") from error
         if spec.source is not None and not spec.source.is_file():
             raise FileNotFoundError(f"Source not found for {name}: {spec.source}")
@@ -365,10 +367,7 @@ def _nonnegative(value: Any, name: str) -> float:
 
 
 def _evaluation_view(
-    prediction: Mapping[str, Any],
-    validation: Mapping[str, Any],
-    *,
-    latency_only: bool | None = None,
+    prediction: Mapping[str, Any], validation: Mapping[str, Any]
 ) -> dict[str, Any]:
     if prediction["config_digest"] != validation["config_digest"]:
         raise EvaluationUnavailable("Prediction and validation config digests differ")
@@ -394,16 +393,6 @@ def _evaluation_view(
     area_prediction_time = predicted["area"].get("prediction_time_ms")
     synthesis_time = actual["area"].get("synthesis_time_ms")
     area_speedup = None
-    if all(value is not None for value in (predicted_area, actual_area, area_prediction_time)):
-        predicted_area = _positive(predicted_area, "predicted area")
-        actual_area = _positive(actual_area, "actual area")
-        area_prediction_time = _positive(area_prediction_time, "area prediction time")
-        if synthesis_time is None:
-            speedup = _positive(actual["area"].get("reported_speedup"), "area speedup")
-            synthesis_time = speedup * area_prediction_time
-        synthesis_time = _positive(synthesis_time, "synthesis time")
-        area_speedup = synthesis_time / area_prediction_time
-
     throughput = predicted.get("throughput")
     actual_throughput_metrics = actual.get("throughput")
     predicted_throughput = throughput.get("predicted") if throughput is not None else None
@@ -417,16 +406,30 @@ def _evaluation_view(
     )
     predicted_complexity = predicted["hardware_complexity"].get("predicted_ge_cycles")
     actual_complexity = actual["hardware_complexity"].get("actual_ge_cycles")
-    complexity_prediction_time = predicted["hardware_complexity"].get("prediction_time_ms")
+    complexity_prediction_time = predicted["hardware_complexity"].get(
+        "prediction_time_ms"
+    )
 
-    # Modules that advertise latency alone must still receive a complete
-    # evaluation view without fake area, throughput, or GE values.
-    if latency_only is None:
-        latency_only = module in {"abs", "sxmatch", "counter", "cadd", "csub", "cmul", "cnorm"}
+    latency_only = (
+        throughput is None
+        and predicted_area is None
+        and predicted_complexity is None
+    )
     if not latency_only:
         predicted_area = _positive(predicted_area, "predicted area")
         actual_area = _positive(actual_area, "actual area")
         area_prediction_time = _positive(area_prediction_time, "area prediction time")
+        area_reported_speedup = actual["area"].get("reported_speedup")
+        synthesis_time_available = actual["area"].get("synthesis_time_available", True)
+        if synthesis_time is None and area_reported_speedup is None and not synthesis_time_available:
+            area_speedup = None
+        elif synthesis_time is None:
+            speedup = _positive(area_reported_speedup, "area speedup")
+            synthesis_time = _positive(speedup * area_prediction_time, "synthesis time")
+            area_speedup = synthesis_time / area_prediction_time
+        else:
+            synthesis_time = _positive(synthesis_time, "synthesis time")
+            area_speedup = synthesis_time / area_prediction_time
         predicted_throughput = _positive(predicted_throughput, "predicted throughput")
         throughput_prediction_time = _positive(
             throughput_prediction_time, "throughput prediction time"
@@ -435,9 +438,7 @@ def _evaluation_view(
         predicted_complexity = _positive(
             predicted_complexity, "predicted hardware complexity"
         )
-        actual_complexity = _positive(
-            actual_complexity, "actual hardware complexity"
-        )
+        actual_complexity = _positive(actual_complexity, "actual hardware complexity")
         complexity_prediction_time = _positive(
             complexity_prediction_time, "hardware complexity prediction time"
         )
@@ -482,23 +483,43 @@ def _evaluation_view(
                 2,
             ),
         }
+    area_view = {
+        "预测结果 (μm²)": round(predicted_area, 2) if predicted_area is not None else None,
+        "真实结果 (μm²)": round(actual_area, 2) if actual_area is not None else None,
+        "误差 (%)": round(area_error, 2) if area_error is not None else None,
+        "预测时间 (ms)": (
+            round(area_prediction_time, 6) if area_prediction_time is not None else None
+        ),
+    }
+    if synthesis_time is not None and area_speedup is not None:
+        area_view.update(
+            {
+                "综合时间 (ms)": round(synthesis_time, 3),
+                "速度提升倍数 (×)": round(area_speedup, 2),
+            }
+        )
+    elif latency_only:
+        area_view.update({"综合时间 (ms)": None, "速度提升倍数 (×)": None})
     view.update(
         {
-            "面积": {
-                "预测结果 (μm²)": round(predicted_area, 2) if predicted_area is not None else None,
-                "真实结果 (μm²)": round(actual_area, 2) if actual_area is not None else None,
-                "误差 (%)": round(area_error, 2) if area_error is not None else None,
-                "预测时间 (ms)": round(area_prediction_time, 6) if area_prediction_time is not None else None,
-                "综合时间 (ms)": round(synthesis_time, 3) if synthesis_time is not None else None,
-                "速度提升倍数 (×)": round(area_speedup, 2) if area_speedup is not None else None,
-            },
+            "面积": area_view,
             "硬件复杂度": {
-                "预测结果 (GE·cycles)": round(predicted_complexity, 2) if predicted_complexity is not None else None,
+                "预测结果 (GE·cycles)": (
+                    round(predicted_complexity, 2)
+                    if predicted_complexity is not None
+                    else None
+                ),
                 ("仿真结果 (GE·cycles)" if module == "bp" else "真实结果 (GE·cycles)"): round(
                     actual_complexity, 2
                 ) if actual_complexity is not None else None,
-                "误差 (%)": round(complexity_error, 2) if complexity_error is not None else None,
-                "预测时间 (ms)": round(complexity_prediction_time, 6) if complexity_prediction_time is not None else None,
+                "误差 (%)": (
+                    round(complexity_error, 2) if complexity_error is not None else None
+                ),
+                "预测时间 (ms)": (
+                    round(complexity_prediction_time, 6)
+                    if complexity_prediction_time is not None
+                    else None
+                ),
                 "GE基准单元": predicted["hardware_complexity"].get("ge_reference_cell"),
                 "1 GE面积 (μm²)": predicted["hardware_complexity"].get("ge_area_um2"),
             },
@@ -589,11 +610,7 @@ def evaluate(
             raise
         try:
             validation_raw = _run_adapter(spec, "validate", path)
-            view = _evaluation_view(
-                prediction_raw,
-                validation_raw,
-                latency_only=spec.capabilities == frozenset({"latency"}),
-            )
+            view = _evaluation_view(prediction_raw, validation_raw)
             _write_json(output_dir / "evaluation.json", view)
             rendered.append((path, view))
         except AdapterFailure as error:

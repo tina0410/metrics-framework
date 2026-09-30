@@ -1,31 +1,60 @@
 {
   "protocol": {
-    "num_RB_range": [126, 266], "num_symbols_range": [8, 11], "is_ECP": true,
-    "dmrs_Uplink": true, "dmrs_Type": "Hybrid", "is_double_dmrs": false,
-    "is_enhanced": true, "dmrs_typeA_pos": "pos2", "additional_DMRS_range": [3],
-    "antenna_ports": [4, 5, 11, 13], "slot_index_format": "QuType(5, 0, False)"
+    "num_RB_range": [24, 273],
+    "num_symbols_range": [12, 14],
+    "is_ECP": false,
+    "dmrs_Uplink": true,
+    "dmrs_Type": 2,
+    "is_double_dmrs": true,
+    "is_enhanced": false,
+    "dmrs_typeA_pos": "pos2",
+    "additional_DMRS_range": [0, 1],
+    "antenna_ports": [0, 6],
+    "slot_index_format": "QuType(4, 0, False)"
   },
   "architecture": {
-    "rb_parallelism": 16, "fi_lmmse_parallelism": 16, "freq_interp": "nn",
-    "time_interp": "linear", "input_mode": "A", "switchable_ports": true,
-    "fi_re_parallelism": 12, "ti_re_parallelism": 12,
-    "fi_lmmse_real_coeff": false, "ti_lmmse_real_coeff": true,
-    "fi_lmmse_coeff_source": "SRAM", "ti_lmmse_coeff_source": "ROM"
+    "rb_parallelism": 2,
+    "fi_lmmse_parallelism": 4,
+    "freq_interp": "lmmse",
+    "time_interp": "linear",
+    "input_mode": "A",
+    "switchable_ports": true,
+    "fi_re_parallelism": 12,
+    "ti_re_parallelism": 3,
+    "fi_lmmse_real_coeff": true,
+    "ti_lmmse_real_coeff": true,
+    "fi_lmmse_coeff_source": "ROM",
+    "ti_lmmse_coeff_source": "ROM"
   },
   "quantization": {
-    "Y": "QuType(14, 4, True)", "H_LS": "QuType(14, 5, True)",
-    "H_FI": "QuType(15, 7, True)", "H_TI": "QuType(13, 10, True)",
-    "FI_LMMSE_COEFF": "QuType(15, 11, True)", "TI_LMMSE_COEFF": "QuType(16, 8, True)"
+    "Y": "QuType(11, 4, True)",
+    "H_LS": "QuType(12, 4, True)",
+    "H_FI": "QuType(12, 4, True)",
+    "H_TI": "QuType(12, 4, True)",
+    "FI_LMMSE_COEFF": "QuType(12, 10, True)",
+    "TI_LMMSE_COEFF": "QuType(12, 11, True)"
   },
-  "arithmetic": {"ls_quant_mode": "RND.POS_INF", "ls_overflow_mode": "SAT.SMGN"},
+  "arithmetic": {
+    "ls_quant_mode": "TRN.TCPL",
+    "ls_overflow_mode": "WRP.TCPL"
+  },
   "implementation": {
-    "ti_lmmse_f_d_norm": 0.01578794415916616, "ti_lmmse_w_coeffs": null,
-    "fi_lmmse_tau_rms": 2.320688204801981, "fi_lmmse_snr_linear": 144.200513180448,
-    "fi_lmmse_channel_model": "TDL-A", "fi_lmmse_delay_spread": 4.149199264468215e-7,
-    "fi_lmmse_scs": 30000.0, "sram_macro": null, "production_observation_layouts": null
+    "ti_lmmse_f_d_norm": 0.01,
+    "ti_lmmse_w_coeffs": null,
+    "fi_lmmse_tau_rms": 3.0,
+    "fi_lmmse_snr_linear": 100.0,
+    "fi_lmmse_channel_model": "TDL-C",
+    "fi_lmmse_delay_spread": 2e-7,
+    "fi_lmmse_scs": 30000.0,
+    "sram_macro": null,
+    "production_observation_layouts": null
   },
   "area": {
-    "use_config_actual_area": false, "actual_area_um2": null,
-    "use_config_actual_time": false, "actual_time_ms": null
+    "source_build_id": "a630789da489",
+    "source_case_id": "explore_0007_lmmse_linear_a630789da489",
+    "use_config_actual_area": false,
+    "actual_area_um2": null,
+    "use_config_actual_time": false,
+    "actual_time_ms": null
   }
 }

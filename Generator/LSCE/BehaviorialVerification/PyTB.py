@@ -19,7 +19,6 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(__file__)))
 sys.path.append(dirname(__file__))
 
-import pytest
 import itertools
 import PyTU
 try:
@@ -644,4 +643,3 @@ def run_subprocess(command, cwd_in):
 #     # ModuledumpMDA(name = "pig", handle="very_big_pig", MDAsize=[8, 8, 4,8], n_latency=0, if_end=False, end_wait=40, clk="i_clk", en="en", n_cycle=10, n_dump=10)
 #     Moduledrive_input_signal(ports = ["pigs","Very_Big_Pig","Piggies"],files= ["PigInput"], if_en = False, clk = "clk", n_latency = 30, if_end = False, end_wait = 100,input_file_dir="./sim/Input_Files", n_cycle=10, n_excites=10, grp="Piggy")
 #     Moduledump(grp="Piggies", names=["pigs","Very_Big_Pig","Piggie"], handles=["pigs","Very_Big_Pig","Piggies_handle"], n_latency = 4, if_end = False, end_wait = 40, clk = "clk", en = "en", output_file_dir = "./sim/Output_Files", n_cycle=10, n_dump=10)
-    

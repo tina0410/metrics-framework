@@ -125,40 +125,41 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         area_source = "config+dc_reference" if area_had_config else "dc_reference"
 
     actual_cycles, simulation_time, _interval, latency_speedup = configured_latency(config)
-    latency_had_config = actual_cycles is not None or simulation_time is not None
-    latency_source = "config"
     actual_iterations: float | None = None
-    if actual_cycles is None or (simulation_time is None and latency_speedup is None):
-        simulation_dir = evaluator.configured_simulation_dir(config_path)
-        simulation_dir.mkdir(parents=True, exist_ok=True)
-        rtl_config = {
-            "Hardware Architecture": architecture,
-            "Decoding Algorithm": algorithm,
-            "Code Length": n,
-            "Parallelism": m,
-            "Data Width": width,
-            "Code Rate": rate,
-            "Eb/N0 (dB)": float(config["decoder"].get("ebn0_db", 10.0)),
-            "Clock Period (ns)": period_ns,
-        }
-        rtl_config_path = simulation_dir / "rtl_config.json"
-        rtl_config_path.write_text(json.dumps(rtl_config, indent=2), encoding="utf-8")
-        simulation = evaluator.simulate_rtl(
-            rtl_config_path, simulation_dir, label=config_path.stem
-        )
-        if simulation.get("waveform_verified") is False or simulation.get("decoding_verified") is False:
-            raise RuntimeError("BP RTL functional comparison failed")
-        rtl_cycles = int(simulation["sim_latency_cycles"])
-        print(
-            f"Success. The RTL latency of {config_path.stem} is "
-            f"{rtl_cycles} cycles",
-            file=sys.stderr,
-        )
-        actual_cycles = actual_cycles or rtl_cycles
-        simulation_time = simulation_time or float(simulation["rtl_simulation_time_ms"])
-        if simulation.get("cpp_iterations") is not None:
-            actual_iterations = float(simulation["cpp_iterations"])
-        latency_source = "config+rtl" if latency_had_config else "rtl"
+    started = time.perf_counter()
+    simulation_dir = evaluator.configured_simulation_dir(config_path)
+    simulation_dir.mkdir(parents=True, exist_ok=True)
+    rtl_config = {
+        "Hardware Architecture": architecture,
+        "Decoding Algorithm": algorithm,
+        "Code Length": n,
+        "Parallelism": m,
+        "Data Width": width,
+        "Code Rate": rate,
+        "Eb/N0 (dB)": float(config["decoder"].get("ebn0_db", 10.0)),
+        "Clock Period (ns)": period_ns,
+    }
+    rtl_config_path = simulation_dir / "rtl_config.json"
+    rtl_config_path.write_text(json.dumps(rtl_config, indent=2), encoding="utf-8")
+    simulation = evaluator.simulate_rtl(
+        rtl_config_path, simulation_dir, label=config_path.stem
+    )
+    measured_time = (time.perf_counter() - started) * 1000.0
+    if simulation.get("waveform_verified") is False or simulation.get("decoding_verified") is False:
+        raise RuntimeError("BP RTL functional comparison failed")
+    rtl_cycles = int(simulation["sim_latency_cycles"])
+    if actual_cycles is not None and actual_cycles != rtl_cycles:
+        raise ValueError("validation.latency.actual_cycles does not match fresh BP RTL simulation")
+    print(
+        f"Success. The RTL latency of {config_path.stem} is "
+        f"{rtl_cycles} cycles",
+        file=sys.stderr,
+    )
+    actual_cycles = rtl_cycles
+    simulation_time = measured_time
+    if simulation.get("cpp_iterations") is not None:
+        actual_iterations = float(simulation["cpp_iterations"])
+    latency_source = "rtl"
     if actual_iterations is None:
         actual_iterations = iterations_from_latency(actual_cycles, cycle_terms(n, m))
 

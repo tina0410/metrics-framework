@@ -1,0 +1,10 @@
+#!/bin/bash
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.cpp_cache/
+generated/
+results.xml
+*.vcd
+*.fst

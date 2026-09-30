@@ -1,15 +1,18 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、Abs、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。Abs 当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE，以及 Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、SxMatch、Counter、CAdd、CSub、CMul、CNorm、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。基础模块当前先接入延迟指标。
 
 ## 命令
 
 ```bash
-python -m metrics_framework <ls|mimo|bp|abs|add|mul> predict [配置编号或路径]
-python -m metrics_framework <ls|mimo|bp|abs|add|mul> evaluate [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|sub|addertree|comp|comptree|add|mul> predict [配置编号或路径]
+python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|sub|addertree|comp|comptree|add|mul> evaluate [配置编号或路径]
 ```
 
 安装根项目后可将 `python -m metrics_framework` 替换为 `metrics`。省略配置时运行模块清单中的五个默认 case；单 case 直接输出指标对象，批量输出 `{配置名称: 指标对象}`。
+`ce` 是 `pusch_ce` 的简写，两者使用同一 adapter、case 和输出目录。
+PUSCH_CE 的历史表只提供真实面积而不提供 DC 综合耗时，因此标准 case
+不会伪造“综合时间”和“速度提升倍数”；配置显式提供该时间后才显示这两项。
 
 旧入口也接受新模式，例如：
 
@@ -23,8 +26,8 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 
 ## 输出契约
 
-- `predict` 只写入并打印 `prediction.json`，其中只有预测值、预测时间和 GE 信息，不包含 `null` 对比字段。
-- `evaluate` 验证完整时写入并打印 `evaluation.json`，展示结构与各模块原有 `*_metrics.json` 一致。
+- `predict` 每次调用都会先删除旧 `prediction.json`，启动新的隔离 adapter 进程并重新执行各项预测、重新计时；旧预测文件和其中的时间绝不作为本轮输入。成功后只写入并打印本轮 `prediction.json`，其中只有预测值、预测时间和 GE 信息，不包含 `null` 对比字段。
+- `evaluate` 每次都清理本 case 的旧仿真工作区和结果文件，重新执行参考模型生成、RTL/testbench 生成、编译、仿真、波形解析及功能对比；验证完整时写入并打印 `evaluation.json`。已有 `simulation_result.json`、VCD、RTL 或可执行文件仅作为上次运行证据，绝不作为本次输入复用。
 - `prediction.json` 和 `evaluation.json` 的预测、仿真、综合及总评估时间统一使用毫秒（`ms`）。
 - 四项指标分别输出 `预测时间 (ms)`，计时从所需模型/工作簿加载完成后开始，到该指标的预测函数运行结束。
 - 只有 `prediction.json` 末尾包含 `自动评估总时间 (ms)`，只累计延迟、面积、Throughput、硬件复杂度四项 predict 时间，不包含模型或工作簿读取、RTL仿真、DC综合、误差计算、adapter启动、文件保存和屏幕打印时间；`evaluation.json` 不计算或输出总时间。
@@ -58,7 +61,7 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 }
 ```
 
-非 `null` 字段直接使用；面积字段不足时读取对应 `Area_TP_Estimator` DC 结果，延迟或输出间隔不足时运行 RTL/C++ 验证。旧的 `use_config_actual_area`、`actual_area_um2`、`actual_time_ms` 和 `synthesis_time_ms` 仍受支持。
+面积的非 `null` 字段直接使用，字段不足时读取对应 `Area_TP_Estimator` DC 结果。延迟配置字段不再用于跳过仿真：每次 `evaluate` 均运行全新的 RTL/C++ 验证，配置的 `actual_cycles` 和 `output_interval_cycles` 仅作为一致性断言，本轮实测值与其不符时评估失败；`simulation_time_ms` 不作为本轮时间来源。旧的 `use_config_actual_area`、`actual_area_um2`、`actual_time_ms` 和 `synthesis_time_ms` 仍受支持。
 
 如果验证时间缺失但存在 `reported_speedup`，框架用该倍数和本轮预测时间恢复展示所需时间；两类数据都存在时以本轮计算倍数为准。
 
@@ -100,74 +103,12 @@ python adapter.py validate CONFIG
 `dc_reference`、`rtl` 或 `derived` 来源。日志写 stderr。验证数据或工具不可用
 返回 2；未预期程序错误返回 1。
 
-基础模块 `FxMatch` 、`Delay`、`Neg`、`Abs`、`SxMatch`、`Counter`、`CAdd`、
-`CSub`、`CMul`、`CNorm`、`MUX`、`Add`、`Sub`、
-`Mul`、`Comp`、`CompTree` 和 `AdderTree` 已全部登记。设计源统一位于
+基础模块 `FxMatch`、`Delay`、`Neg`、`Abs`、`MUX`、`SxMatch`、`Counter`、
+`CAdd`、`CSub`、`CMul`、`CNorm`、`Add`、`Sub`、`Mul`、`Comp`、`CompTree` 和
+`AdderTree` 已全部登记。设计源统一位于
 `Generator/BasicModules/<Module>`，测试入口位于各模块自己的 `tests` 子目录。
-目前 Abs/SxMatch/Counter/CAdd/CSub/CMul/CNorm/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
+目前 Abs/Delay/FxMatch/MUX/Neg/Sub/AdderTree/Comp/CompTree/SxMatch/Counter/CAdd/CSub/CMul/CNorm/Add/Mul 为 `active`；其余模块是 `registered`，调用指标评估时会明确
 报告 adapter 和评估配置尚未接入，不会返回伪造指标。
-
-### SxMatch 延迟评估
-
-SxMatch 的五个配置对应 `Generator/BasicModules/SxMatch/tests/test_SxMatch.py`
-中的五个参数组合；量化与溢出策略采用测试已有的 `TRN.TCPL` 和 `WRP.TCPL`。
-模块的 FxMatch 转换为组合逻辑，之后由 `ModuleDelay(..., N_CLK=n_pipeline)`
-输出，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。配置允许 0-cycle
-组合延迟；`evaluate` 对每个 case 单独调用匹配的 pytest RTL scoreboard 测试，
-并以配置中的流水深度作为该测试验证的 RTL 延迟。
-
-面积和硬件复杂度暂显示为 `null`，Throughput 不输出。预测与评估输出均与 Abs
-一致，并包含预测公式、仿真值和延迟误差。运行原 tests 需要 Python `pytest`、
-PyTV，以及 `iverilog`、`vvp`；测试所需的临时 `modules` 包由框架从模块目录构造，
-不依赖外部 ZIP。
-
-### Counter 延迟评估
-
-Counter 的五个配置分别对应 `Generator/BasicModules/Counter/tests/test_Counter.py`
-的已覆盖位宽、步进、复位、同步清零和 wrap 组合。计数值及可选 wrap 标志都在
-时钟上升沿寄存，预测公式为
-`latency_cycles = 1 (posedge-registered count/wrap output)`。`evaluate` 对应运行
-一个原生 pytest 测试，由 RTL scoreboard 连续验证 80 个计数周期；测试通过后，
-将寄存器更新延迟作为仿真值并计算误差。
-
-面积及硬件复杂度为 `null`，不显示 Throughput；输出格式与 Abs 相同。`evaluate`
-需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
-
-### CAdd 延迟评估
-
-CAdd 使用五个配置，前四项逐一对应
-`Generator/BasicModules/CAdd/tests/test_CAdd.py` 中的四种定点格式与流水深度；
-第五项重复 case1 的合法参数组合，保持默认五配置接口。实部、虚部分别调用
-ModuleAdd，二者共用 `N_CLK` 流水延迟，预测公式为
-`latency_cycles = N_CLK = n_pipeline`。`evaluate` 运行选定 pytest RTL scoreboard，
-逐帧检查打包的复数输出；0-cycle 组合延迟有效，误差按仿真与预测 cycles 计算。
-
-面积和硬件复杂度显示为 `null`，不输出 Throughput，终端结构与 Abs 一致。运行
-tests 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
-
-### CSub 延迟评估
-
-CSub 使用与 CAdd 对应的四种定点格式和流水级数，另有一个使用 `TRN.SMGN` 与
-`SAT.TCPL` 策略的第五配置；这五组参数均来自
-`Generator/BasicModules/CSub/tests/test_CSub.py` 的参数组合。模块对实部、虚部
-分别实例化 Sub，并共用 `N_CLK` 输出流水，因此预测公式为
-`latency_cycles = N_CLK = n_pipeline`。`evaluate` 对每个配置运行原 pytest RTL
-scoreboard，检查复数打包输出后报告仿真延迟和误差。0-cycle 配置有效。
-
-CSub 暂不计算面积和硬件复杂度（显示 `null`），也不输出 Throughput；输出格式与
-Abs 一致。需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
-
-### CMul 延迟评估
-
-CMul 前四个配置对应原 tests 的四种定点格式/流水组合，`METHOD="4mul"`；第五个
-配置使用同一合法参数组合，但选用 tests 覆盖的 `METHOD="3mul"`，并启用另一组
-量化/溢出策略。两种结构都保持精确中间乘积，仅在输出转换处按
-`N_CLK` 延迟，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。每次
-`evaluate` 都单独运行 `test_CMul.py` 中与配置匹配的 RTL scoreboard；组合延迟
-0-cycle 是合法值。
-
-面积和硬件复杂度目前为 `null`，不输出 Throughput；预测/评估终端格式与 Abs
-一致。运行 tests 需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`。
 
 ### Abs 延迟评估
 
@@ -182,6 +123,115 @@ Abs 当前仅接入延迟指标；面积和硬件复杂度相关字段保留为 
 或 `evaluate` 输出延迟结果。Ubuntu 环境需提供
 `clang++`、`iverilog` 和 `vvp`。
 
+### Delay 延迟评估
+
+Delay 提供五个默认配置，对应
+`Generator/BasicModules/Delay/Delay/test_Delay.py` 的 `case1` 至 `case5`。
+生成器在 `N_CLK=0` 时直接连线，在 `N_CLK>0` 时生成对应数量的寄存器级，
+因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 每次运行配置
+对应的 pytest 用例，重新生成 RTL，并调用 Icarus Verilog 编译、仿真和功能检查。
+
+Delay 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。组合直通的 0-cycle 延迟是合法结果。
+Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
+
+### FxMatch 延迟评估
+
+FxMatch 提供五个默认配置，对应
+`Generator/BasicModules/FxMatch/tests/test_FxMatch.py` 的 `case1` 至 `case5`。
+定点量化和溢出处理完成后，生成器通过 `ModuleDelay(..., N_CLK=N_CLK)` 输出，
+因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。`evaluate` 会运行配置对应
+的确定性 pytest 用例，生成 C++ 黄金输出和 RTL，调用 Icarus Verilog 仿真并逐帧
+比较结果。
+
+FxMatch 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
+和 `vvp`。
+
+### MUX 延迟评估
+
+MUX 提供五个默认配置，对应 `Generator/BasicModules/MUX/tests/test_MUX.py`
+的 `n1_m1`、`n2_m7`、`n3_m1`、`n4_m8` 和 `n5_m13` 用例。设计源仅包含
+`always @(*)` 组合选择逻辑，没有时钟、寄存器或流水级，因此预测公式为
+`latency_cycles = 0 (combinational path)`。
+
+`evaluate` 每次运行配置对应的 pytest 用例，重新生成 RTL，使用 Icarus Verilog
+编译并运行 testbench；用例对每个输入 lane、无效选择值以及 X/Z 选择值进行功能
+检查。测试完整通过后，以组合路径的 0-cycle 延迟作为仿真值并计算误差。
+MUX 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和 `vvp`。
+
+### Neg 延迟评估
+
+Neg 提供五个默认配置，对应 `Generator/BasicModules/Neg/tests/test_Neg.py`
+的前五个规范用例。输入取负和定点格式转换均为组合逻辑，最终输出仅通过
+`ModuleDelay(..., N_CLK=N_CLK)` 寄存，因此预测公式为
+`latency_cycles = N_CLK = n_pipeline`。五个默认 case 的延迟依次为
+0、2、1、1 和 0 cycles。
+
+`evaluate` 每次运行配置对应的 pytest 用例，重新生成 C++ 黄金输出和 RTL，调用
+Icarus Verilog 仿真并逐帧比较结果；测试完整通过后才返回测试所验证的流水深度
+并计算误差。Neg 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
+字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
+`iverilog` 和 `vvp`。
+
+### Sub 延迟评估
+
+Sub 提供五个默认配置，对应 `Generator/BasicModules/Sub/tests/test_Sub.py`
+原参数矩阵中的 `case1` 至 `case5`。减法与输入/输出定点格式转换均为组合逻辑，
+最终输出由 `ModuleDelay(..., N_CLK=N_PIPELINES)` 产生，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前五个规范配置均使用四级流水，
+预测延迟为 4 cycles。
+
+`evaluate` 每次只运行指定配置对应的原生 pytest 用例，在临时工作目录内生成 C++
+黄金文件和 RTL，使用 Icarus Verilog 仿真并比较 100 帧结果；测试完整通过后才
+返回对应流水级数并计算误差。Sub 当前不评估面积、Throughput 和硬件复杂度：
+面积与硬件复杂度字段显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要
+提供 Python `pytest`、`PyVerilog`、`PyTV`，以及 `clang++`、`iverilog` 和 `vvp`。
+
+### AdderTree 延迟评估
+
+AdderTree 提供五个默认配置，对应
+`Generator/BasicModules/AdderTree/tests/test_AdderTree.py` 中的五个规范 RTL
+测试用例。Mode A 将总流水级分配到加法树各层，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。`evaluate` 每次运行配置对应的
+pytest 用例，生成 RTL，调用 Icarus Verilog 编译并运行 `vvp`；测试通过后以该
+规范用例验证的流水深度作为仿真值，并输出预测值、仿真值和误差。0-cycle
+组合延迟是合法结果。
+
+AdderTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度字段
+显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `iverilog` 和
+`vvp`。
+
+### Comp 延迟评估
+
+Comp 提供五个默认配置，依次对应
+`Generator/BasicModules/Comp/tests/test_Comp.py` 的 `case1` 至 `case5`。
+生成器对所有启用的比较索引和值输出调用
+`ModuleDelay(..., N_CLK=N_PIPELINES)`，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定四级流水，五个
+case 的预测延迟和测试验证延迟均为 4 cycles。
+
+`evaluate` 会运行配置对应的 pytest 用例，依次生成 C++ 黄金输出和 RTL，调用
+Icarus Verilog 仿真并逐项比较五类输出；测试完整通过后才返回仿真延迟和误差。
+Comp 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度显示为
+`null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、`iverilog`
+和 `vvp`。
+
+### CompTree 延迟评估
+
+CompTree 提供五个默认配置，对应
+`Generator/BasicModules/CompTree/tests/test_CompTree.py` 的 `case1` 至 `case5`。
+Mode A 将总流水级分配到平衡比较树各层，因此预测公式为
+`latency_cycles = N_PIPELINES = n_pipeline`。当前规范测试固定 10 级流水，五个
+case 的预测延迟和测试验证延迟均为 10 cycles。
+
+`evaluate` 会运行配置对应的 pytest 用例，生成 C++ 黄金结果和 RTL，调用
+Icarus Verilog 仿真并比较最大值索引输出；测试完整通过后才返回仿真延迟和
+误差。CompTree 当前不评估面积、Throughput 和硬件复杂度：面积与硬件复杂度
+显示为 `null`，输出中不包含 Throughput。Ubuntu 环境需要提供 `clang++`、
+`iverilog` 和 `vvp`。
+
 新增模块步骤：
 
 1. 实现纯预测函数，禁止读取真实值或运行 RTL。
@@ -194,31 +244,32 @@ MIMO 的面积项目与 RTL 项目存在同名旧模块，因此其 adapter 使�
 
 ### ADD 评估与 RTL 验证
 
-ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数。统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`，五个默认 case 均保持 `n_pipeline = 1`。
+ADD 配置使用 `input_1`、`input_2`、`output` 定义定点位宽、分数位宽和符号，`n_pipeline` 定义流水级数。统一指标要求正延迟和正复杂度，因此 ADD 评估配置要求 `n_pipeline >= 1`；五个默认 case 均保持 `n_pipeline = 1`，并固定使用 `10 ns` 时钟周期。
 
 - 延迟预测值为 `n_pipeline` cycles。验证从 `Generator/BasicModules/Add/tests` 调用测试链，并从 `Generator/BasicModules/Add` 加载 `ModuleAdd`、`FxMatch` 和 `Delay`；`ModuleCppConfig/ModuleCppRun + QuBLAS` 仍用作行为参考。
 - 原 C++ 链连续生成三帧输入和黄金输出，Icarus Verilog 运行原 testbench 后，统一验证器逐帧比较 RTL 输出文件，并从标准 VCD 的 `Input_rdy`、`Output_rdy` 和时钟边沿测量 `sim_latency_cycles` 与 `sim_output_interval_cycles`；真实延迟必须等于 `n_pipeline`。
 - ADD 的 `仿真时间 (ms)` 统计完整验证链耗时，计时范围包含 C++参考文件生成、PyTV RTL/testbench 生成、C++与Icarus编译、`vvp` 运行、逐帧比较和结果解析；它不是 Verilog 波形覆盖的几十个仿真 cycle 所对应的物理时间。
-- 吞吐率复用上述同一次 RTL 仿真结果。预测值按每拍处理一帧计算：`predicted_Gframes/s = 1 / clock.period_ns`；仿真值按实测输出间隔计算：`actual_Gframes/s = 1 / (clock.period_ns × sim_output_interval_cycles)`。默认 ADD 的输出间隔为 1 cycle，因此预测值和仿真值一致。流水级数影响首帧延迟，但只要流水线能每拍接收数据，就不降低稳态吞吐率。
-- `Gframes/s` 表示每秒十亿帧，`Gbps` 表示每秒十亿比特，两者物理意义不同。只有明确每帧包含的有效比特数后，才能按 `Gbps = Gframes/s × bits_per_frame` 换算。
+- 吞吐率按有效输出 bit 计算，`effective_Gbps = output.bitwidth / (clock.period_ns × output_interval_cycles)`。预测按每拍输出一帧；仿真值继续从三帧 `Output_rdy` 的 VCD 时间戳实测输出间隔，再乘每帧的 `output.bitwidth`。默认 ADD `config_case2` 的输出宽度为 2 bit、时钟周期为 10 ns，因此预测值和当前实测值均为 `0.2 Gbps`。
 - 面积预测校验并使用 `Area_TP_Estimator/Est/model/ADD_area.pkl` 的等价轻量系数；真实面积及综合时间按参数从 `ADD.xlsx` 精确匹配。自定义配置在工作簿中没有对应 DC 行时，需通过 `validation.area` 提供真实面积与综合时间。
 
 运行 `evaluate` 前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。生成的 RTL、C++输入/参考文件和仿真证据保存在 `Generator/BasicModules/Add/sim/<配置名>/`，其中 `simulation_result.json` 记录实测延迟、输出间隔、匹配帧数、参考链来源以及参与编译的 RTL 文件。
 
 ### MUL 评估与 RTL 验证
 
-MUL 使用与 ADD 相同的定点配置字段。延迟预测值和 RTL 实测值均为 `n_pipeline` cycles，且统一评估要求 `n_pipeline >= 1`。
+MUL 使用与 ADD 相同的定点配置字段。5 个标准配置统一使用 `10 ns` 时钟周期。延迟预测值和 RTL 实测值均为 `n_pipeline` cycles，且统一评估要求 `n_pipeline >= 1`。
 
 - 验证复用 MUL 原有的 PyTB 测试台、PyTV RTL 生成器与 QuBLAS C++ 黄金模型，然后使用 Icarus Verilog 执行 RTL 仿真；功能结果逐帧对比，延迟和输出间隔从 VCD 时钟边沿上的完整输入/输出序列独立测量。
-- 吞吐率沿用 MUL 仿真中连续帧的时序语义：`Gframes/s = 1 / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
-- 面积预测使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的等价轻量表示，面积单位为 `μm²`。真实面积从 `MUL.xlsx` 的 DC 综合结果列精确查表。
-- `MUL.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
+- 吞吐率按有效输出 bit 计算：`effective_Gbps = output.bitwidth / (clock.period_ns × output_interval_cycles)`。预测输出间隔为 1 cycle，RTL 验证则从相邻有效输出实测该间隔。
+- 面积预测与当前 `Est.py::Est_MUL` 保持等价，使用 `pure_MUL_area.pkl`、`SU_out_FxP_area.pkl` 和 `SU_in.xlsx` 的轻量表示，面积单位为 `μm²`。真实面积从 `MUL0912.xlsx` 的 `dc综合结果` 列精确查表。
+- `MUL0912.xlsx` 的 `time` 列以秒记录，adapter 查表后转换为框架统一的 `ms`。硬件复杂度仍为 `area / GE_area × latency`，单位 `GE·cycles`。
 - 工作簿只有一个共享的 `sign_in` 列；两输入符号性不同的自定义配置需在 `validation.area` 中提供真实面积和综合时间。
 
 MUL 的 RTL、测试链和仿真证据均聚合在 `Generator/BasicModules/Mul`。运行完整验证前需确保 `clang++` 或 `g++`、`iverilog` 和 `vvp` 位于 `PATH`。`simulation_result.json` 会记录测量方法、匹配帧数、延迟、输出间隔、时钟周期及物理延迟。
 
-### CNorm 延迟评估
+### 复数基础模块延迟评估
 
-CNorm 五个配置覆盖原 `tests/test_CNorm.py` 中的四种输入/输出格式、复位与流水深度组合；第五组复用第一组格式并选择测试覆盖的 `TRN.SMGN`、`SAT.TCPL` 策略。CNorm 将复数输入拆分为实部和虚部，分别取绝对值后求和，输出流水由 `N_CLK` 控制，因此预测公式为 `latency_cycles = N_CLK = n_pipeline`。每个配置单独运行对应 pytest RTL scoreboard，报告仿真延迟和误差，0-cycle 组合延迟合法。
-
-面积和硬件复杂度为 `null`，不输出 Throughput，终端结构与 Abs 一致。CNorm 测试依赖由框架从 `Generator/BasicModules/CNorm` 中的本地源码临时构造，不依赖外部 ZIP；运行需要 Python `pytest`、PyTV、`iverilog` 和 `vvp`，生成物保留在系统临时目录。
+SxMatch、Counter、CAdd、CSub、CMul 和 CNorm 均提供五个规范配置，并在
+`evaluate` 时运行对应目录下原有的 pytest RTL 测试。延迟预测直接依据测试中的
+流水级数，公式为 `latency_cycles = N_CLK = n_pipeline`（Counter 按其寄存器行为
+使用对应的一周期公式）。这几类模块当前只评估延迟，面积和硬件复杂度为 `null`，
+不输出 Throughput；预测、仿真延迟和误差格式与 Abs 一致。

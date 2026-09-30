@@ -73,10 +73,6 @@ class Testcase:
         return info
     
             
-# At the beginning of the test, clear the generated files
-os.system("rm -rf ./sim/RTL/*")
-os.system("rm -rf ./sim/Log_Files/*")
-
 def generate_testcase_specific_value_case1(Testcase):
 
     generator = PyTB.TestcaseGenerator(
@@ -106,7 +102,11 @@ def generate_testcase_specific_value_case1(Testcase):
 # -------------------------------User Settings------------------------------- #
 # Testcase Range
 testcase = generate_testcase_specific_value_case1(Testcase)
-@pytest.mark.parametrize("Testcase", testcase)
+@pytest.mark.parametrize(
+    "Testcase",
+    testcase,
+    ids=[f"case{index}" for index in range(1, len(testcase) + 1)],
+)
 
 def test_my_module(request: pytest.FixtureRequest,Testcase:Testcase):
     '''

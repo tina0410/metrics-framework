@@ -89,26 +89,26 @@ def validate(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
         area_source = "config+dc_reference" if area_had_config else "dc_reference"
 
     actual_cycles, simulation_time, interval, latency_speedup = configured_latency(config)
-    latency_had_config = actual_cycles is not None or interval is not None or simulation_time is not None
-    latency_source = "config"
-    if (
-        actual_cycles is None
-        or interval is None
-        or (simulation_time is None and latency_speedup is None)
-    ):
-        started = time.perf_counter()
-        simulation = module.simulate_lsce(config_path, config=config)
-        measured_time = (time.perf_counter() - started) * 1000.0
-        rtl_cycles = int(simulation["latency_cycles"])
-        print(
-            f"Success. The RTL latency of {config_path.stem} is "
-            f"{rtl_cycles} cycles",
-            file=sys.stderr,
+    started = time.perf_counter()
+    simulation = module.simulate_lsce(config_path, config=config)
+    measured_time = (time.perf_counter() - started) * 1000.0
+    rtl_cycles = int(simulation["latency_cycles"])
+    rtl_interval = int(simulation["output_interval_cycles"])
+    if actual_cycles is not None and actual_cycles != rtl_cycles:
+        raise ValueError("validation.latency.actual_cycles does not match fresh LS RTL simulation")
+    if interval is not None and interval != rtl_interval:
+        raise ValueError(
+            "validation.latency.output_interval_cycles does not match fresh LS RTL simulation"
         )
-        actual_cycles = actual_cycles or rtl_cycles
-        interval = interval or int(simulation["output_interval_cycles"])
-        simulation_time = simulation_time or measured_time
-        latency_source = "config+rtl" if latency_had_config else "rtl"
+    print(
+        f"Success. The RTL latency of {config_path.stem} is "
+        f"{rtl_cycles} cycles",
+        file=sys.stderr,
+    )
+    actual_cycles = rtl_cycles
+    interval = rtl_interval
+    simulation_time = measured_time
+    latency_source = "rtl"
 
     period_ns = float(config.get("clock", {}).get("period_ns", 10.0))
     receivers = int(config["Number of Receiving Antennas"])

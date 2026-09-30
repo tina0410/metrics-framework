@@ -11,8 +11,8 @@ from pytv.Converter import convert
 from pytv.ModuleLoader import moduleloader
 
 # Modify version at here
-import sys
 import os
+import sys
 import PyTB
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -22,12 +22,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 You need to update module name here if you change the DUT.
 '''
 DUT_NAME = "Sub" 
-module_name = f"designs.{DUT_NAME}"
-try:
-    module = __import__(module_name, fromlist=[f"Module{DUT_NAME}"])
-    ModuleSub = getattr(module, f"Module{DUT_NAME}")
-except ModuleNotFoundError:
-    print('module version not found.')
+from Sub import ModuleSub
 
 
 

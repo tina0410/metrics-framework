@@ -4,9 +4,9 @@ from enum import Enum
 class QuMode:
 
     class TRN(Enum):# Truncate Method
-        TCPL = 0 
+        TCPL = 0
         SMGN = 1
-    
+
     class RND(Enum):# Round Method
         POS_INF = 0
         NEG_INF = 1
@@ -18,7 +18,7 @@ class OfMode:
 
     class WRP(Enum):
         TCPL = 0
-    
+
     class SAT(Enum):
         TCPL = 0
         SMGN = 1
@@ -37,7 +37,7 @@ class QuType:
         return self.DWT - self.FRAC - 1
     def LSB(self):
         return - self.FRAC
-    
+
     def set_dwt_frac(self, msb, lsb):
         '''
         True set function.
@@ -57,5 +57,3 @@ class QuType:
             self.set_dwt_frac(msb_value, lsb_value)
         else:
             print("MSB or LSB is missing")
-
-    

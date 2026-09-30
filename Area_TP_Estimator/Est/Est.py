@@ -52,15 +52,16 @@ def Est_MUL(Model_MUL, Model_SU_out, SU_in_db, DWT_IN_1, FRAC_IN_1, SIGN_IN_1, D
     y_pred += Model_MUL.predict(X_new)
     # print("pure_MUL_area: ", Model_MUL.predict(X_new))
 
-    # X = [DWT_mul, 0, DWT_OUT, FRAC_OUT - FRAC_IN_1 - FRAC_IN_2, SIGN_IN_1, SIGN_IN_2]
-    # X_new = []
-    # X_new.append(S2U_out(*X))
-    # X_new = pd.DataFrame(X_new)
-    # # Model_SU_out = joblib.load('./model/SU_out_FxP_area.pkl')
-    # y_pred += Model_SU_out.predict(X_new)
-    # print("SU_out_FxP_area: ", model.predict(X_new))
+    X = [DWT_mul, 0, DWT_OUT, FRAC_OUT - FRAC_IN_1 - FRAC_IN_2, SIGN_IN_1, SIGN_IN_2]
+    X_new = []
+    X_new.append(S2U_out(*X))
+    X_new = pd.DataFrame(X_new)
+    # Model_SU_out = joblib.load('./model/SU_out_FxP_area.pkl')
+    y_pred += Model_SU_out.predict(X_new)
+    # print("SU_out_FxP_area: ", Model_SU_out.predict(X_new))
     # print("MUL_area: ", y_pred)
 
+    y_pred += 5.88 * DWT_mul
     return y_pred
 
 def Est_ADD(model, DWT_IN_1, FRAC_IN_1, SIGN_IN_1, DWT_IN_2, FRAC_IN_2, SIGN_IN_2, DWT_OUT, FRAC_OUT, n_pipelines=0, if_rst_n=False):
@@ -137,6 +138,7 @@ def Est_Delay(DWT, CLK, IS_RST_N):
 
 def Est_COMP(model, Sub_db, QU_IN_1:QuType, QU_IN_2:QuType, QU_OUT:QuType, N_PIPELINES, IF_RST_N, IF_GIDX=False, IF_LIDX=False, IF_EIDX=False, IF_GVAL=False, IF_LVAL=False):
     y_pred = 0
+    area_Sub = 0
     QU_IN_FIX = QuType()
     LSB_FIX = -max(QU_IN_1.FRAC, QU_IN_2.FRAC)
     MSB_FIX = max(QU_IN_1.DWT - QU_IN_1.FRAC, QU_IN_2.DWT - QU_IN_2.FRAC+1)
@@ -144,9 +146,10 @@ def Est_COMP(model, Sub_db, QU_IN_1:QuType, QU_IN_2:QuType, QU_OUT:QuType, N_PIP
     QU_IN_FIX.FRAC = -LSB_FIX
     QU_IN_FIX.IF_SIGNED = QU_IN_1.IF_SIGNED or QU_IN_2.IF_SIGNED
     if QU_IN_FIX.IF_SIGNED:
-        y_pred += Est_SUB(model, Sub_db, QU_IN_1.DWT, QU_IN_1.FRAC, QU_IN_1.IF_SIGNED,
+        area_Sub += Est_SUB(model, Sub_db, QU_IN_1.DWT, QU_IN_1.FRAC, QU_IN_1.IF_SIGNED,
                           QU_IN_2.DWT, QU_IN_2.FRAC, QU_IN_2.IF_SIGNED,
-                          QU_IN_FIX.DWT, QU_IN_FIX.FRAC, N_PIPELINES, IF_RST_N)
+                          QU_IN_FIX.DWT, QU_IN_FIX.FRAC, 0, False)
+        y_pred += area_Sub
         if IF_GIDX:
             y_pred += Est_Delay(1, N_PIPELINES, IF_RST_N)
         if IF_LIDX:
@@ -165,62 +168,25 @@ def Est_COMP(model, Sub_db, QU_IN_1:QuType, QU_IN_2:QuType, QU_OUT:QuType, N_PIP
     if IF_GVAL or IF_LVAL:
         y_pred += Est_Delay(QU_OUT.DWT, 0, IF_RST_N)
         y_pred += Est_Delay(QU_OUT.DWT, 0, IF_RST_N)
-    print(y_pred)
+    print(area_Sub)
     return y_pred
 
 # ---------- 主程序 ----------
 if __name__ == "__main__":
     path = "."
-
-    SU_in_db = pd.read_excel(path + '/model/SU_in.xlsx', sheet_name='SU_in', header=0)
-    Sub_db = pd.read_excel(path + '/model/SU_in.xlsx', sheet_name='Sub', header=0)
     Model_ADD = joblib.load(path + '/model/ADD_area.pkl')
+    SU_in_db = pd.read_excel(path + '/model/SU_in.xlsx', sheet_name='SU_in', header=0)
     Model_MUL = joblib.load(path + '/model/pure_MUL_area.pkl')
     Model_SU_out = joblib.load(path + '/model/SU_out_FxP_area.pkl')
 
-    EXCEL_FILE = path + "/cases.xlsx"
-    if not os.path.exists(EXCEL_FILE):
-        print(f"错误：文件 {EXCEL_FILE} 不存在！")
-        exit(1)
-
-    xls = pd.ExcelFile(EXCEL_FILE)
-    sheets = ['Comp', 'Delay', 'Sub', 'Add', 'newSub']
-
-    for sheet in sheets:
-        df = pd.read_excel(xls, sheet_name=sheet)
-        print(f"\n========== 处理 Sheet: {sheet} ==========")
-        for idx, row in df.iterrows():
-            case = row['case']
-            folder = row['folder']
-            if sheet == 'Comp':
-                qu_in1 = QuType(int(row['DWT1']), int(row['FRAC1']), bool(row['SIGNED1']))
-                qu_in2 = QuType(int(row['DWT2']), int(row['FRAC2']), bool(row['SIGNED2']))
-                qu_out = QuType(int(row['DWTOUT']), int(row['FRACOUT']), qu_in1.IF_SIGNED and qu_in2.IF_SIGNED)
-                n_pipelines = int(row['N_PIPELINES'])
-                if_rst_n = bool(row['IF_RST_N'])
-                if_gidx = bool(row['IF_GIDX'])
-                if_lidx = bool(row['IF_LIDX'])
-                if_eidx = bool(row['IF_EIDX'])
-                if_gval = bool(row['IF_GVAL'])
-                if_lval = bool(row['IF_LVAL'])
-                area = Est_COMP(Model_ADD, Sub_db, qu_in1, qu_in2, qu_out, n_pipelines, if_rst_n, if_gidx, if_lidx, if_eidx, if_gval, if_lval)
-            elif sheet == 'Delay':
-                dwt = int(row['DWT'])
-                n_clk = int(row['N_CLK'])
-                if_rst_n = bool(row['IF_RST_N'])
-                # area = Est_Delay(dwt, n_clk, if_rst_n)
-            elif sheet == 'newSub':
-                area = Est_SUB(Model_ADD, Sub_db,
-                               int(row['DWT1']), int(row['FRAC1']), bool(row['SIGNED1']),
-                               int(row['DWT2']), int(row['FRAC2']), bool(row['SIGNED2']),
-                               int(row['DWTOUT']), int(row['FRACOUT']),
-                               int(row['N_PIPELINES']), bool(row['IF_RST_N']))
-            # elif sheet == 'Add' or sheet == 'Add_frac0':
-            #     area = Est_ADD(Model_ADD,
-            #                    int(row['DWT1']), int(row['FRAC1']), bool(row['SIGNED1']),
-            #                    int(row['DWT2']), int(row['FRAC2']), bool(row['SIGNED2']),
-            #                    int(row['DWTOUT']), int(row['FRACOUT']),
-            #                    int(row['N_PIPELINES']), bool(row['IF_RST_N']))
-            else:
-                continue
-            # print(area)   # 仅打印评估面积
+    area = Est_MUL(Model_MUL, Model_SU_out, SU_in_db,
+                    6, 3, 1,
+                    6, 3, 1,
+                    9, 4,
+                    1)
+    # area = Est_ADD(Model_ADD,
+    #                 2, 2, 1,
+    #                 1, 0, 1,
+    #                 1, 1,
+    #                 1)
+    print(area)

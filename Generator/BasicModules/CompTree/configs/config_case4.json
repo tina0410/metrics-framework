@@ -1,0 +1,14 @@
+{
+  "test_case": "case4",
+  "input": {"bitwidth": 5, "fractional_width": 5, "signed": false},
+  "output": {"bitwidth": 6, "fractional_width": 4, "signed": false},
+  "n_pipeline": 10,
+  "if_rst_n": [true, false, true, false, false, true, false, false, true, false],
+  "n_inputs": 31,
+  "if_gidx": true,
+  "config_mode": "A",
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "SAT.SMGN",
+  "n_frames": 100,
+  "clock": {"period_ns": 10.0}
+}

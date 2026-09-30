@@ -1,0 +1,6 @@
+{
+  "test_case": "n4_m8",
+  "n_inputs": 4,
+  "data_width": 8,
+  "clock": {"period_ns": 10.0}
+}

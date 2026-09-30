@@ -14,7 +14,7 @@ def ModuleCppConfig(QU_IN_1:PyTU.QuType, QU_IN_2:PyTU.QuType, QU_OUT:PyTU.QuType
     dwt_int_in_1, dwt_frac_in_1 = PyTB.calc_qublas_dwt(QU_IN_1)
     dwt_int_in_2, dwt_frac_in_2 = PyTB.calc_qublas_dwt(QU_IN_2)
     dwt_int_out, dwt_frac_out = PyTB.calc_qublas_dwt(QU_OUT)
-    QuMode_dict = {PyTU.QuMode.TRN.TCPL: "TRN::TCPL", PyTU.QuMode.TRN.SMGN: "TRN::SMGN", PyTU.QuMode.RND.POS_INF: "RND::POS_INF", PyTU.QuMode.RND.NEG_INF: "RND::NEG_INF", 
+    QuMode_dict = {PyTU.QuMode.TRN.TCPL: "TRN::TCPL", PyTU.QuMode.TRN.SMGN: "TRN::SMGN", PyTU.QuMode.RND.POS_INF: "RND::POS_INF", PyTU.QuMode.RND.NEG_INF: "RND::NEG_INF",
                    PyTU.QuMode.RND.INF: "RND::INF", PyTU.QuMode.RND.ZERO: "RND::ZERO",PyTU.QuMode.RND.CONV: "RND::CONV"}
     OfMode_dict = {PyTU.OfMode.WRP.TCPL: "WRP::TCPL", PyTU.OfMode.SAT.TCPL: "SAT::TCPL", PyTU.OfMode.SAT.ZERO: "SAT::ZERO", PyTU.OfMode.SAT.SMGN: "SAT::SMGN"}
     Signed_dict = {True: "true", False: "false"}
@@ -28,7 +28,7 @@ def ModuleCppConfig(QU_IN_1:PyTU.QuType, QU_IN_2:PyTU.QuType, QU_OUT:PyTU.QuType
     #/ #pragma once
     #/ #include "QuBLAS.h"
     #/ #include <cmath>
-    
+
     #/ namespace fxp {
     #/   using QU_IN_1= Qu<intBits<`dwt_int_in_1`>, fracBits<`dwt_frac_in_1`>, isSigned<`is_signed_in_str_1`>, QuMode<`QuMode_str`>, OfMode<SAT::ZERO>>;
     #/   using QU_IN_2= Qu<intBits<`dwt_int_in_2`>, fracBits<`dwt_frac_in_2`>, isSigned<`is_signed_in_str_2`>, QuMode<`QuMode_str`>, OfMode<SAT::ZERO>>;
@@ -76,8 +76,3 @@ def ModuleCppRun(N_FRAMES):
     #/     return 0;
     #/ }
     pass
-            
-
-
-
-

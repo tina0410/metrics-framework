@@ -267,6 +267,14 @@ def validate(config_path: Path) -> dict[str, Any]:
         raise ValueError("clock.period_ns must be finite and greater than zero")
     case_root = SIM_ROOT / config_path.stem
     case_root.mkdir(parents=True, exist_ok=True)
+    for artifact_name in (
+        "simulation_result.json",
+        "latency_check.txt",
+        "behavioral_output_reference.txt",
+        "rtl_output.txt",
+        "wave.vcd",
+    ):
+        (case_root / artifact_name).unlink(missing_ok=True)
     started = time.perf_counter()
     paths = _generate_case(config_path, config, case_root)
     rtl_files = sorted(path.name for path in paths["rtl_dir"].glob("*.v"))
@@ -300,6 +308,10 @@ def validate(config_path: Path) -> dict[str, Any]:
     output_positions = list(range(output_start, output_start + len(expected)))
     intervals = [right - left for left, right in zip(output_positions, output_positions[1:])]
     stable_interval = intervals[0] if intervals and len(set(intervals)) == 1 else None
+    if stable_interval is None or stable_interval < 1:
+        raise ValueError(f"MUL output interval is not stable: {intervals}")
+    effective_output_bits = int(config["output"]["bitwidth"])
+    simulated_throughput_gbps = effective_output_bits / (period_ns * stable_interval)
     result = {
         "sim_latency_cycles": latency,
         "sim_output_interval_cycles": stable_interval,
@@ -311,6 +323,8 @@ def validate(config_path: Path) -> dict[str, Any]:
         "vcd_output_sample_indices": output_positions,
         "clock_period_ns": period_ns,
         "clock_frequency_mhz": 1000.0 / period_ns,
+        "effective_output_bits": effective_output_bits,
+        "simulated_throughput_gbps": simulated_throughput_gbps,
         "physical_latency_ns": latency * period_ns,
         "functional_match": True,
         "rtl_simulation_time_ms": elapsed_ms,
@@ -336,6 +350,8 @@ def validate(config_path: Path) -> dict[str, Any]:
                 f"sim_output_interval_cycle_list={intervals}",
                 f"matched_output_frames={len(expected)}",
                 f"clock_period_ns={period_ns}",
+                f"effective_output_bits={effective_output_bits}",
+                f"simulated_throughput_gbps={simulated_throughput_gbps}",
                 f"physical_latency_ns={latency * period_ns}",
                 "functional_match=true",
             )

@@ -35,8 +35,7 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity", "iterations"]
     },
     "pusch_ce": {
-      "status": "registered",
-      "source": "Generator/PUSCH_CE/v_top.py",
+      "status": "active",
       "adapter": "metrics_framework/adapters/pusch_ce.py",
       "command": ["{python}", "{adapter}"],
       "root": "Generator/PUSCH_CE",
@@ -48,22 +47,43 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "fxmatch": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/FxMatch/FxMatch.py",
       "root": "Generator/BasicModules/FxMatch",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/fxmatch.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "FXMATCH_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "delay": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Delay/Delay.py",
       "root": "Generator/BasicModules/Delay",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/delay.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "DELAY_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "neg": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Neg/Neg.py",
       "root": "Generator/BasicModules/Neg",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/neg.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "NEG_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "abs": {
       "status": "active",
@@ -94,9 +114,9 @@
     "counter": {
       "status": "active",
       "source": "Generator/BasicModules/Counter/Counter.py",
+      "root": "Generator/BasicModules/Counter",
       "adapter": "metrics_framework/adapters/counter.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicModules/Counter",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
@@ -107,9 +127,9 @@
     "cadd": {
       "status": "active",
       "source": "Generator/BasicModules/CAdd/CAdd.py",
+      "root": "Generator/BasicModules/CAdd",
       "adapter": "metrics_framework/adapters/cadd.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicModules/CAdd",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
@@ -120,9 +140,9 @@
     "csub": {
       "status": "active",
       "source": "Generator/BasicModules/CSub/CSub.py",
+      "root": "Generator/BasicModules/CSub",
       "adapter": "metrics_framework/adapters/csub.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicModules/CSub",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
@@ -133,9 +153,9 @@
     "cmul": {
       "status": "active",
       "source": "Generator/BasicModules/CMul/CMul.py",
+      "root": "Generator/BasicModules/CMul",
       "adapter": "metrics_framework/adapters/cmul.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicModules/CMul",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
@@ -146,9 +166,9 @@
     "cnorm": {
       "status": "active",
       "source": "Generator/BasicModules/CNorm/CNorm.py",
+      "root": "Generator/BasicModules/CNorm",
       "adapter": "metrics_framework/adapters/cnorm.py",
       "command": ["{python}", "{adapter}"],
-      "root": "Generator/BasicModules/CNorm",
       "config_dir": "configs",
       "config_pattern": "config_case{case}.json",
       "default_cases": [1, 2, 3, 4, 5],
@@ -157,10 +177,17 @@
       "capabilities": ["latency"]
     },
     "mux": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/MUX/MUX.py",
       "root": "Generator/BasicModules/MUX",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/mux.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "MUX_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "add": {
       "status": "active",
@@ -176,10 +203,17 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "sub": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Sub/Sub.py",
       "root": "Generator/BasicModules/Sub",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/sub.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "SUB_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "mul": {
       "status": "active",
@@ -195,22 +229,43 @@
       "capabilities": ["area", "latency", "throughput", "hardware_complexity"]
     },
     "comp": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/Comp/Comp.py",
       "root": "Generator/BasicModules/Comp",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/comp.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "COMP_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "comptree": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/CompTree/CompTree.py",
       "root": "Generator/BasicModules/CompTree",
-      "capabilities": ["rtl_verification"]
+      "adapter": "metrics_framework/adapters/comptree.py",
+      "command": ["{python}", "{adapter}"],
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "COMPTREE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     },
     "addertree": {
-      "status": "registered",
+      "status": "active",
       "source": "Generator/BasicModules/AdderTree/AdderTree.py",
+      "adapter": "metrics_framework/adapters/addertree.py",
+      "command": ["{python}", "{adapter}"],
       "root": "Generator/BasicModules/AdderTree",
-      "capabilities": ["rtl_verification"]
+      "config_dir": "configs",
+      "config_pattern": "config_case{case}.json",
+      "default_cases": [1, 2, 3, 4, 5],
+      "python_env": "ADDERTREE_METRICS_PYTHON",
+      "output_root": "evaluation_output",
+      "capabilities": ["latency"]
     }
   }
 }

@@ -13,6 +13,7 @@ import json
 import math
 from pathlib import Path
 import re
+import subprocess
 import sys
 import time
 from typing import Any, Mapping
@@ -32,6 +33,12 @@ class LatencyRuntime:
     dmrs_type_a_pos: str
     n_additional_dmrs: int
     clock_period_ns: float = 10.0
+    is_ecp: bool = False
+    is_enhanced: bool = False
+    enabled_ports: tuple[int, ...] = ()
+    n_id: int = 0
+    n_scid: int = 0
+    slot_idx: int = 0
 
 
 @dataclass(frozen=True)
@@ -205,6 +212,10 @@ def runtime_from_config(config: Mapping[str, Any]) -> LatencyRuntime:
     if not isinstance(runtime, Mapping):
         raise ValueError("latency.runtime must be an object")
     period = float(section.get("clock_period_ns", 10.0))
+    protocol = config.get("protocol", {})
+    enabled_ports = runtime.get("enabled_ports", protocol.get("antenna_ports", ()))
+    if not isinstance(enabled_ports, (list, tuple)):
+        raise ValueError("latency.runtime.enabled_ports must be an array")
     return LatencyRuntime(
         num_rbs=_positive_int(runtime.get("num_RBs"), "latency.runtime.num_RBs"),
         num_symbols=_positive_int(
@@ -220,6 +231,19 @@ def runtime_from_config(config: Mapping[str, Any]) -> LatencyRuntime:
             "latency.runtime.n_additional_dmrs",
         ),
         clock_period_ns=period,
+        is_ecp=bool(runtime.get("is_ECP", False)),
+        is_enhanced=bool(runtime.get("is_enhanced", False)),
+        enabled_ports=tuple(
+            _nonnegative_int(port, "latency.runtime.enabled_ports")
+            for port in enabled_ports
+        ),
+        n_id=_nonnegative_int(runtime.get("N_ID", 0), "latency.runtime.N_ID"),
+        n_scid=_nonnegative_int(
+            runtime.get("n_scid", 0), "latency.runtime.n_scid"
+        ),
+        slot_idx=_nonnegative_int(
+            runtime.get("slot_idx", 0), "latency.runtime.slot_idx"
+        ),
     )
 
 
@@ -241,6 +265,13 @@ def load_case_config(
         raise LookupError(f"no latency runtime is defined for {path.stem}") from error
     if not isinstance(latency, dict):
         raise ValueError(f"latency runtime for {path.stem} must be an object")
+    config_build_id = config.get("area", {}).get("source_build_id")
+    latency_build_id = latency.get("build_id")
+    if config_build_id and latency_build_id != config_build_id:
+        raise ValueError(
+            f"latency runtime build_id {latency_build_id!r} does not match "
+            f"configuration build_id {config_build_id!r}"
+        )
     combined = dict(config)
     combined["latency"] = latency
     return combined
@@ -269,8 +300,25 @@ def _validate_runtime_for_build(
         raise ValueError("latency runtime Type-A position differs from the static build")
     if runtime.n_additional_dmrs not in protocol["additional_DMRS_range"]:
         raise ValueError("latency runtime additional-DMRS value is not generated")
-    if protocol["is_ECP"] is True and runtime.num_symbols > 12:
+    if runtime.is_ecp and runtime.num_symbols > 12:
         raise ValueError("extended CP permits at most 12 PUSCH symbols")
+    if protocol["is_ECP"] != "Hybrid" and (
+        runtime.is_ecp is not bool(protocol["is_ECP"])
+    ):
+        raise ValueError("latency runtime ECP mode differs from the static build")
+    if protocol["is_enhanced"] != "Hybrid" and (
+        runtime.is_enhanced is not bool(protocol["is_enhanced"])
+    ):
+        raise ValueError("latency runtime enhanced mode differs from the static build")
+    generated_ports = tuple(int(port) for port in protocol["antenna_ports"])
+    if not runtime.enabled_ports:
+        raise ValueError("latency runtime enabled_ports must be non-empty")
+    if not set(runtime.enabled_ports).issubset(generated_ports):
+        raise ValueError("latency runtime enables a port outside the generated set")
+    if not architecture["switchable_ports"] and set(runtime.enabled_ports) != set(
+        generated_ports
+    ):
+        raise ValueError("a fixed-port build requires all generated ports enabled")
     if architecture["input_mode"] == "A" and (
         runtime.num_rbs % int(architecture["rb_parallelism"])
     ):
@@ -290,57 +338,33 @@ def _parse_qutype(text: Any):
 
 
 def timing_from_config(config: Mapping[str, Any]) -> LatencyTiming:
-    """Ask the RTL generator for the exact structural timing constants."""
+    """Derive exact structural constants without importing the RTL TOP."""
 
-    protocol = config["protocol"]
-    architecture = config["architecture"]
-    quants = config["quantization"]
-    from v_top import _prepare_top_context
-
-    y = _parse_qutype(quants["Y"])
-    h_ls = _parse_qutype(quants["H_LS"])
-    h_fi = _parse_qutype(quants["H_FI"])
-    fi_coeff = _parse_qutype(quants["FI_LMMSE_COEFF"])
-    context = _prepare_top_context(
-        pusch_params={
-            "num_RB_range": protocol["num_RB_range"],
-            "num_symbols_range": protocol["num_symbols_range"],
-            "is_ECP": protocol["is_ECP"],
-        },
-        puschdmrs_params={
-            "dmrs_Uplink": protocol["dmrs_Uplink"],
-            "dmrs_Type": protocol["dmrs_Type"],
-            "is_double_dmrs": protocol["is_double_dmrs"],
-            "is_enhanced": protocol["is_enhanced"],
-            "dmrs_typeA_pos": protocol["dmrs_typeA_pos"],
-            "additional_DMRS_range": protocol["additional_DMRS_range"],
-        },
-        Y=y,
-        RB_PARALLELISM=int(architecture["rb_parallelism"]),
-        ANTENNA_PORTS=list(protocol["antenna_ports"]),
-        H_interp_f_DWT=2 * h_fi.DWT,
-        freq_interp_method=architecture["freq_interp"],
-        time_interp_method=architecture["time_interp"],
-        switchable_ports=bool(architecture["switchable_ports"]),
-        INPUT_MODE=architecture["input_mode"],
-        QU_H_LS=h_ls,
-        LMMSE_INTERP_PARALLELISM=int(architecture["fi_lmmse_parallelism"]),
-        TI_LMMSE_COEFF_SOURCE=architecture["ti_lmmse_coeff_source"],
-        FI_LMMSE_COEFF_SOURCE=architecture["fi_lmmse_coeff_source"],
-        FI_LMMSE_COEFF_DWT=fi_coeff.DWT,
-        FI_LMMSE_REAL_COEFF=bool(architecture["fi_lmmse_real_coeff"]),
-        FI_RE_PARALLELISM=int(architecture["fi_re_parallelism"]),
-        TI_RE_PARALLELISM=int(architecture["ti_re_parallelism"]),
+    helper = Path(__file__).with_name("structural_timing.py")
+    process = subprocess.run(
+        [sys.executable, str(helper)],
+        input=json.dumps(dict(config), ensure_ascii=False),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or "structural timing failed")
+    try:
+        context = json.loads(process.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("structural timing helper returned invalid JSON") from error
     return LatencyTiming(
-        rb_parallelism=int(architecture["rb_parallelism"]),
-        ti_re_parallelism=int(architecture["ti_re_parallelism"]),
-        early_ls_drain=int(context["EARLY_LS_DRAIN"]),
-        ti_pipeline_depth=int(context["TI_PIPELINE_DEPTH"]),
-        has_pre_fi_buf=bool(context["HAS_PRE_FI_BUF"]),
-        fi_window_size=int(context["FI_WINDOW_SIZE"]),
-        fi_cycles_per_occ=int(context["FI_CYCLES_PER_OCC"]),
-        fi_cycles_per_occ_single=int(context["FI_CYCLES_PER_OCC_SINGLE"]),
+        rb_parallelism=int(context["rb_parallelism"]),
+        ti_re_parallelism=int(context["ti_re_parallelism"]),
+        early_ls_drain=int(context["early_ls_drain"]),
+        ti_pipeline_depth=int(context["ti_pipeline_depth"]),
+        has_pre_fi_buf=bool(context["has_pre_fi_buf"]),
+        fi_window_size=int(context["fi_window_size"]),
+        fi_cycles_per_occ=int(context["fi_cycles_per_occ"]),
+        fi_cycles_per_occ_single=int(context["fi_cycles_per_occ_single"]),
     )
 
 
