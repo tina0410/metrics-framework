@@ -74,6 +74,31 @@ def test_json_metrics_and_complexity_check(tmp_path: Path) -> None:
     assert len(comparisons) == 5
 
 
+def test_mimo_ignores_extra_evaluation_case(tmp_path: Path) -> None:
+    registry = tmp_path / "metrics_framework" / "registry.json"
+    registry.parent.mkdir()
+    registry.write_text(json.dumps({"modules": {"mimo": {
+        "config_pattern": "config_case{case}.json",
+        "default_cases": [1, 2, 3, 4, 5],
+    }}}), encoding="utf-8")
+    root = tmp_path / "Generator" / "MIMODetector" / "evaluation_output"
+    for case in range(1, 7):
+        directory = root / f"config_case{case}"
+        directory.mkdir(parents=True)
+        (directory / "evaluation.json").write_text(json.dumps({
+            "area": {"error_percent": 2, "prediction_time_ms": 20, "speedup": 100},
+            "latency": {"error_percent": case, "prediction_time_ms": 10 + case, "speedup": 50 - case},
+            "hardware_complexity": {"error_percent": 2},
+        }), encoding="utf-8")
+    spec = next(spec for spec in MODULE.MODULES if spec.registry_key == "mimo")
+    result = MODULE.aggregate_module(tmp_path, spec, "2", 5, False, 1e-6)
+    assert result.delay_case_count == 5
+    assert result.delay_error_percent == 3
+    assert result.delay_prediction_time_s == 0.011
+    assert result.delay_speedup == 45
+    assert all("config_case6" not in source for source in result.sources)
+
+
 def test_docx_cell_update(tmp_path: Path) -> None:
     source = tmp_path / "Result.docx"
     output = tmp_path / "Result_filled.docx"

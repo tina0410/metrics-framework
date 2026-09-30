@@ -486,7 +486,10 @@ def aggregate_module(repo_root: Path, spec: ModuleSpec, area_error_text: str, ex
     json_area = MetricSeries()
     json_delay = MetricSeries()
     comparisons: list[tuple[Path, float, float]] = []
-    only_cases = {f"config{case}" for case in spec.latency_cases} if spec.latency_cases is not None else None
+    registry_path = repo_root / "metrics_framework" / "registry.json"
+    registry_entry = json.loads(registry_path.read_text(encoding="utf-8"))["modules"][spec.registry_key]
+    case_ids = spec.latency_cases if spec.latency_cases is not None else registry_entry["default_cases"]
+    only_cases = {Path(registry_entry["config_pattern"].format(case=case)).stem for case in case_ids}
     for relative in spec.evaluation_roots:
         root = repo_root / relative
         area, delay, checks, sources = collect_json_metrics(root, only_cases)
