@@ -111,7 +111,7 @@ def test_markdown_table_update() -> None:
     assert "| SxMatch | 0.3 | 0 | 0.3 | 0.0000715/0.0150666 | 1.22e5/69.2 |" in updated
 
 
-def test_pusch_ce_uses_standalone_latency_prediction(tmp_path: Path, monkeypatch) -> None:
+def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeypatch) -> None:
     registry = tmp_path / "metrics_framework" / "registry.json"
     registry.parent.mkdir()
     registry.write_text(json.dumps({"modules": {"pusch_ce": {
@@ -125,10 +125,17 @@ def test_pusch_ce_uses_standalone_latency_prediction(tmp_path: Path, monkeypatch
 
     def fake_run(command, **_kwargs):
         commands.append(command)
-        case = int(Path(command[-1]).stem.removeprefix("config"))
+        case = int(Path(command[2]).stem.removeprefix("config"))
         return MODULE.subprocess.CompletedProcess(
             command, 0,
-            stdout=json.dumps({"predicted_cycles": 100 + case, "prediction_time_ms": 10 + case}),
+            stdout=json.dumps({"latency": {
+                "predicted_cycles": 100 + case,
+                "actual_cycles": 100 + case,
+                "error_percent": 0.0,
+                "prediction_time_ms": 10 + case,
+                "simulation_time_ms": 1000.0,
+                "speedup": 1000.0 / (10 + case),
+            }}),
             stderr="",
         )
 
@@ -137,10 +144,10 @@ def test_pusch_ce_uses_standalone_latency_prediction(tmp_path: Path, monkeypatch
     MODULE.generate_evaluations(tmp_path, [spec], "python")
 
     assert len(commands) == 5
-    assert all("latency_interface.py" in command[1] for command in commands)
+    assert all("validate_pusch_ce_latency.py" in command[1] for command in commands)
     result = MODULE.aggregate_module(tmp_path, spec, "6.9", 5, False, 1e-6)
     assert result.delay_case_count == 5
     assert result.delay_prediction_time_s == 0.011
-    assert result.delay_error_percent is None
-    assert result.delay_speedup is None
+    assert result.delay_error_percent == 0.0
+    assert result.delay_speedup == 1000.0 / 15
     assert result.area_speedup is None
