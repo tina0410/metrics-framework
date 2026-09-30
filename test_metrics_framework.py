@@ -120,9 +120,9 @@ def test_basic_module_all_default_configs_predict_full_metrics(name, adapter, di
 def test_basic_module_prediction_uses_add_mul_terminal_shape():
     result = predict("abs", "2")
     assert set(result) == {"延迟", "面积", "Throughput", "硬件复杂度", "自动评估总时间 (ms)"}
-    assert result["延迟"]["预测结果 (cycles)"] == 2
+    assert result["延迟"]["预测结果 (cycles)"] == 4
     assert result["面积"]["预测结果 (μm²)"] > 0
-    assert result["Throughput"]["预测结果 (Gbps)"] == pytest.approx(0.9)
+    assert result["Throughput"]["预测结果 (Gbps)"] == pytest.approx(1.2)
     assert result["硬件复杂度"]["预测结果 (GE·cycles)"] > 0
 
 
@@ -142,6 +142,15 @@ def test_basic_module_validation_uses_configured_area_and_computes_missing_metri
     )
     config_path = module.ROOT / "configs" / "config_case3.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
+    config.update({
+        "test_case": "signed_narrow_sat",
+        "input": {"bitwidth": 8, "fractional_width": 4, "signed": True},
+        "output": {"bitwidth": 5, "fractional_width": 2, "signed": True},
+        "n_pipeline": 1,
+        "if_rst_n": False,
+        "quantization_mode": "RND.POS_INF",
+        "overflow_mode": "SAT.TCPL",
+    })
     config["validation"] = {
         "area": {"actual_um2": 112.0, "synthesis_time_ms": 1000.0}
     }
@@ -178,17 +187,43 @@ def test_basic_module_report_requires_exact_parameters():
     module = abs_adapter._module()
     path = module.ROOT / "configs" / "config_case1.json"
     config = json.loads(path.read_text(encoding="utf-8"))
+    config["input"]["bitwidth"] = 999
     with pytest.raises(LookupError, match="provide validation.area"):
         read_area_reference("abs", config)
 
 
+def test_basic_module_report_case_calls_rtl_with_excel_parameters(monkeypatch):
+    from metrics_framework.adapters import basic_full
+
+    module = abs_adapter._module()
+    path = module.ROOT / "configs" / "config_case1.json"
+    config = json.loads(path.read_text(encoding="utf-8"))
+    seen = []
+
+    def rtl_case(name, config_path, supplied):
+        seen.append((name, config_path, supplied))
+        return {
+            "functional_match": True,
+            "sim_latency_cycles": 3,
+            "sim_output_interval_cycles": 1,
+            "rtl_simulation_time_ms": 100.0,
+        }
+
+    monkeypatch.setattr(basic_full, "run_report_rtl_case", rtl_case)
+    result = abs_adapter.validate(path, config)
+    assert seen == [("abs", path, config)]
+    assert result["latency"]["actual_cycles"] == 3
+    assert result["latency"]["source"] == "tests_rtl_config"
+    assert result["area"]["actual_um2"] == pytest.approx(400.679991)
+
+
 def test_zero_cell_passthroughs_keep_zero_area_and_complexity():
-    for adapter, directory in ((mux_adapter, "MUX"), (comptree_adapter, "CompTree")):
-        path = ROOT / "Generator" / "BasicModules" / directory / "configs" / "config_case1.json"
-        config = json.loads(path.read_text(encoding="utf-8"))
-        result = adapter.predict(path, config)
-        assert result["area"]["predicted_um2"] == 0
-        assert result["hardware_complexity"]["predicted_ge_cycles"] == 0
+    path = ROOT / "Generator" / "BasicModules" / "MUX" / "configs" / "config_case1.json"
+    config = json.loads(path.read_text(encoding="utf-8"))
+    config.update({"test_case": "n1_m1", "n_inputs": 1, "data_width": 1})
+    result = mux_adapter.predict(path, config)
+    assert result["area"]["predicted_um2"] == 0
+    assert result["hardware_complexity"]["predicted_ge_cycles"] == 0
 
 
 def test_zero_cell_validation_accepts_zero_actual_area():
@@ -208,6 +243,13 @@ def test_fxmatch_fractional_width_larger_than_storage_width_is_supported():
     module = fxmatch_adapter._module()
     path = module.ROOT / "configs" / "config_case1.json"
     config = json.loads(path.read_text(encoding="utf-8"))
+    config.update({
+        "test_case": "case1",
+        "input": {"bitwidth": 5, "fractional_width": 9, "signed": True},
+        "output": {"bitwidth": 5, "fractional_width": 2, "signed": True},
+        "n_pipeline": 4,
+        "if_rst_n": [False, False, True, False],
+    })
     assert config["input"]["fractional_width"] > config["input"]["bitwidth"]
     result = fxmatch_adapter.predict(path, config)
     assert result["area"]["predicted_um2"] > 0

@@ -1,6 +1,8 @@
 {
-  "test_case": "n2_m7",
-  "n_inputs": 2,
-  "data_width": 7,
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL2",
+  "data_width": 2,
+  "n_inputs": 2
 }

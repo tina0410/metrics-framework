@@ -1,12 +1,22 @@
 {
-  "test_case": "n4_p1",
-  "input": {"bitwidth": 8, "fractional_width": 0, "signed": false},
-  "output": {"bitwidth": 12, "fractional_width": 0, "signed": false},
-  "n_inputs": 4,
-  "n_pipeline": 1,
-  "if_rst_n": false,
-  "quantization_mode": "TRN.TCPL",
-  "overflow_mode": "WRP.TCPL",
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL7",
+  "input": {
+    "bitwidth": 10,
+    "fractional_width": 2,
+    "signed": false
+  },
+  "output": {
+    "bitwidth": 10,
+    "fractional_width": 0,
+    "signed": false
+  },
+  "n_inputs": 7,
   "config_mode": "A",
-  "clock": {"period_ns": 10.0}
+  "n_pipeline": 1,
+  "if_rst_n": true,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL"
 }

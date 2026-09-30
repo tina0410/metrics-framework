@@ -1,14 +1,29 @@
 {
-  "test_case": "case3",
-  "input": {"bitwidth": 5, "fractional_width": 5, "signed": false},
-  "output": {"bitwidth": 6, "fractional_width": 4, "signed": false},
-  "n_pipeline": 10,
-  "if_rst_n": [true, false, true, false, false, true, false, false, true, false],
-  "n_inputs": 31,
-  "if_gidx": true,
-  "config_mode": "A",
-  "quantization_mode": "TRN.TCPL",
-  "overflow_mode": "SAT.TCPL",
   "n_frames": 100,
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL53",
+  "input": {
+    "bitwidth": 9,
+    "fractional_width": 6,
+    "signed": true
+  },
+  "output": {
+    "bitwidth": 8,
+    "fractional_width": 6,
+    "signed": true
+  },
+  "n_inputs": 3,
+  "config_mode": "A",
+  "n_pipeline": 3,
+  "if_rst_n": true,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL",
+  "outputs": {
+    "greater_index": true,
+    "less_index": false,
+    "greater_value": true,
+    "less_value": false
+  }
 }

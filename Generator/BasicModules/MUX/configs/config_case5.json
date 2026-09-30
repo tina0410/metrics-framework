@@ -1,6 +1,8 @@
 {
-  "test_case": "n5_m13",
-  "n_inputs": 5,
-  "data_width": 13,
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL5",
+  "data_width": 5,
+  "n_inputs": 2
 }

@@ -1,11 +1,21 @@
 {
-  "test_case": "case2",
-  "input": {"bitwidth": 5, "fractional_width": 9, "signed": true},
-  "output": {"bitwidth": 5, "fractional_width": 3, "signed": true},
-  "n_pipeline": 4,
-  "if_rst_n": [false, false, true, false],
-  "quantization_mode": "TRN.TCPL",
-  "overflow_mode": "WRP.TCPL",
   "n_frames": 100,
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL2",
+  "input": {
+    "bitwidth": 10,
+    "fractional_width": 3,
+    "signed": false
+  },
+  "output": {
+    "bitwidth": 5,
+    "fractional_width": 1,
+    "signed": true
+  },
+  "n_pipeline": 6,
+  "if_rst_n": false,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL"
 }

@@ -1,7 +1,9 @@
 {
-  "test_case": "case3",
-  "data_width": 13,
-  "n_pipeline": 3,
-  "if_rst_n": [true, false, true],
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL3",
+  "data_width": 3,
+  "n_pipeline": 1,
+  "if_rst_n": true
 }

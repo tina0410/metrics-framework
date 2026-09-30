@@ -1,9 +1,11 @@
 {
-  "test_case": "case2",
-  "DWT": 3,
-  "STEP": 1,
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL2",
+  "DWT": 7,
+  "STEP": 15,
   "IF_RST_N": true,
   "HAS_CLEAR": true,
-  "HAS_WRAP": true,
-  "clock": {"period_ns": 10.0}
+  "HAS_WRAP": true
 }

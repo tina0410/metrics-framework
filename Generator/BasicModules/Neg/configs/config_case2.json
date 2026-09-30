@@ -1,10 +1,20 @@
 {
-  "test_case": "signed_guard_wide",
-  "input": {"bitwidth": 8, "fractional_width": 4, "signed": true},
-  "output": {"bitwidth": 9, "fractional_width": 4, "signed": true},
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL2",
+  "input": {
+    "bitwidth": 12,
+    "fractional_width": 3,
+    "signed": false
+  },
+  "output": {
+    "bitwidth": 16,
+    "fractional_width": 0,
+    "signed": false
+  },
   "n_pipeline": 2,
-  "if_rst_n": true,
-  "quantization_mode": "RND.CONV",
-  "overflow_mode": "SAT.TCPL",
-  "clock": {"period_ns": 10.0}
+  "if_rst_n": false,
+  "quantization_mode": "TRN.TCPL",
+  "overflow_mode": "WRP.TCPL"
 }

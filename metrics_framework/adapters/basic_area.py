@@ -413,7 +413,7 @@ def _report_expected(module_name: str, config: Mapping[str, Any]) -> dict[str, A
             "QU_IN_1_DWT": first[0], "QU_IN_1_FRAC": first[1], "QU_IN_1_IF_SIGNED": bool(first[2]),
             "QU_IN_2_DWT": second[0], "QU_IN_2_FRAC": second[1], "QU_IN_2_IF_SIGNED": bool(second[2]),
             "QU_OUT_DWT": output[0], "QU_OUT_FRAC": output[1], "QU_OUT_IF_SIGNED": bool(output[2]),
-            "N_PIPELINES" if module_name == "sub" else "N_CLK": _pipeline(config), **common,
+            "N_PIPELINES" if module_name == "comp" else "N_CLK": _pipeline(config), **common,
         }
         if module_name == "cmul":
             expected["METHOD"] = str(config.get("method", "4mul"))
@@ -456,6 +456,8 @@ def _normalized(value: Any) -> Any:
         return tuple(_normalized(item) for item in value)
     if isinstance(value, str):
         text = value.strip()
+        if "|" in text:
+            return tuple(_normalized(part) for part in text.split("|"))
         if text.lower() == "true":
             return True
         if text.lower() == "false":

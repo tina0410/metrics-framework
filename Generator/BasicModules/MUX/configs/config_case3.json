@@ -1,6 +1,8 @@
 {
-  "test_case": "n3_m1",
-  "n_inputs": 3,
-  "data_width": 1,
-  "clock": {"period_ns": 10.0}
+  "clock": {
+    "period_ns": 10.0
+  },
+  "test_case": "RTL3",
+  "data_width": 3,
+  "n_inputs": 2
 }
