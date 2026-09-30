@@ -216,6 +216,7 @@ def main() -> int:
     parser.add_argument("config", type=Path)
     parser.add_argument("--simulator", default=os.environ.get("SIM", "verilator"))
     parser.add_argument("--build-root", type=Path, default=TEST_ROOT / "sim")
+    parser.add_argument("--output-json", type=Path, help="write the result to a JSON file for callers that also capture simulator logs")
     parser.add_argument(
         "--build-jobs",
         type=int,
@@ -229,7 +230,12 @@ def main() -> int:
             build_root=args.build_root.expanduser().resolve(),
             build_jobs=args.build_jobs,
         )
-        sys.stdout.write(json.dumps(result, ensure_ascii=False))
+        serialized = json.dumps(result, ensure_ascii=False)
+        if args.output_json is not None:
+            output_path = args.output_json.expanduser().resolve()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(serialized, encoding="utf-8")
+        sys.stdout.write(serialized)
         return 0
     except (FileNotFoundError, LookupError, RuntimeError, ValueError) as error:
         print(f"{type(error).__name__}: {error}", file=sys.stderr)

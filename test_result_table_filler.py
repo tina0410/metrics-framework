@@ -126,16 +126,18 @@ def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeyp
     def fake_run(command, **_kwargs):
         commands.append(command)
         case = int(Path(command[2]).stem.removeprefix("config"))
+        payload = {"latency": {
+            "predicted_cycles": 100 + case,
+            "actual_cycles": 100 + case,
+            "error_percent": 0.0,
+            "prediction_time_ms": 10 + case,
+            "simulation_time_ms": 1000.0,
+            "speedup": 1000.0 / (10 + case),
+        }}
+        Path(command[command.index("--output-json") + 1]).write_text(json.dumps(payload), encoding="utf-8")
         return MODULE.subprocess.CompletedProcess(
             command, 0,
-            stdout=json.dumps({"latency": {
-                "predicted_cycles": 100 + case,
-                "actual_cycles": 100 + case,
-                "error_percent": 0.0,
-                "prediction_time_ms": 10 + case,
-                "simulation_time_ms": 1000.0,
-                "speedup": 1000.0 / (10 + case),
-            }}),
+            stdout="Verilator build log\ncocotb test log\n" + json.dumps(payload),
             stderr="",
         )
 

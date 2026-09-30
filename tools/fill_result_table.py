@@ -556,26 +556,27 @@ def generate_evaluations(repo_root: Path, specs: Iterable[ModuleSpec], python: s
             for case in entry["default_cases"]:
                 case_name = entry["config_pattern"].format(case=case)
                 config_path = module_root / entry["config_dir"] / case_name
-                command = [python, str(script), str(config_path), "--simulator", "verilator"]
+                output = module_root / entry["output_root"] / f"config{case}" / "latency_evaluation.json"
+                output.parent.mkdir(parents=True, exist_ok=True)
+                temporary = output.with_name(f".{output.name}.tmp")
+                temporary.unlink(missing_ok=True)
+                command = [python, str(script), str(config_path), "--simulator", "verilator", "--output-json", str(temporary)]
                 print(f"[generate] {spec.row_name} latency evaluate {case}: {' '.join(command)}", flush=True)
                 completed = subprocess.run(command, cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 if completed.returncode != 0:
                     detail = completed.stderr.strip() or completed.stdout.strip() or f"exit={completed.returncode}"
                     raise ResultError(f"{spec.row_name} 延迟验证 case {case} 失败: {detail}")
                 try:
-                    payload = json.loads(completed.stdout)
-                except json.JSONDecodeError as error:
-                    raise ResultError(f"{spec.row_name} 延迟验证 case {case} 未返回有效 JSON") from error
+                    payload = json.loads(temporary.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as error:
+                    detail = (completed.stdout.strip() or completed.stderr.strip())[-1000:]
+                    raise ResultError(f"{spec.row_name} 延迟验证 case {case} 未写入有效 JSON；输出末尾: {detail}") from error
                 latency = payload.get("latency") if isinstance(payload, dict) else None
                 if not isinstance(latency, dict) or any(
                     _finite_number(latency.get(key)) is None
                     for key in ("predicted_cycles", "actual_cycles", "error_percent", "prediction_time_ms", "speedup")
                 ):
                     raise ResultError(f"{spec.row_name} 延迟验证 case {case} 缺少预测值、真实值、偏差或计时")
-                output = module_root / entry["output_root"] / f"config{case}" / "latency_evaluation.json"
-                output.parent.mkdir(parents=True, exist_ok=True)
-                temporary = output.with_name(f".{output.name}.tmp")
-                temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
                 temporary.replace(output)
             continue
         command = [python, "-m", "metrics_framework", spec.registry_key, "evaluate"]
