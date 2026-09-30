@@ -34,7 +34,7 @@ python tools/fill_result_table.py \
   --report-json result_metrics.json
 ```
 
-`--generate` 会依次执行表中 19 个模块的批量 `evaluate`。任一模块生成失败、延迟有效 case 不是 5 个、所需时间或速度指标缺失，脚本都会停止且不输出半成品 Word 文件。
+`--generate` 会对其他模块执行批量 `evaluate`；PUSCH_CE 的 5 个 case 单独调用 `Generator/PUSCH_CE/latency_interface.py`，仅生成 `evaluation_output/configN/latency_prediction.json`，不查询 PUSCH_CE 面积参数表。PUSCH_CE 没有本轮真实延迟和仿真耗时，因此延迟偏差留空，速度提升中的延迟项显示 `-`；面积性能缺少来源时也显示 `-`。其余模块仍要求 5 个有效延迟评估 case 和所需性能指标。生成失败时脚本停止且不输出半成品表格。
 
 只汇总已有数据时可省略 `--generate`。排查不完整数据时可临时加 `--allow-partial`，此模式会在 JSON 报告中记录告警，并以 `-` 标记缺失项，不应作为正式验收结果。
 

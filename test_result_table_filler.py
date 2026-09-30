@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import zipfile
 from pathlib import Path
@@ -108,3 +109,38 @@ def test_markdown_table_update() -> None:
     )
     updated = MODULE.update_markdown_table(text, [result])
     assert "| SxMatch | 0.3 | 0 | 0.3 | 0.0000715/0.0150666 | 1.22e5/69.2 |" in updated
+
+
+def test_pusch_ce_uses_standalone_latency_prediction(tmp_path: Path, monkeypatch) -> None:
+    registry = tmp_path / "metrics_framework" / "registry.json"
+    registry.parent.mkdir()
+    registry.write_text(json.dumps({"modules": {"pusch_ce": {
+        "root": "Generator/PUSCH_CE",
+        "config_dir": "cases",
+        "config_pattern": "config{case}.json",
+        "default_cases": [1, 2, 3, 4, 5],
+        "output_root": "evaluation_output",
+    }}}), encoding="utf-8")
+    commands = []
+
+    def fake_run(command, **_kwargs):
+        commands.append(command)
+        case = int(Path(command[-1]).stem.removeprefix("config"))
+        return MODULE.subprocess.CompletedProcess(
+            command, 0,
+            stdout=json.dumps({"predicted_cycles": 100 + case, "prediction_time_ms": 10 + case}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+    spec = next(spec for spec in MODULE.MODULES if spec.registry_key == "pusch_ce")
+    MODULE.generate_evaluations(tmp_path, [spec], "python")
+
+    assert len(commands) == 5
+    assert all("latency_interface.py" in command[1] for command in commands)
+    result = MODULE.aggregate_module(tmp_path, spec, "6.9", 5, False, 1e-6)
+    assert result.delay_case_count == 5
+    assert result.delay_prediction_time_s == 0.011
+    assert result.delay_error_percent is None
+    assert result.delay_speedup is None
+    assert result.area_speedup is None

@@ -34,6 +34,7 @@ class ModuleSpec:
     registry_key: str
     evaluation_roots: tuple[str, ...]
     workbook_candidates: tuple[str, ...] = ()
+    latency_prediction_only: bool = False
 
 
 MODULES = (
@@ -53,7 +54,7 @@ MODULES = (
     ModuleSpec("Mux", "mux", ("Generator/BasicModules/MUX/evaluation_output",), ("Area_TP_Estimator/MUX/report/test.xlsx", "Area_TP_Estimator/Mux/report/test.xlsx")),
     ModuleSpec("AdderTree", "addertree", ("Generator/BasicModules/AdderTree/evaluation_output",), ("Area_TP_Estimator/AdderTree/report/test.xlsx",)),
     ModuleSpec("CompTree", "comptree", ("Generator/BasicModules/CompTree/evaluation_output",), ("Area_TP_Estimator/CompTree/report/test.xlsx",)),
-    ModuleSpec("5G PUSCH Channel Estimator", "pusch_ce", ("Generator/PUSCH_CE/evaluation_output",), ("Area_TP_Estimator/PUSCH_Est_pack/param.xlsx",)),
+    ModuleSpec("5G PUSCH Channel Estimator", "pusch_ce", ("Generator/PUSCH_CE/evaluation_output",), ("Area_TP_Estimator/PUSCH_Est_pack/param.xlsx",), True),
     ModuleSpec("INSA -MMSE MIMO Detector", "mimo", ("Generator/MIMODetector/evaluation_output",), ("Area_TP_Estimator/Est_INSA_MMSE/INSA.xlsx",)),
     ModuleSpec("BP Polar-Decodere", "bp", ("BPPredIter/BP_Evaluation/evaluation_output",), ("Area_TP_Estimator/Est_Polar_BP_Decoder/area.xlsx",)),
 )
@@ -199,6 +200,26 @@ def collect_json_metrics(root: Path) -> tuple[MetricSeries, MetricSeries, list[t
             if area_error is not None and complexity_error is not None:
                 comparisons.append((path, abs(area_error), abs(complexity_error)))
     return area, delay, comparisons, sorted(set(sources))
+
+
+def collect_latency_predictions(root: Path, expected_cases: int) -> tuple[list[float], list[str]]:
+    """Read the standalone PUSCH CE latency predictions, without area lookup."""
+    times: list[float] = []
+    sources: list[str] = []
+    if not root.is_dir():
+        return times, sources
+    for case in range(1, expected_cases + 1):
+        path = root / f"config{case}" / "latency_prediction.json"
+        payload = _read_json(path)
+        if payload is None:
+            continue
+        cycles = _positive(payload.get("predicted_cycles"))
+        time_ms = _finite_number(payload.get("prediction_time_ms"))
+        if cycles is None or time_ms is None or time_ms < 0:
+            continue
+        times.append(time_ms / 1000.0)
+        sources.append(str(path))
+    return times, sources
 
 
 def natural_key(value: Any) -> tuple[Any, ...]:
@@ -487,15 +508,23 @@ def aggregate_module(repo_root: Path, spec: ModuleSpec, area_error_text: str, ex
         json_area.errors.extend(area.errors)
         json_area.prediction_times_s.extend(area.prediction_times_s)
         json_area.speedups.extend(area.speedups)
-        json_delay.errors.extend(delay.errors)
-        json_delay.prediction_times_s.extend(delay.prediction_times_s)
-        json_delay.speedups.extend(delay.speedups)
+        if spec.latency_prediction_only:
+            prediction_times, prediction_sources = collect_latency_predictions(root, expected_cases)
+            json_delay.prediction_times_s.extend(prediction_times)
+            sources.extend(prediction_sources)
+        else:
+            json_delay.errors.extend(delay.errors)
+            json_delay.prediction_times_s.extend(delay.prediction_times_s)
+            json_delay.speedups.extend(delay.speedups)
         comparisons.extend(checks)
         result.sources.extend(str(Path(source).relative_to(repo_root)) if Path(source).is_relative_to(repo_root) else source for source in sources)
 
-    result.delay_case_count = len(json_delay.errors)
+    result.delay_case_count = (
+        len(json_delay.prediction_times_s) if spec.latency_prediction_only else len(json_delay.errors)
+    )
     if result.delay_case_count != expected_cases:
-        message = f"延迟有效 case 数为 {result.delay_case_count}，期望 {expected_cases}"
+        kind = "延迟预测" if spec.latency_prediction_only else "延迟评估"
+        message = f"{kind}有效 case 数为 {result.delay_case_count}，期望 {expected_cases}"
         if not allow_partial:
             raise ResultError(f"{spec.row_name}: {message}")
         result.warnings.append(message)
@@ -527,13 +556,13 @@ def aggregate_module(repo_root: Path, spec: ModuleSpec, area_error_text: str, ex
     result.area_speedup = _prefer(_minimum(workbook_metrics.speedups), _minimum(json_area.speedups))
     if workbook_path is not None:
         result.sources.append(str(workbook_path.relative_to(repo_root)))
-    if result.area_prediction_time_s is None:
+    if result.area_prediction_time_s is None and not spec.latency_prediction_only:
         result.warnings.append("未找到面积预测时间")
-    if result.area_speedup is None:
+    if result.area_speedup is None and not spec.latency_prediction_only:
         result.warnings.append("未找到面积速度提升倍数")
     if result.delay_prediction_time_s is None:
         result.warnings.append("未找到延迟预测时间")
-    if result.delay_speedup is None:
+    if result.delay_speedup is None and not spec.latency_prediction_only:
         result.warnings.append("未找到延迟速度提升倍数")
     if result.warnings and not allow_partial:
         raise ResultError(f"{spec.row_name}: {'；'.join(result.warnings)}")
@@ -545,7 +574,33 @@ def generate_evaluations(repo_root: Path, specs: Iterable[ModuleSpec], python: s
     registry = repo_root / "metrics_framework" / "registry.json"
     if not registry.is_file():
         raise ResultError(f"找不到统一指标注册表: {registry}")
+    registry_modules = json.loads(registry.read_text(encoding="utf-8"))["modules"]
     for spec in specs:
+        if spec.latency_prediction_only:
+            entry = registry_modules[spec.registry_key]
+            module_root = repo_root / entry["root"]
+            script = module_root / "latency_interface.py"
+            for case in entry["default_cases"]:
+                case_name = entry["config_pattern"].format(case=case)
+                config_path = module_root / entry["config_dir"] / case_name
+                command = [python, str(script), str(config_path)]
+                print(f"[generate] {spec.row_name} latency {case}: {' '.join(command)}", flush=True)
+                completed = subprocess.run(command, cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if completed.returncode != 0:
+                    detail = completed.stderr.strip() or completed.stdout.strip() or f"exit={completed.returncode}"
+                    raise ResultError(f"{spec.row_name} 延迟预测 case {case} 失败: {detail}")
+                try:
+                    payload = json.loads(completed.stdout)
+                except json.JSONDecodeError as error:
+                    raise ResultError(f"{spec.row_name} 延迟预测 case {case} 未返回有效 JSON") from error
+                if not isinstance(payload, dict) or _positive(payload.get("predicted_cycles")) is None or _finite_number(payload.get("prediction_time_ms")) is None:
+                    raise ResultError(f"{spec.row_name} 延迟预测 case {case} 缺少预测周期或预测时间")
+                output = module_root / entry["output_root"] / f"config{case}" / "latency_prediction.json"
+                output.parent.mkdir(parents=True, exist_ok=True)
+                temporary = output.with_name(f".{output.name}.tmp")
+                temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+                temporary.replace(output)
+            continue
         command = [python, "-m", "metrics_framework", spec.registry_key, "evaluate"]
         print(f"[generate] {spec.row_name}: {' '.join(command)}", flush=True)
         completed = subprocess.run(command, cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
