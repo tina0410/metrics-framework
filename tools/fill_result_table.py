@@ -144,6 +144,7 @@ def collect_json_metrics(root: Path, only_cases: set[str] | None = None) -> tupl
     candidates: dict[str, list[tuple[int, Path, dict[str, Any]]]] = {}
     name_priority = {
         "latency_evaluation.json": -1,
+        "area_prediction.json": 0,
         "evaluation.json": 0,
         "mimo_metrics.json": 1,
         "bp_metrics.json": 1,
@@ -561,9 +562,28 @@ def generate_evaluations(repo_root: Path, specs: Iterable[ModuleSpec], python: s
             entry = registry_modules[spec.registry_key]
             module_root = repo_root / entry["root"]
             script = module_root / "tests" / "validate_pusch_ce_latency.py"
+            area_script = repo_root / "Area_TP_Estimator" / "PUSCH_Est_pack" / "pusch_ce_area_interface.py"
             for case in spec.latency_cases if spec.latency_cases is not None else entry["default_cases"]:
                 case_name = entry["config_pattern"].format(case=case)
                 config_path = module_root / entry["config_dir"] / case_name
+                area_output = module_root / entry["output_root"] / f"config{case}" / "area_prediction.json"
+                area_command = [python, str(area_script), "predict", str(config_path)]
+                print(f"[generate] {spec.row_name} area predict {case}: {' '.join(area_command)}", flush=True)
+                area_completed = subprocess.run(area_command, cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if area_completed.returncode != 0:
+                    detail = area_completed.stderr.strip() or area_completed.stdout.strip() or f"exit={area_completed.returncode}"
+                    raise ResultError(f"{spec.row_name} 面积预测 case {case} 失败: {detail}")
+                try:
+                    area_payload = json.loads(area_completed.stdout)
+                except json.JSONDecodeError as error:
+                    raise ResultError(f"{spec.row_name} 面积预测 case {case} 未返回有效 JSON") from error
+                area_time_ms = _finite_number(area_payload.get("prediction_time_ms")) if isinstance(area_payload, dict) else None
+                if area_time_ms is None or area_time_ms <= 0:
+                    raise ResultError(f"{spec.row_name} 面积预测 case {case} 缺少有效预测时间")
+                area_output.parent.mkdir(parents=True, exist_ok=True)
+                area_temporary = area_output.with_name(f".{area_output.name}.tmp")
+                area_temporary.write_text(json.dumps({"area": area_payload}, ensure_ascii=False, indent=2), encoding="utf-8")
+                area_temporary.replace(area_output)
                 output = module_root / entry["output_root"] / f"config{case}" / "latency_evaluation.json"
                 output.parent.mkdir(parents=True, exist_ok=True)
                 temporary = output.with_name(f".{output.name}.tmp")

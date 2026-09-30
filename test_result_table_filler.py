@@ -150,6 +150,12 @@ def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeyp
 
     def fake_run(command, **_kwargs):
         commands.append(command)
+        if "pusch_ce_area_interface.py" in command[1]:
+            return MODULE.subprocess.CompletedProcess(
+                command, 0,
+                stdout=json.dumps({"predicted_area_um2": 123.0, "prediction_time_ms": 12.5}),
+                stderr="",
+            )
         case = int(Path(command[2]).stem.removeprefix("config"))
         payload = {"latency": {
             "predicted_cycles": 100 + case,
@@ -170,9 +176,11 @@ def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeyp
     spec = next(spec for spec in MODULE.MODULES if spec.registry_key == "pusch_ce")
     MODULE.generate_evaluations(tmp_path, [spec], "python")
 
-    assert len(commands) == 1
-    assert Path(commands[0][2]).name == "config1.json"
-    assert all("validate_pusch_ce_latency.py" in command[1] for command in commands)
+    assert len(commands) == 2
+    assert Path(commands[0][3]).name == "config1.json"
+    assert Path(commands[1][2]).name == "config1.json"
+    assert "pusch_ce_area_interface.py" in commands[0][1]
+    assert "validate_pusch_ce_latency.py" in commands[1][1]
     stale_case = tmp_path / "Generator" / "PUSCH_CE" / "evaluation_output" / "config2"
     stale_case.mkdir(parents=True)
     (stale_case / "latency_evaluation.json").write_text(json.dumps({"latency": {
@@ -185,5 +193,6 @@ def test_pusch_ce_uses_standalone_rtl_latency_validation(tmp_path: Path, monkeyp
     assert result.delay_prediction_time_s == 0.011
     assert result.delay_error_percent == 0.0
     assert result.delay_speedup == 1000.0 / 11
+    assert result.area_prediction_time_s == 0.0125
     assert all("config2" not in source for source in result.sources)
     assert result.area_speedup is None
