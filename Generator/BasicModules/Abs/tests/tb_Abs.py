@@ -4,7 +4,7 @@
 # Date: 2026.9.1
 # Description: Generate the Verilog testbench for Abs.
 
-import os
+import posixpath
 from pytv.Converter import convert
 from pytv.ModuleLoader import moduleloader
 
@@ -43,8 +43,8 @@ def ModuleTbAbs(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_dir=".
     if N_CLK > 0 and IF_RST_N:
         PyTB.Moduledrive_arst(port="i_rst_n", clk="clk", start=1, last=1, OUTMODE="PRINT")
 
-    input_files_dir = os.path.join(io_file_dir, "Input_Files")
-    output_files_dir = os.path.join(io_file_dir, "Output_Files")
+    input_files_dir = posixpath.join(io_file_dir, "Input_Files")
+    output_files_dir = posixpath.join(io_file_dir, "Output_Files")
 
     PyTB.Moduledrive_input_signal(clk="clk", ports=["i_data"], files=["abs_i_data.txt"], input_file_dir=input_files_dir, n_latency=3, n_cycle=1, n_excites=N_FRAMES, OUTMODE="PRINT")
 

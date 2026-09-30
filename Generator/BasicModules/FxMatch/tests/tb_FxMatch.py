@@ -20,6 +20,7 @@ from Generator.BasicModules.FxMatch.FxMatch import ModuleFxMatch
 
 @convert
 def ModuleTbFxMatch(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_dir="../..", N_FRAMES=50):
+    has_reset = any(IF_RST_N) if isinstance(IF_RST_N, list) else bool(IF_RST_N)
     #/ `timescale 1ns/1ps
     #/ module TbFxMatch;
     #/ // Inputs
@@ -36,9 +37,11 @@ def ModuleTbFxMatch(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_di
     inst_ports = {
         "i_data": "i_data",
         "o_data": "o_data",
-        "i_clk": "i_clk",
-        "i_rst_n": "i_rst_n"
     }
+    if N_CLK > 0:
+        inst_ports["i_clk"] = "i_clk"
+        if has_reset:
+            inst_ports["i_rst_n"] = "i_rst_n"
     #/ // Instantiate the DUT, requires kwargs
     ModuleFxMatch(QU_IN = QU_IN, QU_OUT=QU_OUT, N_CLK=N_CLK, IF_RST_N = IF_RST_N, QU_MODE = QU_MODE, OF_MODE = OF_MODE, PORTS = inst_ports)
 
@@ -50,7 +53,8 @@ def ModuleTbFxMatch(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_di
 
 
     #/ // Drive rst signal
-    PyTB.Moduledrive_arst(port = "i_rst_n", clk="i_clk", start=1, last=1, OUTMODE = "PRINT")
+    if N_CLK > 0 and has_reset:
+        PyTB.Moduledrive_arst(port = "i_rst_n", clk="i_clk", start=1, last=1, OUTMODE = "PRINT")
     #/
     #/
 

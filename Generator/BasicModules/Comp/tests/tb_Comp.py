@@ -21,6 +21,7 @@ from Generator.BasicModules.Comp.Comp import ModuleComp
 
 @convert
 def ModuleTbComp(QU_IN_1, QU_IN_2, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_dir="../..",N_FRAMES=100, IF_GIDX=True, IF_LIDX=True, IF_EIDX=True, IF_GVAL=True, IF_LVAL=True):
+    has_reset = any(IF_RST_N) if isinstance(IF_RST_N, list) else bool(IF_RST_N)
     #/ `timescale 1ns/1ps
     #/ module TbComp;
     #/ // Inputs
@@ -50,9 +51,11 @@ def ModuleTbComp(QU_IN_1, QU_IN_2, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io
         "o_eidx": "o_eidx",
         "o_gval": "o_gval",
         "o_lval": "o_lval",
-        "i_rst_n":"i_rst_n",
-        "i_clk":"clk",
     }
+    if N_CLK > 0:
+        inst_ports["i_clk"] = "clk"
+        if has_reset:
+            inst_ports["i_rst_n"] = "i_rst_n"
     #/ // Instantiate the DUT
     ModuleComp(PORTS = inst_ports, QU_IN_1 = QU_IN_1, QU_IN_2 = QU_IN_2, QU_OUT = QU_OUT, N_PIPELINES = N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N = IF_RST_N, IF_GIDX = IF_GIDX, IF_LIDX = IF_LIDX, IF_EIDX = IF_EIDX, IF_GVAL = IF_GVAL, IF_LVAL = IF_LVAL)
 
@@ -64,7 +67,8 @@ def ModuleTbComp(QU_IN_1, QU_IN_2, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io
 
 
     #/ // Drive rst signal
-    PyTB.Moduledrive_arst(port = "i_rst_n",start=1, last=1, OUTMODE = "PRINT")
+    if N_CLK > 0 and has_reset:
+        PyTB.Moduledrive_arst(port = "i_rst_n",start=1, last=1, OUTMODE = "PRINT")
 
 
 

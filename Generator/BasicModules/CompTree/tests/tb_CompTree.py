@@ -22,6 +22,7 @@ from Generator.BasicModules.CompTree.CompTree import ModuleCompTree
 
 @convert
 def ModuleTbCompTree(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_dir="../..", N_FRAMES=100, N_INPUTS=10, CONFIG_MODE="A",IF_GIDX=False):
+    has_reset = any(IF_RST_N) if isinstance(IF_RST_N, list) else bool(IF_RST_N)
     n_layers = math.ceil(math.log2(N_INPUTS))
     #/ `timescale 1ns/1ps
     #/ module TbCompTree;
@@ -43,9 +44,11 @@ def ModuleTbCompTree(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_d
         "i_data":"i_data",
         "o_gval": "o_gval",
         "o_gidx": "o_gidx",
-        "i_rst_n":"i_rst_n",
-        "i_clk":"clk",
     }
+    if N_CLK > 0:
+        inst_ports["i_clk"] = "clk"
+        if has_reset:
+            inst_ports["i_rst_n"] = "i_rst_n"
     #/ // Instantiate the DUT
     ModuleCompTree(PORTS = inst_ports, QU_IN = QU_IN, QU_OUT = QU_OUT, N_PIPELINES = N_CLK, QU_MODE=QU_MODE, OF_MODE=OF_MODE, IF_RST_N = IF_RST_N, N_INPUTS=N_INPUTS,IF_GIDX=IF_GIDX, CONFIG_MODE=CONFIG_MODE)
 
@@ -56,7 +59,8 @@ def ModuleTbCompTree(QU_IN, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, io_file_d
     PyTB.ModuleInitialize(ports = ["i_data"],OUTMODE = "PRINT")
 
     #/ // Drive rst signal
-    PyTB.Moduledrive_arst(port = "i_rst_n",start=1, last=1, OUTMODE = "PRINT")
+    if N_CLK > 0 and has_reset:
+        PyTB.Moduledrive_arst(port = "i_rst_n",start=1, last=1, OUTMODE = "PRINT")
 
 
     # Note: Input data is generated in CppRun module.

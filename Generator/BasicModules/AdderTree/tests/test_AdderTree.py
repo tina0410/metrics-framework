@@ -61,7 +61,7 @@ def test_adder_tree(case: Testcase):
     # Keep the Python oracle exercised independently of RTL generation.
     values = list(range(1, case.N_INPUTS + 1))
     assert pack_lanes(values, case.QU_IN.DWT) >= 0
-    assert adder_tree_expected(values, case.QU_OUT.DWT) == sum(values)
+    assert adder_tree_expected(values, case.QU_OUT.DWT) == sum(values) & ((1 << case.QU_OUT.DWT) - 1)
 
     rtl_dir = SIM_DIR / "RTL" / f"n{case.N_INPUTS}_p{case.N_PIPELINES}"
     shutil.rmtree(rtl_dir, ignore_errors=True)

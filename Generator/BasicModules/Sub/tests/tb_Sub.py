@@ -12,6 +12,7 @@ from pytv.ModuleLoader import moduleloader
 
 # Modify version at here
 import os
+import posixpath
 import sys
 import PyTB
 
@@ -76,14 +77,14 @@ def ModuleTbSub(QU_IN_1, QU_IN_2, QU_OUT, N_CLK, IF_RST_N, QU_MODE, OF_MODE, inp
     # Note: Input data is generated in CppRun module.
 
     #/ // Drive input signal
-    input_file_name_1 = os.path.join(input_file_dir,"Input_Files/sub_i_data_1.txt")
-    input_file_name_2 = os.path.join(input_file_dir,"Input_Files/sub_i_data_2.txt")
+    input_file_name_1 = posixpath.join(input_file_dir,"Input_Files/sub_i_data_1.txt")
+    input_file_name_2 = posixpath.join(input_file_dir,"Input_Files/sub_i_data_2.txt")
     PyTB.Moduledrive_input(port = "i_data_1",fistream_port="Input_i_data_1", wait_cycles=2 ,file_name =input_file_name_1, OUTMODE = "PRINT")
     PyTB.Moduledrive_input(port = "i_data_2",fistream_port="Input_i_data_2", wait_cycles=2 ,file_name =input_file_name_2, OUTMODE = "PRINT")
 
     #/ // Dump output signal
     
-    output_file_name = os.path.join(input_file_dir,"Output_Files/sub_o_data.txt")
+    output_file_name = posixpath.join(input_file_dir,"Output_Files/sub_o_data.txt")
     PyTB.Moduledump_output(port = "o_data",fostream_port="Output_o_data", wait_cycles=2 ,file_name = output_file_name, N_excitations=N_FRAMES, OUTMODE = "PRINT")
     
     # generated_tbs = moduleloader.getParams("Tb")

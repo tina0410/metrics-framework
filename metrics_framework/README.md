@@ -1,6 +1,6 @@
 # 统一指标框架
 
-该框架统一 LS、MIMO、BP、PUSCH_CE，以及 Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、SxMatch、Counter、CAdd、CSub、CMul、CNorm、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。基础模块当前先接入延迟指标。
+该框架统一 LS、MIMO、BP、PUSCH_CE，以及 Abs、Delay、FxMatch、MUX、Neg、Sub、AdderTree、Comp、CompTree、SxMatch、Counter、CAdd、CSub、CMul、CNorm、ADD 和 MUL 的指标评估，同时让各模块保留独立 Python 和 RTL 工具环境。每个基础模块的五个默认配置取自各自的 DC 面积报告。
 
 ## 命令
 
@@ -27,7 +27,7 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 ## 输出契约
 
 - `predict` 每次调用都会先删除旧 `prediction.json`，启动新的隔离 adapter 进程并重新执行各项预测、重新计时；旧预测文件和其中的时间绝不作为本轮输入。成功后只写入并打印本轮 `prediction.json`，其中只有预测值、预测时间和 GE 信息，不包含 `null` 对比字段。
-- `evaluate` 每次都清理本 case 的旧仿真工作区和结果文件，重新执行参考模型生成、RTL/testbench 生成、编译、仿真、波形解析及功能对比；验证完整时写入并打印 `evaluation.json`。已有 `simulation_result.json`、VCD、RTL 或可执行文件仅作为上次运行证据，绝不作为本次输入复用。
+- `evaluate` 将默认基础模块配置直接传入其原有 RTL 功能测试链，重新生成并运行 testbench；测试成功后才输出延迟和完整 `evaluation.json`。其中延迟周期由配置的流水级数给出，并由本轮 RTL 功能测试校验输出对齐。已有仿真结果文件、VCD、RTL 或可执行文件绝不作为本次输入复用。
 - `prediction.json` 和 `evaluation.json` 的预测、仿真、综合及总评估时间统一使用毫秒（`ms`）。
 - 四项指标分别输出 `预测时间 (ms)`，计时从所需模型/工作簿加载完成后开始，到该指标的预测函数运行结束。
 - 只有 `prediction.json` 末尾包含 `自动评估总时间 (ms)`，只累计延迟、面积、Throughput、硬件复杂度四项 predict 时间，不包含模型或工作簿读取、RTL仿真、DC综合、误差计算、adapter启动、文件保存和屏幕打印时间；`evaluation.json` 不计算或输出总时间。
@@ -61,7 +61,7 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 }
 ```
 
-面积的非 `null` 字段直接使用，字段不足时读取对应 `Area_TP_Estimator` DC 结果。延迟配置字段不再用于跳过仿真：每次 `evaluate` 均运行全新的 RTL/C++ 验证，配置的 `actual_cycles` 和 `output_interval_cycles` 仅作为一致性断言，本轮实测值与其不符时评估失败；`simulation_time_ms` 不作为本轮时间来源。旧的 `use_config_actual_area`、`actual_area_um2`、`actual_time_ms` 和 `synthesis_time_ms` 仍受支持。
+面积的非 `null` 字段直接使用，字段不足时按完整参数精确匹配对应 `Area_TP_Estimator` DC 报告。默认五个基础模块配置以报告行参数为准，RTL 验证入口直接接收这些配置，而不再要求它们等于历史固定测试向量。配置的 `actual_cycles` 和 `output_interval_cycles` 仅作为一致性断言；`simulation_time_ms` 不作为本轮时间来源。旧的 `use_config_actual_area`、`actual_area_um2`、`actual_time_ms` 和 `synthesis_time_ms` 仍受支持。
 
 如果验证时间缺失但存在 `reported_speedup`，框架用该倍数和本轮预测时间恢复展示所需时间；两类数据都存在时以本轮计算倍数为准。
 

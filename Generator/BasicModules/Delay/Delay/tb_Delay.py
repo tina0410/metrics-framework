@@ -13,6 +13,7 @@ from Generator.BasicModules.Delay.Delay import ModuleDelay
 @convert
 def ModuleTbDelay(DWT, N_CLK, IF_RST_N):
     HAS_RST_N = IF_RST_N if isinstance(IF_RST_N, bool) else any(IF_RST_N)
+    ALL_RST_N = IF_RST_N if isinstance(IF_RST_N, bool) else all(IF_RST_N)
     values = [0, 1, (1 << DWT) - 1, 0x5A & ((1 << DWT) - 1)]
 
     #/ `timescale 1ns/1ps
@@ -62,7 +63,9 @@ def ModuleTbDelay(DWT, N_CLK, IF_RST_N):
     if N_CLK > 0 and HAS_RST_N:
         #/     i_rst_n = 1'b0;
         #/     #2;
-        #/     if (o_data !== `DWT`'b0) $fatal(1, "reset did not clear Delay output");
+        if ALL_RST_N:
+            #/     if (o_data !== `DWT`'b0) $fatal(1, "reset did not clear Delay output");
+            pass
         #/     i_rst_n = 1'b1;
         pass
     for value in values:

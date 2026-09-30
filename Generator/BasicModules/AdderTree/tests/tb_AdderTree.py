@@ -75,7 +75,15 @@ def ModuleTbAdderTree(QU_IN, QU_OUT, N_PIPELINES, QU_MODE, OF_MODE, IF_RST_N, N_
             (value & ((1 << QU_IN.DWT) - 1)) << (index * QU_IN.DWT)
             for index, value in enumerate(values)
         )
-        expected = sum(values) & ((1 << QU_OUT.DWT) - 1)
+        input_mask = (1 << QU_IN.DWT) - 1
+        operands = [value & input_mask for value in values]
+        if QU_IN.IF_SIGNED:
+            sign_bit = 1 << (QU_IN.DWT - 1)
+            operands = [value - (1 << QU_IN.DWT) if value & sign_bit else value for value in operands]
+        total = sum(operands)
+        frac_shift = QU_OUT.FRAC - QU_IN.FRAC
+        scaled = total << frac_shift if frac_shift >= 0 else total >> -frac_shift
+        expected = scaled & ((1 << QU_OUT.DWT) - 1)
         #/     check(`PACKED_DWT`'h`format(packed, 'x')`, `QU_OUT.DWT`'h`format(expected, 'x')`);
     #/     $display("PASS AdderTree N_INPUTS=`N_INPUTS` N_PIPELINES=`N_PIPELINES`");
     #/     $finish;
