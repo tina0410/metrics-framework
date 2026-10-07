@@ -30,7 +30,7 @@
   "simulated_throughput_gbps": 0.7,
   "physical_latency_ns": 10.0,
   "functional_match": true,
-  "rtl_simulation_time_ms": 1556.277945637703,
+  "rtl_simulation_time_ms": 3100.8612513542175,
   "measurement_method": "canonical MUL PyTB + QuBLAS C++ reference; VCD clock-edge positions matching the complete input and output sequences",
   "testbench": "/home/roboute/Desktop/mjj/Generator/BasicModules/Mul/sim/config_case1/workspace/RTL/TbMul0000000001.v",
   "rtl_files": [
