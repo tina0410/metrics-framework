@@ -29,8 +29,8 @@ python BPPredIter/BP_Evaluation/evaluate_bp.py predict 3
 - `predict` 每次调用都会先删除旧 `prediction.json`，启动新的隔离 adapter 进程并重新执行各项预测、重新计时；旧预测文件和其中的时间绝不作为本轮输入。成功后只写入并打印本轮 `prediction.json`，其中只有预测值、预测时间和 GE 信息，不包含 `null` 对比字段。
 - `evaluate` 每次都清理本 case 的旧仿真工作区和结果文件，重新执行参考模型生成、RTL/testbench 生成、编译、仿真、波形解析及功能对比；验证完整时写入并打印 `evaluation.json`。已有 `simulation_result.json`、VCD、RTL 或可执行文件仅作为上次运行证据，绝不作为本次输入复用。
 - `prediction.json` 和 `evaluation.json` 的预测、仿真、综合及总评估时间统一使用毫秒（`ms`）。
-- 四项指标分别输出 `预测时间 (ms)`，计时从所需模型/工作簿加载完成后开始，到该指标的预测函数运行结束。
-- 只有 `prediction.json` 末尾包含 `自动评估总时间 (ms)`，只累计延迟、面积、Throughput、硬件复杂度四项 predict 时间，不包含模型或工作簿读取、RTL仿真、DC综合、误差计算、adapter启动、文件保存和屏幕打印时间；`evaluation.json` 不计算或输出总时间。
+- 四项指标分别输出 `预测时间 (ms)`。统一 CLI/API 的面积和延迟分别启动全新的单指标预测程序，由父进程在创建预测进程前开始计时、在进程退出后结束；包含进程创建、Python 解释器启动、模块导入、配置读取、模型/资源表加载、初始化、预测计算和预测程序结果输出。两项分别计时，不累计另一项预测。Throughput 和硬件复杂度仍只统计各自计算时间。低层 Python 预测函数内的计时用于诊断，包含模型加载但不代表完整程序耗时。
+- 只有 `prediction.json` 末尾包含 `自动评估总时间 (ms)`，累计面积、延迟两个预测程序的完整耗时及 Throughput、硬件复杂度的计算时间；不包含外层 CLI/adapter 调度、验证参考表读取、RTL 仿真、DC 综合、误差计算、最终文件保存和打印；`evaluation.json` 不输出总时间。
 - `evaluation.json` 的延迟分区保留 `仿真时间 (ms)`，面积分区保留 `综合时间 (ms)`，用于展示验证链耗时并计算速度提升倍数。
 - 验证数据不完整时不生成 `evaluation.json`，stdout 完全为空，stderr 说明原因，退出码为 2。
 - adapter 或框架自身出现未预期错误时 stdout 同样为空，退出码为 1。
@@ -239,6 +239,8 @@ Icarus Verilog 仿真并比较最大值索引输出；测试完整通过后才�
 3. 使用 `adapters/common.py` 的 `run_cli` 封装协议。
 4. 在 `registry.json` 注册模块和独立解释器环境变量。
 5. 增加预测隔离、JSON 验证覆盖、验证失败零 stdout、完整 evaluation 快照测试。
+
+全指标 adapter 另外实现 `predict_metric(config_path, config, metric)`，分别执行 `area` 或 `latency`，并让 `predict(..., prepared=...)` 仅组合已取得的预测值及派生指标。`adapters/common.py` 启动 `prediction_worker.py`，从单指标程序启动前到退出后计时。仅延迟 adapter 可保留原接口，由 worker 单独运行其 `predict`。
 
 MIMO 的面积项目与 RTL 项目存在同名旧模块，因此其 adapter 使用额外的 area worker 子进程；新模块存在类似命名或 ABI 冲突时也应使用同样的隔离方式。
 

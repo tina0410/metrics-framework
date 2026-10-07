@@ -946,7 +946,7 @@ def test_batch_evaluation_omits_total_time_per_case(tmp_path, monkeypatch):
     assert "自动评估总时间 (ms)" not in result["config2"]
 
 
-def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path):
+def test_bp_prediction_includes_iteration_model_loading_in_timing(monkeypatch, tmp_path):
     events: list[str] = []
     clocks = iter((1.0, 1.001, 2.0, 2.002, 3.0, 3.0005, 4.0, 4.00075))
     expected_model_bundle = object()
@@ -1005,7 +1005,7 @@ def test_bp_prediction_loads_iteration_model_before_timing(monkeypatch, tmp_path
     }
 
     result = bp_adapter.predict(tmp_path / "config1.json", config)
-    assert events[:3] == ["model_load", "clock", "model_predict"]
+    assert events[:3] == ["clock", "model_load", "model_predict"]
     assert result["latency"]["prediction_time_ms"] == pytest.approx(1.0)
     assert result["throughput"]["prediction_time_ms"] == pytest.approx(0.5)
     assert result["hardware_complexity"]["prediction_time_ms"] == pytest.approx(0.75)
@@ -1897,3 +1897,177 @@ def test_bp_rtl_validation_uses_canonical_sim_directory(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == "Success. The RTL latency of config6 is 10 cycles\n"
+
+
+@pytest.mark.parametrize("adapter,loader_name", [
+    (add_adapter, "load_area_model"),
+    (mul_adapter, "load_area_models"),
+])
+def test_basic_area_prediction_counts_model_loading(monkeypatch, tmp_path, adapter, loader_name):
+    from types import SimpleNamespace
+
+    clock = [0.0]
+    bundle = object()
+
+    def load_model():
+        clock[0] += 0.025
+        return bundle
+
+    def calculate_area(model, _params):
+        assert model is bundle
+        clock[0] += 0.005
+        return 112.0
+
+    def calculate_latency(_params):
+        clock[0] += 0.003
+        return 2
+
+    module = SimpleNamespace(
+        parameters=lambda _config: (),
+        latency_cycles=calculate_latency,
+        predict_area=calculate_area,
+        throughput_gbps=lambda _params: 1.0,
+        read_ge_area=lambda: 1.12,
+        GE_REFERENCE_CELL="NAND2",
+    )
+    setattr(module, loader_name, load_model)
+    monkeypatch.setattr(adapter, "_module", lambda: module)
+    monkeypatch.setattr(adapter.time, "perf_counter", lambda: clock[0])
+
+    metrics = adapter.predict(tmp_path / "config.json", {})
+    assert metrics["area"]["prediction_time_ms"] == pytest.approx(30.0)
+    assert metrics["latency"]["prediction_time_ms"] == pytest.approx(3.0)
+    assert metrics["area"]["predicted_um2"] == 112.0
+    assert metrics["latency"]["predicted_cycles"] == 2
+
+
+def test_bp_prediction_counts_both_model_loads(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    clock = [0.0]
+    bundle = object()
+
+    def load_iteration_model():
+        clock[0] += 0.025
+        return bundle
+
+    def predict_iterations(*_args, model_bundle):
+        assert model_bundle is bundle
+        clock[0] += 0.005
+        return 2.0
+
+    def estimate_area(**_kwargs):
+        clock[0] += 0.007
+        return 112.0
+
+    def load_area_module():
+        clock[0] += 0.040
+        return SimpleNamespace(Esttop=estimate_area)
+
+    monkeypatch.setattr(bp_adapter.time, "perf_counter", lambda: clock[0])
+    monkeypatch.setattr(bp_adapter, "_modules", lambda: (
+        SimpleNamespace(_load_area_module=load_area_module), object(),
+        lambda iterations, _terms: int(iterations * 10),
+        lambda *_args: object(), lambda *_args: 2.0,
+        "NAND2", lambda area, ge: area / ge, lambda: 1.12,
+        load_iteration_model, predict_iterations,
+    ))
+    config = {
+        "decoder": {"hardware_architecture": "TypeI", "decoding_algorithm": "MS",
+                    "code_length": 64, "parallelism": 16, "data_width": 5},
+        "clock": {"period_ns": 20.0},
+    }
+    metrics = bp_adapter.predict(tmp_path / "config.json", config)
+    assert metrics["latency"]["prediction_time_ms"] == pytest.approx(30.0)
+    assert metrics["area"]["prediction_time_ms"] == pytest.approx(47.0)
+    assert metrics["latency"]["predicted_cycles"] == 20
+
+
+def test_bp_legacy_area_counts_loading_without_reference_lookup(monkeypatch):
+    from importlib.util import module_from_spec, spec_from_file_location
+    from types import SimpleNamespace
+
+    spec = spec_from_file_location("timing_bp_area_integration", ROOT / "BPPredIter/BP_Evaluation/area_tp_integration.py")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    clock = [0.0]
+
+    def evaluate_area(*_args, **_kwargs):
+        clock[0] += 0.105  # 5 ms prediction plus 100 ms validation-reference work.
+        return {"prediction_time_ms": 5.0, "synthesis_time_ms": 300.0, "speedup": 60.0}
+
+    def load_area_module():
+        clock[0] += 0.025
+        return SimpleNamespace(evaluate_area=evaluate_area)
+
+    monkeypatch.setattr(module, "_load_area_module", load_area_module)
+    monkeypatch.setattr(module.time, "perf_counter", lambda: clock[0])
+    result = module.evaluate_bp_area("TypeI", "MS", 64, 16, 5)
+    assert result["prediction_time_ms"] == pytest.approx(30.0)
+    assert result["speedup"] == pytest.approx(10.0)
+
+
+@pytest.mark.parametrize("module,metric", [("add", "area"), ("bp", "latency"), ("abs", "latency")])
+def test_prediction_program_time_includes_process_startup(monkeypatch, tmp_path, module, metric):
+    from metrics_framework.adapters import common
+
+    clock = [0.0]
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{}", encoding="utf-8")
+    payload = ({"predicted_area_um2": 112.0} if metric == "area" else {"predicted_cycles": 2})
+    if module == "abs":
+        payload = {"latency": payload}
+
+    def execute(command, **kwargs):
+        assert command[2:4] == [module, metric]
+        clock[0] += 1.25  # Includes interpreter startup, imports, loading and prediction.
+        result = {"module": module, "metric": metric,
+                  "config_digest": common.digest({}), "payload": payload}
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(result), stderr="")
+
+    monkeypatch.setattr(common.time, "perf_counter", lambda: clock[0])
+    monkeypatch.setattr(common.subprocess, "run", execute)
+    result = common.prediction_program(module, metric, config_path)
+    timed = result["latency"] if module == "abs" else result
+    assert timed["prediction_time_ms"] == pytest.approx(1250.0)
+
+
+@pytest.mark.parametrize("adapter", [add_adapter, mul_adapter])
+def test_prepared_predictions_are_composed_without_predicting_again(monkeypatch, tmp_path, adapter):
+    from types import SimpleNamespace
+
+    def unexpected(*_args):
+        raise AssertionError("Metric must only run in its own prediction program")
+
+    module = SimpleNamespace(parameters=lambda _config: (), latency_cycles=unexpected,
+        load_area_model=unexpected, load_area_models=unexpected, predict_area=unexpected,
+        throughput_gbps=lambda _params: 1.0, read_ge_area=lambda: 1.12,
+        GE_REFERENCE_CELL="NAND2")
+    monkeypatch.setattr(adapter, "_module", lambda: module)
+    prepared = {"latency": {"predicted_cycles": 2, "prediction_time_ms": 1250.0},
+                "area": {"predicted_area_um2": 112.0, "prediction_time_ms": 2000.0}}
+    result = adapter.predict(tmp_path / "config.json", {}, prepared=prepared)
+    assert result["latency"]["prediction_time_ms"] == 1250.0
+    assert result["area"]["prediction_time_ms"] == 2000.0
+    assert result["hardware_complexity"]["predicted_ge_cycles"] == pytest.approx(200.0)
+
+
+@pytest.mark.parametrize("metric", ["area", "latency"])
+def test_prediction_worker_runs_only_requested_metric(monkeypatch, tmp_path, metric):
+    from types import SimpleNamespace
+    from metrics_framework import prediction_worker
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{}", encoding="utf-8")
+    calls = []
+
+    def predict_metric(path, config, requested):
+        calls.append(requested)
+        assert path == config_path and config == {}
+        return {"value": 112.0}
+
+    adapter = SimpleNamespace(predict_metric=predict_metric)
+    monkeypatch.setattr(prediction_worker.importlib, "import_module", lambda _name: adapter)
+    result = prediction_worker.predict_one("add", metric, config_path)
+    assert calls == [metric]
+    assert result["payload"] == {"value": 112.0}
