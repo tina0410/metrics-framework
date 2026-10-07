@@ -217,6 +217,85 @@ def test_basic_module_report_case_calls_rtl_with_excel_parameters(monkeypatch):
     assert result["area"]["actual_um2"] == pytest.approx(400.679991)
 
 
+def test_basic_report_lookup_is_outside_latency_formula_timer(monkeypatch):
+    from types import SimpleNamespace
+    from metrics_framework.adapters import basic_full
+
+    clock = [0.0]
+    events = []
+
+    def parameters(_config):
+        raise ValueError("report-backed configuration")
+
+    def lookup(_module_name, _config):
+        events.append("lookup")
+        clock[0] += 10.0
+
+    def formula(_module_name, _module, _config, _params):
+        events.append("formula")
+        clock[0] += 0.004
+        return 3
+
+    monkeypatch.setattr(basic_full, "read_area_reference", lookup)
+    monkeypatch.setattr(basic_full, "_latency_cycles", formula)
+    monkeypatch.setattr(basic_full, "prediction_metrics", lambda *_args: {})
+    monkeypatch.setattr(basic_full.time, "perf_counter", lambda: clock[0])
+
+    result = basic_full.predict(
+        "abs", SimpleNamespace(parameters=parameters), {"n_pipeline": 3}
+    )
+    assert events == ["lookup", "formula"]
+    assert result["latency"]["predicted_cycles"] == 3
+    assert result["latency"]["prediction_time_ms"] == pytest.approx(4.0)
+
+
+def test_pusch_latency_timer_only_wraps_formula(monkeypatch):
+    from importlib.util import module_from_spec, spec_from_file_location
+    import sys
+
+    module_path = ROOT / "Generator" / "PUSCH_CE" / "latency_interface.py"
+    spec = spec_from_file_location("timing_test_pusch_latency_interface", module_path)
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    events = []
+    runtime = module.LatencyRuntime(1, 1, 1, False, "pos2", 0)
+    timing = module.LatencyTiming(1, 1, 1, 1, False, 1, 1, 1)
+    clock = [0.0]
+
+    def timed(label, value):
+        events.append(label)
+        return value
+
+    monkeypatch.setattr(
+        module, "runtime_from_config", lambda _config: timed("runtime", runtime)
+    )
+    monkeypatch.setattr(
+        module,
+        "_validate_runtime_for_build",
+        lambda *_args: events.append("validate"),
+    )
+    monkeypatch.setattr(
+        module, "timing_from_config", lambda _config: timed("timing", timing)
+    )
+    monkeypatch.setattr(
+        module,
+        "predict_from_terms",
+        lambda *_args: timed("formula", {"predicted_cycles": 7}),
+    )
+
+    def perf_counter():
+        events.append("timer")
+        clock[0] += 0.002
+        return clock[0]
+
+    monkeypatch.setattr(module.time, "perf_counter", perf_counter)
+    result = module.predict_latency({})
+    assert events == ["runtime", "validate", "timing", "timer", "formula", "timer"]
+    assert result["prediction_time_ms"] == pytest.approx(2.0)
+
+
 def test_zero_cell_passthroughs_keep_zero_area_and_complexity():
     path = ROOT / "Generator" / "BasicModules" / "MUX" / "configs" / "config_case1.json"
     config = json.loads(path.read_text(encoding="utf-8"))

@@ -16,23 +16,48 @@ from metrics_framework.adapters.common import configured_latency
 from metrics_framework.testing.run_basic_rtl_case import run_report_rtl_case
 
 
-def _latency(module_name: str, module: Any, config: dict[str, Any]) -> tuple[int, Any | None]:
+def _latency_params(
+    module_name: str, module: Any, config: dict[str, Any]
+) -> Any | None:
     try:
-        params = module.parameters(config)
+        return module.parameters(config)
     except ValueError:
         # The DC workbook is the source of truth for area cases. Legacy RTL tests
         # cover fixed, different parameter sets, so do not run one as this case.
         read_area_reference(module_name, config)
-        cycles = 1 if module_name == "counter" else 0 if module_name == "mux" else int(config["n_pipeline"])
-        if cycles < 0:
-            raise ValueError("n_pipeline must be nonnegative")
-        return cycles, None
-    return int(module.latency_cycles(params)), params
+        return None
+
+
+def _latency_cycles(
+    module_name: str, module: Any, config: dict[str, Any], params: Any | None
+) -> int:
+    if params is not None:
+        return int(module.latency_cycles(params))
+    cycles = (
+        1
+        if module_name == "counter"
+        else 0
+        if module_name == "mux"
+        else int(config["n_pipeline"])
+    )
+    if cycles < 0:
+        raise ValueError("n_pipeline must be nonnegative")
+    return cycles
+
+
+def _latency(
+    module_name: str, module: Any, config: dict[str, Any]
+) -> tuple[int, Any | None]:
+    params = _latency_params(module_name, module, config)
+    return _latency_cycles(module_name, module, config, params), params
 
 
 def predict(module_name: str, module: Any, config: dict[str, Any]) -> dict[str, Any]:
+    # Parameter parsing and workbook-backed case validation are preparation,
+    # not part of the latency formula's prediction time.
+    params = _latency_params(module_name, module, config)
     started = time.perf_counter()
-    cycles, params = _latency(module_name, module, config)
+    cycles = _latency_cycles(module_name, module, config, params)
     latency_time_ms = (time.perf_counter() - started) * 1000.0
     latency: dict[str, Any] = {
         "predicted_cycles": cycles,

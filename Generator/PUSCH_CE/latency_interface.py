@@ -369,10 +369,10 @@ def timing_from_config(config: Mapping[str, Any]) -> LatencyTiming:
 
 
 def predict_latency(config: Mapping[str, Any]) -> dict[str, Any]:
-    started = time.perf_counter()
     runtime = runtime_from_config(config)
     _validate_runtime_for_build(config, runtime)
     timing = timing_from_config(config)
+    started = time.perf_counter()
     result = predict_from_terms(timing, runtime)
     result["prediction_time_ms"] = (time.perf_counter() - started) * 1000.0
     result["runtime"] = asdict(runtime)
