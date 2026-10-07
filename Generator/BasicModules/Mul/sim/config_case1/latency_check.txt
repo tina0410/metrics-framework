@@ -1,0 +1,10 @@
+sim_latency_cycles=1
+expected_n_pipeline=1
+sim_output_interval_cycles=1
+sim_output_interval_cycle_list=[1, 1, 1, 1, 1, 1, 1]
+matched_output_frames=8
+clock_period_ns=10.0
+effective_output_bits=7
+simulated_throughput_gbps=0.7
+physical_latency_ns=10.0
+functional_match=true

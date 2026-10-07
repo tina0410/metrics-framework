@@ -20,7 +20,7 @@ Mul0000000001  u_0000000001_Mul0000000001(.i_data_1(i_data_1), .i_data_2(i_data_
  initial
  begin
      clk = 0;
-      forever #2.5  clk <= ~clk;
+      forever #5.0  clk <= ~clk;
  end
  // Initialize Inputs
  initial begin
@@ -49,7 +49,7 @@ Mul0000000001  u_0000000001_Mul0000000001(.i_data_1(i_data_1), .i_data_2(i_data_
  repeat (1) @(posedge en);
  Input_rdy <= 1;
  for (Input_rdy_iter=0; Input_rdy_iter<36; Input_rdy_iter=Input_rdy_iter+1) begin
-     # (2.5) Input_rdy <= ~ Input_rdy;
+     # (5.0) Input_rdy <= ~ Input_rdy;
  end
  end
  integer Output_rdy_iter;
@@ -59,7 +59,7 @@ Mul0000000001  u_0000000001_Mul0000000001(.i_data_1(i_data_1), .i_data_2(i_data_
  repeat (1) @(posedge clk); // wait for 1 cycles
  Output_rdy <= 1;
  for (Output_rdy_iter=0; Output_rdy_iter<36; Output_rdy_iter=Output_rdy_iter+1) begin
-     # (2.5) Output_rdy <= ~ Output_rdy;
+     # (5.0) Output_rdy <= ~ Output_rdy;
  end
  repeat(30) @(posedge clk);
  $finish;
