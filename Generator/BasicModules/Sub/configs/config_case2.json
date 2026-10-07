@@ -3,24 +3,24 @@
   "clock": {
     "period_ns": 10.0
   },
-  "test_case": "RTL2",
+  "test_case": "RTL7",
   "input_1": {
-    "bitwidth": 6,
-    "fractional_width": 4,
-    "signed": true
-  },
-  "input_2": {
     "bitwidth": 14,
-    "fractional_width": 2,
+    "fractional_width": 4,
     "signed": false
   },
-  "output": {
-    "bitwidth": 10,
-    "fractional_width": 2,
+  "input_2": {
+    "bitwidth": 12,
+    "fractional_width": 0,
     "signed": true
   },
-  "n_pipeline": 1,
-  "if_rst_n": false,
+  "output": {
+    "bitwidth": 16,
+    "fractional_width": 0,
+    "signed": true
+  },
+  "n_pipeline": 3,
+  "if_rst_n": true,
   "quantization_mode": "TRN.TCPL",
   "overflow_mode": "WRP.TCPL"
 }

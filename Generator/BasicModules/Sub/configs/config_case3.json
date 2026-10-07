@@ -3,19 +3,19 @@
   "clock": {
     "period_ns": 10.0
   },
-  "test_case": "RTL3",
+  "test_case": "RTL8",
   "input_1": {
     "bitwidth": 16,
-    "fractional_width": 4,
-    "signed": false
-  },
-  "input_2": {
-    "bitwidth": 9,
-    "fractional_width": 6,
+    "fractional_width": 8,
     "signed": true
   },
-  "output": {
+  "input_2": {
     "bitwidth": 12,
+    "fractional_width": 2,
+    "signed": false
+  },
+  "output": {
+    "bitwidth": 8,
     "fractional_width": 6,
     "signed": true
   },
