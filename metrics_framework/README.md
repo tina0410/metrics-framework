@@ -14,6 +14,8 @@ python -m metrics_framework <ls|mimo|bp|ce|abs|delay|fxmatch|mux|neg|sub|addertr
 PUSCH_CE 的历史表只提供真实面积而不提供 DC 综合耗时，因此标准 case
 不会伪造“综合时间”和“速度提升倍数”；配置显式提供该时间后才显示这两项。
 
+验收表的 Excel/`evaluation_output` 汇总、`Result.md` 或 `Result.docx` 自动填写方法，见 [验收结果表自动填写](../docs/result_table_filler.md)。
+
 旧入口也接受新模式，例如：
 
 ```bash
